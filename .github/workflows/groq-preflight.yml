@@ -1,0 +1,49 @@
+name: Groq Provider Preflight
+
+on:
+  push:
+    paths:
+      - '.github/groq-preflight-trigger'
+  workflow_dispatch:
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      ECOCOMMIT_GROQ_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
+    steps:
+      - name: Verify Groq provider with one request
+        shell: python
+        run: |
+          import json
+          import os
+          from urllib import request, error
+
+          key = os.environ.get('ECOCOMMIT_GROQ_API_KEY', '')
+          if not key:
+              raise SystemExit('ECOCOMMIT_GROQ_API_KEY is missing')
+
+          payload = {
+              'model': 'openai/gpt-oss-120b',
+              'messages': [{'role': 'user', 'content': 'Return JSON exactly: {"ok": true}'}],
+              'response_format': {'type': 'json_object'},
+              'temperature': 0,
+          }
+          req = request.Request(
+              'https://api.groq.com/openai/v1/chat/completions',
+              data=json.dumps(payload).encode('utf-8'),
+              headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+              method='POST',
+          )
+          try:
+              with request.urlopen(req, timeout=30) as r:
+                  body = r.read().decode('utf-8')
+                  print('GROQ_PREFLIGHT_OK', r.status)
+                  print(body[:1500])
+          except error.HTTPError as exc:
+              body = exc.read().decode(errors='replace')
+              print('GROQ_PREFLIGHT_HTTP_ERROR', exc.code)
+              print(body[:2000])
+              raise SystemExit(2)
