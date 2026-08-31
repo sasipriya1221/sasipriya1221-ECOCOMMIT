@@ -167,17 +167,23 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         system = (
             "You are the ECOCOMMIT economic-intent compiler. Return only one JSON object matching the supplied contract. "
             "Your output is an untrusted candidate, never financial authority. Preserve every economically material statement. "
-            "Use only clauses needed by the instruction. Rules: "
+            "Use only clauses needed by the instruction. Treat the clause ontology literally: PRODUCT is the thing being acquired; "
+            "QUANTITY is a count/volume; AMOUNT is a monetary bound or stated price; COUNTERPARTY is a named or described supplier; "
+            "TEMPORAL is a deadline, delivery window, date, or duration such as 'within five days' or 'by Friday'; CERTIFICATION is an explicit grade/certification; "
+            "REVERSIBILITY is a refundable/irreversible/payment-capture exposure constraint; AUTHORIZATION is explicit authority to buy/pay/authorize/capture; "
+            "CONDITION is a non-temporal predicate that constrains an action; EXCEPTION is an unless/otherwise carve-out; DEPENDENCY is a prerequisite or ordering relationship between clauses. "
+            "Rules: "
             "1) preserve do not/never/reject/excluding with negated=true on the affected clause; "
-            "2) encode unless/otherwise/only if/provided that/in which case with EXCEPTION or exception_to; "
-            "3) encode real if/before/after/until dependencies with DEPENDENCY or depends_on; do not infer 'if' from letters inside other words; "
+            "2) encode unless/otherwise/only if/provided that/in which case with EXCEPTION or exception_to, and when that phrase gates another action also preserve the gating relationship with depends_on or a DEPENDENCY clause; "
+            "3) encode real if/before/after/until dependencies with DEPENDENCY or depends_on; do not infer 'if' from letters inside other words; a simple 'within N days' delivery deadline is TEMPORAL, not CONDITION or DEPENDENCY; "
             "4) preserve HARD versus SOFT and one-time versus recurring authority; "
             "5) PRODUCT should keep the complete stated product phrase, including grade/certification adjectives; CERTIFICATION may also be emitted; "
             "6) source_span.text must be an exact verbatim substring; the client recomputes offsets; "
             "7) vague terms such as around/reasonable/reliable/best/enough/usual/normal/suitable/appropriate must stay vague, receive lower confidence, and never become invented precision; "
             "8) EXPLICIT_USER requires an exact source span; use INFERENCE only for genuinely inferred meaning; "
             "9) INFERENCE must never create hard AMOUNT, AUTHORIZATION, or COUNTERPARTY authority; "
-            "10) dependencies and exceptions must reference valid clause_id values."
+            "10) dependencies and exceptions must reference valid clause_id values; "
+            "11) confidence means certainty that this clause faithfully extracts the user's explicit text, not trust in the supplier or desirability of the commercial term. Exact, unambiguous verbatim requirements should normally have high extraction confidence; lower confidence for genuine ambiguity or inference."
         )
         user_content: dict[str, object] = {"instruction": instruction}
         if not self.use_json_schema:
