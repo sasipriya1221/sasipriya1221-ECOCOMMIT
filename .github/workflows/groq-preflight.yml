@@ -6,48 +6,56 @@ on:
       - '.github/groq-preflight-trigger'
   workflow_dispatch:
 
+concurrency:
+  group: groq-provider-preflight
+  cancel-in-progress: true
+
 jobs:
   preflight:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     env:
-      ECOCOMMIT_GROQ_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
+      ECOCOMMIT_LLM_BASE_URL: https://api.groq.com/openai/v1
+      ECOCOMMIT_LLM_MODEL: openai/gpt-oss-120b
+      ECOCOMMIT_LLM_REASONING_EFFORT: low
+      ECOCOMMIT_LLM_JSON_SCHEMA: 'true'
+      ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS: '2048'
+      ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
     steps:
-      - name: Verify Groq provider with one request
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Offline regression suite
+        run: pytest
+      - name: Verify Groq secret exists
+        shell: bash
+        run: |
+          if [ -z "$ECOCOMMIT_LLM_API_KEY" ]; then
+            echo 'ECOCOMMIT_GROQ_API_KEY is not configured.' >&2
+            exit 3
+          fi
+      - name: Verify live provider contract with one request
         shell: python
         run: |
-          import json
           import os
-          from urllib import request, error
+          from ecocommit.interpreter import OpenAICompatibleIntentProvider
+          from ecocommit.validator import FidelityValidator
 
-          key = os.environ.get('ECOCOMMIT_GROQ_API_KEY', '')
-          if not key:
-              raise SystemExit('ECOCOMMIT_GROQ_API_KEY is missing')
-
-          payload = {
-              'model': 'openai/gpt-oss-120b',
-              'messages': [{'role': 'user', 'content': 'Return JSON exactly: {"ok": true}'}],
-              'response_format': {'type': 'json_object'},
-              'temperature': 0,
-          }
-          req = request.Request(
-              'https://api.groq.com/openai/v1/chat/completions',
-              data=json.dumps(payload).encode('utf-8'),
-              headers={
-                  'Authorization': f'Bearer {key}',
-                  'Content-Type': 'application/json',
-                  'User-Agent': 'ECOCOMMIT/0.1 (+https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT)',
-              },
-              method='POST',
+          instruction = 'Buy 12 S17-certified bearings from Vendor A under ₹2 lakh within five days.'
+          provider = OpenAICompatibleIntentProvider(
+              os.environ['ECOCOMMIT_LLM_BASE_URL'],
+              os.environ['ECOCOMMIT_LLM_API_KEY'],
+              os.environ['ECOCOMMIT_LLM_MODEL'],
+              timeout=60,
           )
-          try:
-              with request.urlopen(req, timeout=30) as r:
-                  body = r.read().decode('utf-8')
-                  print('GROQ_PREFLIGHT_OK', r.status)
-                  print(body[:1500])
-          except error.HTTPError as exc:
-              body = exc.read().decode(errors='replace')
-              print('GROQ_PREFLIGHT_HTTP_ERROR', exc.code)
-              print(body[:2000])
-              raise SystemExit(2)
+          contract = provider.interpret(instruction)
+          report = FidelityValidator().validate(contract)
+          print('GROQ_PREFLIGHT_OK')
+          print('CLAUSES', len(contract.clauses))
+          print('STATUS', report.status.value)
