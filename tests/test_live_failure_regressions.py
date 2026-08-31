@@ -68,3 +68,56 @@ def test_source_offsets_are_recomputed_from_exact_text():
     contract = EconomicIntentContract.model_validate(repaired)
     assert contract.clauses[0].source_span.text == "ISO-9001 pressure valves"
     assert instruction[contract.clauses[0].source_span.start:contract.clauses[0].source_span.end] == "ISO-9001 pressure valves"
+
+
+def test_verified_exact_span_can_repair_omitted_explicit_user_provenance():
+    instruction = "Buy 40 fire-rated network cabinets."
+    raw = {
+        "instruction": instruction,
+        "schema_version": "0.1",
+        "clauses": [{
+            "clause_id": "product",
+            "clause_type": "PRODUCT",
+            "normalized_value": "fire-rated network cabinets",
+            "source_span": {"text": "fire-rated network cabinets", "start": 0, "end": 2},
+            "materiality": 0.9,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": None,
+            "negated": False,
+            "depends_on": [],
+            "exception_to": [],
+        }],
+    }
+
+    repaired = OpenAICompatibleIntentProvider._repair_source_spans(raw, instruction)
+    contract = EconomicIntentContract.model_validate(repaired)
+
+    assert contract.clauses[0].provenance == Provenance.EXPLICIT_USER
+    assert contract.clauses[0].source_span.text == "fire-rated network cabinets"
+
+
+def test_ungrounded_clause_does_not_get_explicit_provenance_repair():
+    instruction = "Buy bearings."
+    raw = {
+        "instruction": instruction,
+        "schema_version": "0.1",
+        "clauses": [{
+            "clause_id": "fabricated",
+            "clause_type": "COUNTERPARTY",
+            "normalized_value": "Vendor A",
+            "source_span": {"text": "Vendor A", "start": 0, "end": 1},
+            "materiality": 0.9,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": None,
+            "negated": False,
+            "depends_on": [],
+            "exception_to": [],
+        }],
+    }
+
+    repaired = OpenAICompatibleIntentProvider._repair_source_spans(raw, instruction)
+
+    assert repaired["clauses"][0]["source_span"] is None
+    assert "provenance" not in repaired["clauses"][0]
