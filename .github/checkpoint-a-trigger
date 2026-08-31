@@ -1,2 +1,2 @@
-trigger: 2026-08-31T16:20:00Z
-reason: run full Checkpoint A benchmark on Groq GPT-OSS 120B after successful preflight
+trigger: 2026-08-31T19:39:00Z
+reason: run full frozen 50-clear + 30-ambiguous Checkpoint A benchmark on Groq Qwen after 20/20 semantic smoke; thresholds unchanged
