@@ -104,9 +104,9 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         api_key: str,
         model: str,
         timeout: float = 30.0,
-        max_attempts: int = 4,
+        max_attempts: int = 5,
         reasoning_effort: str | None = None,
-        max_retry_delay: float = 65.0,
+        max_retry_delay: float = 900.0,
         max_completion_tokens: int | None = None,
         use_json_schema: bool | None = None,
     ):
@@ -240,7 +240,8 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                         provider_delay = 0.0
                     exponential = min(8.0, 2.0 ** (attempt - 1))
                     # Respect the provider retry window but retain a hard ceiling so
-                    # one request cannot stall CI indefinitely.
+                    # one request cannot stall CI indefinitely. The default ceiling
+                    # is long enough for Groq's rolling free-tier token windows.
                     delay = min(self.max_retry_delay, max(exponential, provider_delay))
                     time.sleep(delay)
                     continue
