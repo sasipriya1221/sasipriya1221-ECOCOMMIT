@@ -1,2 +1,2 @@
-trigger: 2026-08-31T17:30:00Z
-reason: validate live-failure fixes on 10 clear + 10 ambiguous cases before full rerun
+trigger: 2026-08-31T17:50:00Z
+reason: rerun 10 clear + 10 ambiguous cases after offline regression correction
