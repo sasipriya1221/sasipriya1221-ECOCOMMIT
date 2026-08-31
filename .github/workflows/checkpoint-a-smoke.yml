@@ -1,0 +1,43 @@
+name: Checkpoint A - Development Smoke
+
+on:
+  push:
+    paths:
+      - '.github/checkpoint-a-smoke-trigger'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      ECOCOMMIT_LLM_BASE_URL: https://api.groq.com/openai/v1
+      ECOCOMMIT_LLM_MODEL: openai/gpt-oss-120b
+      ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Offline regression suite
+        run: pytest
+      - name: Verify Groq secret exists
+        shell: bash
+        run: |
+          if [ -z "$ECOCOMMIT_LLM_API_KEY" ]; then
+            echo 'ECOCOMMIT_GROQ_API_KEY is not configured.' >&2
+            exit 3
+          fi
+      - name: Run 10 clear + 10 ambiguous live smoke cases
+        run: python scripts/checkpoint_a_live.py --clear-limit 10 --ambiguous-limit 10 --workers 2 --output artifacts/checkpoint_a_smoke_results.json
+      - name: Upload smoke artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoint-a-smoke-results
+          path: artifacts/checkpoint_a_smoke_results.json
+          if-no-files-found: warn
