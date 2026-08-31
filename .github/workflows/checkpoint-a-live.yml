@@ -35,6 +35,9 @@ jobs:
           fi
       - name: Run live Checkpoint A evaluation
         run: python scripts/checkpoint_a_live.py --output artifacts/checkpoint_a_results.json
+      - name: Print compact live diagnostics
+        if: always()
+        run: python scripts/checkpoint_a_diagnostics.py artifacts/checkpoint_a_results.json
       - name: Upload evaluation artifact
         if: always()
         uses: actions/upload-artifact@v4
