@@ -58,15 +58,16 @@ class FidelityValidator:
         r"\breasonably\b", r"\breliable\b", r"\bbest\b", r"\benough\b",
         r"\bsufficient\b", r"\bsuitable\b", r"\busual\b", r"\bnormal\b",
         r"\bsensible\b", r"\bacceptable\b", r"\bfair\b", r"\bpractical\b",
-        r"\bappropriate\b", r"\bstandard commercial terms\b",
-        r"\bnormal approval threshold\b", r"\bnormal limit\b",
-        r"\blittle more\b", r"\bnot too much\b", r"\bmaterially worse\b",
-        r"\bsubstantially cheaper\b", r"\bmuch better value\b",
-        r"\bunder control\b", r"\bas low as reasonably possible\b",
-        r"\bminimal irreversible risk\b", r"\bunnecessary (?:financial )?exposure\b",
-        r"\bexcessive irreversible risk\b", r"\bsafe staged-payment\b",
-        r"\bstrong protection\b", r"\bgood warranty\b", r"\bsoon\b",
-        r"\bquickly\b", r"\bbefore they are needed\b",
+        r"\bappropriate\b", r"\bpreferred\b", r"\bmodest\b",
+        r"\bstandard commercial terms\b", r"\bnormal approval threshold\b",
+        r"\bnormal limit\b", r"\blittle more\b", r"\bnot too much\b",
+        r"\bmaterially worse\b", r"\bsubstantially cheaper\b",
+        r"\bmuch better value\b", r"\bunder control\b",
+        r"\bas low as reasonably possible\b", r"\bminimal irreversible risk\b",
+        r"\bunnecessary (?:financial )?exposure\b", r"\bexcessive irreversible risk\b",
+        r"\bsafe staged-payment\b", r"\bstrong protection\b",
+        r"\bgood warranty\b", r"\bsoon\b", r"\bquickly\b",
+        r"\bbefore they are needed\b",
     )
 
     def __init__(self, config: ValidatorConfig | None = None):
@@ -107,8 +108,6 @@ class FidelityValidator:
         hard_failure = any(f.severity == "high" for f in findings)
         clarification_signal = any(f.severity == "clarify" for f in findings)
 
-        # Missing explicit surface requirements/structure is a rejection. Inferred or
-        # materially vague meaning is not silently accepted; it is escalated.
         if coverage < self.config.minimum_coverage or hard_failure:
             status = DecisionStatus.REJECTED
         elif clarification_signal or faithfulness < self.config.minimum_faithfulness or total_risk >= self.config.risk_threshold:
@@ -139,8 +138,6 @@ class FidelityValidator:
         )
         covered = 0
         for signal in numeric:
-            # Compare both the full monetary token and its core number to tolerate
-            # normalization such as '₹8 lakh' -> '800000'. Exact source spans remain preferred.
             core = re.search(r"\d+(?:\.\d+)?", signal)
             core_text = core.group(0) if core else signal
             if signal in haystack or re.search(rf"(?<!\d){re.escape(core_text)}(?!\d)", haystack):
@@ -154,8 +151,7 @@ class FidelityValidator:
         return covered / len(numeric)
 
     def _check_negation(self, contract: EconomicIntentContract, findings: list[ValidationFinding]) -> None:
-        instruction = contract.instruction
-        if self._matches_any(instruction, self.NEGATION_PATTERNS) and not any(c.negated for c in contract.clauses):
+        if self._matches_any(contract.instruction, self.NEGATION_PATTERNS) and not any(c.negated for c in contract.clauses):
             findings.append(ValidationFinding(
                 code="NEGATION_NOT_PRESERVED",
                 message="Instruction contains negation/prohibition but no contract clause preserves it",
@@ -173,21 +169,21 @@ class FidelityValidator:
             ))
 
     def _check_dependency_structure(self, contract: EconomicIntentContract, findings: list[ValidationFinding]) -> None:
-        # Word-boundary matching is intentional: 'if' inside 'certified' must never
-        # create a fake dependency requirement.
+        # A missing dependency is never silently validated, but it is clarification-
+        # class rather than a terminal rejection because the underlying instruction
+        # may itself be materially ambiguous. Word boundaries prevent 'certified'
+        # from producing a fake 'if' match.
         if self._matches_any(contract.instruction, self.DEPENDENCY_PATTERNS) and not any(
             c.clause_type == ClauseType.DEPENDENCY or c.depends_on for c in contract.clauses
         ):
             findings.append(ValidationFinding(
                 code="DEPENDENCY_NOT_PRESERVED",
                 message="Instruction contains a real conditional/ordering dependency but no dependency structure exists",
-                severity="high",
+                severity="clarify",
             ))
 
     def _check_material_vagueness(self, contract: EconomicIntentContract, findings: list[ValidationFinding]) -> None:
-        instruction = contract.instruction
-        matched = [p for p in self.VAGUE_MATERIAL_PATTERNS if re.search(p, instruction, flags=re.IGNORECASE)]
-        if matched:
+        if self._matches_any(contract.instruction, self.VAGUE_MATERIAL_PATTERNS):
             findings.append(ValidationFinding(
                 code="MATERIAL_VAGUENESS",
                 message="Instruction contains economically material open-textured language that requires clarification before autonomous financial authority",
