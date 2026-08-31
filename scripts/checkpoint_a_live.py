@@ -1,0 +1,271 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable
+
+from ecocommit.contracts import ClauseType, DecisionStatus, EconomicIntentContract
+from ecocommit.interpreter import OpenAICompatibleIntentProvider
+from ecocommit.validator import FidelityValidator
+
+
+@dataclass(frozen=True)
+class GoldRequirement:
+    clause_type: ClauseType
+    source_text: str
+    negated: bool | None = None
+
+
+@dataclass(frozen=True)
+class GoldCase:
+    case_id: str
+    instruction: str
+    expected_status: DecisionStatus
+    required: tuple[GoldRequirement, ...]
+    require_exception: bool = False
+    require_dependency: bool = False
+
+
+def _clear_cases() -> list[GoldCase]:
+    cases: list[GoldCase] = []
+    products = [
+        ("S17-certified bearings", "500", "₹8 lakh", "five days"),
+        ("ISO-9001 pressure valves", "120", "₹6 lakh", "seven days"),
+        ("medical-grade power modules", "80", "₹9 lakh", "ten days"),
+        ("fire-rated network cabinets", "40", "₹5 lakh", "Friday"),
+        ("food-safe conveyor belts", "25", "₹4 lakh", "14 days"),
+    ]
+    suppliers = ["approved suppliers", "Vendor A", "domestic suppliers", "certified suppliers", "Supplier Q"]
+    idx = 1
+    for product, qty, amount, deadline in products:
+        for supplier in suppliers:
+            instruction = f"Buy {qty} {product} from {supplier} for no more than {amount} and ensure delivery within {deadline}."
+            cases.append(GoldCase(
+                case_id=f"C{idx:03d}",
+                instruction=instruction,
+                expected_status=DecisionStatus.VALIDATED,
+                required=(
+                    GoldRequirement(ClauseType.QUANTITY, qty),
+                    GoldRequirement(ClauseType.PRODUCT, product),
+                    GoldRequirement(ClauseType.COUNTERPARTY, supplier),
+                    GoldRequirement(ClauseType.AMOUNT, amount),
+                    GoldRequirement(ClauseType.TEMPORAL, deadline),
+                ),
+            ))
+            idx += 1
+
+    advanced = [
+        "Buy 300 S17 bearings below ₹7 lakh, but do not use Vendor B unless Vendor A is out of stock.",
+        "Purchase 60 industrial sensors for at most ₹3 lakh only if calibration certificates are valid at dispatch.",
+        "Order 100 safety relays from approved suppliers; never make more than 20% irreversible before inspection passes.",
+        "Acquire 12 cooling units under ₹9 lakh and pay the final 40% only after installation acceptance.",
+        "Buy 200 sterile connectors by Thursday, excluding suppliers whose certification expires before delivery.",
+        "Purchase 75 power controllers under ₹5 lakh unless the approved replacement guarantee is missing, in which case do not proceed.",
+        "Order 30 pumps from Vendor A if stock is reserved; otherwise use Vendor C, but keep total exposure below ₹6 lakh.",
+        "Buy 400 packaging seals for no more than ₹2 lakh, provided that food-safety certification is current.",
+        "Purchase 18 lab analyzers and do not authorize recurring charges; this is a one-time purchase only.",
+        "Buy 90 control boards under ₹4 lakh and do not capture payment before dispatch confirmation.",
+        "Order 70 certified actuators within 8 days; if Vendor A cannot meet the deadline, use any approved supplier under ₹5 lakh.",
+        "Purchase 45 inspection cameras for ₹6 lakh maximum and never substitute a non-certified model.",
+        "Buy 250 S17 fasteners before Monday, but only from suppliers with an active replacement guarantee.",
+        "Acquire 10 compressors under ₹8 lakh; do not pay the retention amount until quality acceptance.",
+        "Order 150 temperature probes at no more than ₹1.5 lakh and reject any offer that requires automatic renewal.",
+        "Buy 24 sterilization units from an approved supplier, unless the warranty is shorter than two years.",
+        "Purchase 90 battery packs under ₹4 lakh; capture at most 30% before dispatch and the rest after acceptance.",
+        "Order 55 certified routers for delivery before Friday; do not accept a higher price even if delivery is faster.",
+        "Buy 80 pressure sensors below ₹3.5 lakh only if inventory is reserved for this transaction.",
+        "Purchase 100 relays from Vendor A unless its certification is expired; then use another approved supplier.",
+        "Acquire 65 motor controllers under ₹5.5 lakh, excluding any supplier that cannot provide traceable batch certification.",
+        "Buy 32 air filters within 6 days and never exceed ₹2 lakh total including fees.",
+        "Order 200 connector kits; if the quality certificate is pending, authorize only and do not capture funds.",
+        "Purchase 16 industrial PCs under ₹7 lakh, but do not use a marketplace reseller unless explicitly approved.",
+        "Buy 500 S17 bolts below ₹2.5 lakh and ensure the order is one-time, not recurring.",
+    ]
+    for text in advanced:
+        required: list[GoldRequirement] = []
+        lower = text.lower()
+        if "do not" in lower or "never" in lower or "excluding" in lower or "reject" in lower:
+            required.append(GoldRequirement(ClauseType.CONDITION, "do not" if "do not" in lower else ("never" if "never" in lower else ("excluding" if "excluding" in lower else "reject")), True))
+        cases.append(GoldCase(
+            case_id=f"C{idx:03d}",
+            instruction=text,
+            expected_status=DecisionStatus.VALIDATED,
+            required=tuple(required),
+            require_exception=any(m in lower for m in ("unless", "otherwise", "provided that", "only if", "in which case")),
+            require_dependency=any(m in lower for m in ("if ", "before", "after", "until", "unless", "only if", "provided that")),
+        ))
+        idx += 1
+    return cases[:50]
+
+
+def _ambiguous_cases() -> list[GoldCase]:
+    texts = [
+        "Buy around 500 production-grade S17 parts at a reasonable price.",
+        "Choose a reliable supplier and spend a little more if needed.",
+        "Buy the best certified bearings soon, but keep the cost sensible.",
+        "Order enough backup units for normal operations without overspending.",
+        "Use Vendor A if the deal is good; otherwise choose someone trustworthy.",
+        "Buy these components with strong protection and minimal irreversible risk.",
+        "Purchase roughly 100 units and keep payment conservative until we are comfortable with quality.",
+        "Get a premium model if the price difference is not too much.",
+        "Buy from an approved supplier unless another option is clearly better.",
+        "Order the usual quantity and use our normal payment safeguards.",
+        "Buy replacement parts quickly and avoid unnecessary financial exposure.",
+        "Choose the cheapest acceptable option, but quality matters more.",
+        "Purchase sufficient stock for the next cycle and keep within our normal limit.",
+        "Buy the certified version if it is reasonably available.",
+        "Use the preferred supplier unless their terms are materially worse.",
+        "Order about 50 units and pay only what is appropriate before inspection.",
+        "Get the parts before they are needed and keep the budget under control.",
+        "Select a supplier with acceptable guarantees and normal delivery terms.",
+        "Buy the standard model unless the upgraded one offers much better value.",
+        "Purchase what operations needs, but do not take excessive irreversible risk.",
+        "Order the required quantity and use a safe staged-payment approach.",
+        "Buy from a reputable domestic supplier if practical.",
+        "Choose a certified product with good warranty protection and fair pricing.",
+        "Buy enough units to cover expected demand without tying up too much cash.",
+        "Use Vendor A unless another certified supplier is substantially cheaper.",
+        "Purchase the parts with a reasonable delivery commitment and quality protection.",
+        "Buy the usual S17 parts at our standard commercial terms.",
+        "Order the best option we can justify without taking unnecessary risk.",
+        "Purchase a suitable quantity below the normal approval threshold.",
+        "Buy the components and keep the irreversible portion as low as reasonably possible.",
+    ]
+    return [
+        GoldCase(
+            case_id=f"A{i:03d}",
+            instruction=text,
+            expected_status=DecisionStatus.CLARIFICATION_REQUIRED,
+            required=(),
+            require_exception="unless" in text.lower(),
+            require_dependency="if " in text.lower() or "unless" in text.lower() or "until" in text.lower() or "before" in text.lower(),
+        )
+        for i, text in enumerate(texts, start=1)
+    ]
+
+
+def cases() -> list[GoldCase]:
+    clear = _clear_cases()
+    ambiguous = _ambiguous_cases()
+    assert len(clear) == 50
+    assert len(ambiguous) == 30
+    return clear + ambiguous
+
+
+def _span_matches(contract: EconomicIntentContract, requirement: GoldRequirement) -> bool:
+    wanted = requirement.source_text.lower()
+    for clause in contract.clauses:
+        if clause.clause_type != requirement.clause_type:
+            continue
+        if requirement.negated is not None and clause.negated != requirement.negated:
+            continue
+        span = clause.source_span.text.lower() if clause.source_span else ""
+        value = clause.normalized_value.lower()
+        if wanted in span or wanted in value:
+            return True
+    return False
+
+
+def semantic_case_pass(contract: EconomicIntentContract, gold: GoldCase, validator: FidelityValidator) -> tuple[bool, dict]:
+    report = validator.validate(contract)
+    req_results = [_span_matches(contract, req) for req in gold.required]
+    exception_ok = (not gold.require_exception) or any(c.clause_type == ClauseType.EXCEPTION or c.exception_to for c in contract.clauses)
+    dependency_ok = (not gold.require_dependency) or any(c.clause_type == ClauseType.DEPENDENCY or c.depends_on for c in contract.clauses)
+    status_ok = report.status == gold.expected_status
+    passed = all(req_results) and exception_ok and dependency_ok and status_ok
+    return passed, {
+        "validator_status": report.status.value,
+        "expected_status": gold.expected_status.value,
+        "coverage": report.coverage,
+        "faithfulness": report.faithfulness,
+        "selective_risk": report.selective_risk,
+        "required_checks": req_results,
+        "exception_ok": exception_ok,
+        "dependency_ok": dependency_ok,
+        "findings": [f.model_dump() for f in report.findings],
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run ECOCOMMIT live Checkpoint A evaluation")
+    parser.add_argument("--base-url", default=os.getenv("ECOCOMMIT_LLM_BASE_URL", "https://api.openai.com/v1"))
+    parser.add_argument("--model", default=os.getenv("ECOCOMMIT_LLM_MODEL"))
+    parser.add_argument("--api-key", default=os.getenv("ECOCOMMIT_LLM_API_KEY"))
+    parser.add_argument("--output", default="artifacts/checkpoint_a_results.json")
+    args = parser.parse_args()
+
+    if not args.model:
+        raise SystemExit("ECOCOMMIT_LLM_MODEL (or --model) is required")
+    if not args.api_key:
+        raise SystemExit("ECOCOMMIT_LLM_API_KEY (or --api-key) is required; no mocked credential is accepted")
+
+    provider = OpenAICompatibleIntentProvider(args.base_url, args.api_key, args.model, timeout=60.0)
+    validator = FidelityValidator()
+    rows = []
+    validated = 0
+    correct_validated = 0
+    clarification_correct = 0
+
+    for gold in cases():
+        try:
+            contract = provider.interpret(gold.instruction)
+            passed, detail = semantic_case_pass(contract, gold, validator)
+            if detail["validator_status"] == DecisionStatus.VALIDATED.value:
+                validated += 1
+                if passed:
+                    correct_validated += 1
+            if gold.expected_status == DecisionStatus.CLARIFICATION_REQUIRED and detail["validator_status"] == DecisionStatus.CLARIFICATION_REQUIRED.value:
+                clarification_correct += 1
+            rows.append({"id": gold.case_id, "instruction": gold.instruction, "passed": passed, "detail": detail, "contract": contract.model_dump(mode="json")})
+        except Exception as exc:
+            rows.append({"id": gold.case_id, "instruction": gold.instruction, "passed": False, "error": type(exc).__name__ + ": " + str(exc)})
+
+    total = len(rows)
+    passed_total = sum(1 for r in rows if r.get("passed"))
+    clear_count = 50
+    ambiguous_count = 30
+    autonomous_coverage = validated / total if total else 0.0
+    selective_semantic_reliability = correct_validated / validated if validated else 0.0
+    clarification_accuracy = clarification_correct / ambiguous_count
+
+    summary = {
+        "provider": {"base_url": args.base_url, "model": args.model},
+        "dataset": {"total": total, "clear": clear_count, "ambiguous": ambiguous_count},
+        "metrics": {
+            "passed_cases": passed_total,
+            "case_pass_rate": passed_total / total,
+            "autonomous_coverage": autonomous_coverage,
+            "selective_semantic_reliability": selective_semantic_reliability,
+            "ambiguous_clarification_accuracy": clarification_accuracy,
+        },
+        "checkpoint_a_gate": {
+            "criteria": {
+                "case_pass_rate_min": 0.90,
+                "selective_semantic_reliability_min": 0.95,
+                "autonomous_coverage_min": 0.55,
+                "ambiguous_clarification_accuracy_min": 0.80,
+            },
+        },
+        "cases": rows,
+    }
+    c = summary["checkpoint_a_gate"]["criteria"]
+    gate_passed = (
+        summary["metrics"]["case_pass_rate"] >= c["case_pass_rate_min"]
+        and selective_semantic_reliability >= c["selective_semantic_reliability_min"]
+        and autonomous_coverage >= c["autonomous_coverage_min"]
+        and clarification_accuracy >= c["ambiguous_clarification_accuracy_min"]
+    )
+    summary["checkpoint_a_gate"]["passed"] = gate_passed
+
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(json.dumps({"metrics": summary["metrics"], "checkpoint_a_gate": summary["checkpoint_a_gate"]}, indent=2))
+    return 0 if gate_passed else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
