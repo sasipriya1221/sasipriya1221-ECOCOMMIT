@@ -37,6 +37,67 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         }],
     }
 
+    STRICT_JSON_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "instruction": {"type": "string", "minLength": 1},
+            "schema_version": {"type": "string", "enum": ["0.1"]},
+            "clauses": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "clause_id": {"type": "string", "minLength": 1},
+                        "clause_type": {
+                            "type": "string",
+                            "enum": [
+                                "PRODUCT", "QUANTITY", "AMOUNT", "COUNTERPARTY", "TEMPORAL",
+                                "CERTIFICATION", "REVERSIBILITY", "AUTHORIZATION", "CONDITION",
+                                "EXCEPTION", "DEPENDENCY",
+                            ],
+                        },
+                        "normalized_value": {"type": "string", "minLength": 1},
+                        "source_span": {
+                            "anyOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "text": {"type": "string", "minLength": 1},
+                                        "start": {"type": "integer", "minimum": 0},
+                                        "end": {"type": "integer", "minimum": 1},
+                                    },
+                                    "required": ["text", "start", "end"],
+                                    "additionalProperties": False,
+                                },
+                                {"type": "null"},
+                            ]
+                        },
+                        "provenance": {
+                            "type": "string",
+                            "enum": ["EXPLICIT_USER", "INCORPORATED_POLICY", "AUTHORITATIVE_EVIDENCE", "INFERENCE"],
+                        },
+                        "materiality": {"type": "number", "minimum": 0, "maximum": 1},
+                        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                        "hardness": {"type": "string", "enum": ["HARD", "SOFT"]},
+                        "policy_class": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                        "negated": {"type": "boolean"},
+                        "depends_on": {"type": "array", "items": {"type": "string"}},
+                        "exception_to": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": [
+                        "clause_id", "clause_type", "normalized_value", "source_span", "provenance",
+                        "materiality", "confidence", "hardness", "policy_class", "negated",
+                        "depends_on", "exception_to",
+                    ],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        "required": ["instruction", "schema_version", "clauses"],
+        "additionalProperties": False,
+    }
+
     def __init__(
         self,
         base_url: str,
@@ -46,6 +107,8 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         max_attempts: int = 4,
         reasoning_effort: str | None = None,
         max_retry_delay: float = 65.0,
+        max_completion_tokens: int | None = None,
+        use_json_schema: bool | None = None,
     ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -54,6 +117,20 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         self.max_attempts = max(1, max_attempts)
         self.reasoning_effort = reasoning_effort or os.getenv("ECOCOMMIT_LLM_REASONING_EFFORT")
         self.max_retry_delay = max(0.0, max_retry_delay)
+
+        configured_max = os.getenv("ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS")
+        if max_completion_tokens is not None:
+            self.max_completion_tokens = max(1, int(max_completion_tokens))
+        elif configured_max:
+            self.max_completion_tokens = max(1, int(configured_max))
+        else:
+            self.max_completion_tokens = None
+
+        if use_json_schema is None:
+            configured_schema = os.getenv("ECOCOMMIT_LLM_JSON_SCHEMA", "").strip().lower()
+            self.use_json_schema = configured_schema in {"1", "true", "yes", "on"}
+        else:
+            self.use_json_schema = bool(use_json_schema)
 
     @staticmethod
     def _repair_source_spans(payload: dict, instruction: str) -> dict:
@@ -88,7 +165,7 @@ class OpenAICompatibleIntentProvider(IntentProvider):
 
     def interpret(self, instruction: str) -> EconomicIntentContract:
         system = (
-            "You are the ECOCOMMIT economic-intent compiler. Return only one JSON object matching the supplied compact contract shape. "
+            "You are the ECOCOMMIT economic-intent compiler. Return only one JSON object matching the supplied contract. "
             "Your output is an untrusted candidate, never financial authority. Preserve every economically material statement. "
             "Use only clauses needed by the instruction. Rules: "
             "1) preserve do not/never/reject/excluding with negated=true on the affected clause; "
@@ -102,17 +179,34 @@ class OpenAICompatibleIntentProvider(IntentProvider):
             "9) INFERENCE must never create hard AMOUNT, AUTHORIZATION, or COUNTERPARTY authority; "
             "10) dependencies and exceptions must reference valid clause_id values."
         )
+        user_content: dict[str, object] = {"instruction": instruction}
+        if not self.use_json_schema:
+            user_content["contract_shape"] = self.COMPACT_SCHEMA
+
         payload = {
             "model": self.model,
             "temperature": 0,
             "messages": [
                 {"role": "system", "content": system},
-                {"role": "user", "content": json.dumps({"instruction": instruction, "contract_shape": self.COMPACT_SCHEMA}, separators=(",", ":"))},
+                {"role": "user", "content": json.dumps(user_content, separators=(",", ":"))},
             ],
-            "response_format": {"type": "json_object"},
+            "response_format": (
+                {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "economic_intent_contract",
+                        "strict": True,
+                        "schema": self.STRICT_JSON_SCHEMA,
+                    },
+                }
+                if self.use_json_schema
+                else {"type": "json_object"}
+            ),
         }
         if self.reasoning_effort:
             payload["reasoning_effort"] = self.reasoning_effort
+        if self.max_completion_tokens is not None:
+            payload["max_completion_tokens"] = self.max_completion_tokens
 
         for attempt in range(1, self.max_attempts + 1):
             req = request.Request(
@@ -145,8 +239,8 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                     except ValueError:
                         provider_delay = 0.0
                     exponential = min(8.0, 2.0 ** (attempt - 1))
-                    # Groq publishes Retry-After on 429s. Respect the provider window,
-                    # but retain a hard ceiling so one request cannot stall CI forever.
+                    # Respect the provider retry window but retain a hard ceiling so
+                    # one request cannot stall CI indefinitely.
                     delay = min(self.max_retry_delay, max(exponential, provider_delay))
                     time.sleep(delay)
                     continue
