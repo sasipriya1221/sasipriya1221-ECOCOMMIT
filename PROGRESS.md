@@ -4,17 +4,17 @@
 |---|---|---|
 | M0 Specification Freeze | 🟢 PASSED | Scope, hypothesis and metrics frozen in repo |
 | M1 Economic Contract Language | 🟢 PASSED (offline acceptance) | 20 varied instructions fit one schema; authority invariant tested |
-| M2 AI Intent Intelligence | 🟡 BLOCKED ON LIVE PROVIDER CREDIT | Provider + schema + 50 post-prompt-freeze clear live cases prepared; live API call currently blocked by provider credit balance |
-| M3 Fidelity + Abstention | 🟡 BLOCKED ON LIVE PROVIDER CREDIT | Structural/ambiguity tests pass offline; 30 ambiguous live cases + frozen gate prepared; live API call currently blocked by provider credit balance |
+| M2 AI Intent Intelligence | 🟡 IN PROGRESS | Real Groq provider is connected; live semantic benchmark is being corrected against the frozen gate |
+| M3 Fidelity + Abstention | 🟡 IN PROGRESS | Structural/ambiguity regressions pass offline; live ambiguity performance has not yet passed the frozen gate |
 | M4 Policy Mapping | ⬜ NOT STARTED | Stop before Checkpoint B |
 
 ## Checkpoint A
 
 **Status: 🔴 NOT PASSED YET**
 
-The offline core has passed 36/36 tests. During development, two validator/test mismatches were found and fixed before this status was written.
+The offline core passes 36/36 tests. Provider access is no longer blocked by the earlier OpenAI credit issue: the project now uses the configured Groq OpenAI-compatible endpoint with `openai/gpt-oss-120b`, and the Groq provider preflight has passed with the repository secret injected.
 
-A live evaluation runner and GitHub Actions workflow are committed. The Checkpoint A development stress set contains 80 cases created after the intent prompt was frozen: 50 clear compositional procurement instructions and 30 materially ambiguous instructions.
+The Checkpoint A development stress set contains 80 cases: 50 clear compositional procurement instructions and 30 materially ambiguous instructions. Failed cases remain evidence; fixture/mock results do not count.
 
 Frozen Checkpoint A gate (all required in the same real-model run):
 
@@ -25,19 +25,16 @@ Frozen Checkpoint A gate (all required in the same real-model run):
 
 ## Live-run evidence
 
-Run #1 executed against the configured OpenAI-compatible provider with the repository secret correctly injected. Offline regression passed 36/36. The live phase returned HTTP 429 for all cases.
+An earlier full Groq run (GitHub Actions run `33412737638`, head `37e78c93205e44c626b13e6bd694ca6c85d8c1ef`) completed against the real configured model and **failed** the frozen gate. Its aggregate metrics were:
 
-A separate single-request provider preflight was then added to distinguish infrastructure failure from semantic failure. The preflight returned:
+- passed cases: 11 / 80
+- case pass rate: 13.75%
+- autonomous coverage: 30.00%
+- selective semantic reliability: 41.67%
+- ambiguous clarification accuracy: 13.33%
 
-- HTTP 429
-- error type: `insufficient_quota`
-- error code: `credit_balance_exhausted`
-- provider message: no API credits remain; add credits before continuing
+Those results are retained as failed development evidence; they are not relabeled or discarded. Subsequent changes fixed justified implementation defects including source-span offset repair, dependency/clarification handling, a compact intent contract prompt, and bounded provider retry delays, with regression tests added for the discovered failure classes.
 
-Therefore **no semantic Checkpoint A metric is valid yet**. The zero live scores from run #1 are infrastructure-failure artifacts and must not be interpreted as model-quality scores.
+A fresh 10-clear + 10-ambiguous real-model development smoke run has been triggered from the bounded-retry head (`45f4c0158d3917e3174741217f9a90bf5f496a6f`). Its offline regression and Groq-secret checks have passed; the live cases are still executing. This smoke run is diagnostic only and cannot itself mark Checkpoint A passed.
 
-The provider client now has bounded retry/backoff and explicit provider-error diagnostics. The repository secret itself is present and passed the workflow secret-existence check.
-
-Checkpoint A can resume immediately after the OpenAI API project has usable credits. Mock/provider-fixture results are explicitly not accepted as evidence.
-
-No M4 work begins until the real-model Checkpoint A gate passes.
+No M4 / Checkpoint B work begins until a subsequent **full 50+30 real-model run** meets every frozen Checkpoint A threshold in the same run.
