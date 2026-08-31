@@ -36,12 +36,23 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         }],
     }
 
-    def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 30.0, max_attempts: int = 4):
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        model: str,
+        timeout: float = 30.0,
+        max_attempts: int = 4,
+        reasoning_effort: str | None = None,
+        max_retry_delay: float = 65.0,
+    ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
         self.max_attempts = max(1, max_attempts)
+        self.reasoning_effort = reasoning_effort
+        self.max_retry_delay = max(0.0, max_retry_delay)
 
     @staticmethod
     def _repair_source_spans(payload: dict, instruction: str) -> dict:
@@ -94,6 +105,8 @@ class OpenAICompatibleIntentProvider(IntentProvider):
             ],
             "response_format": {"type": "json_object"},
         }
+        if self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
 
         for attempt in range(1, self.max_attempts + 1):
             req = request.Request(
@@ -126,11 +139,17 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                     except ValueError:
                         provider_delay = 0.0
                     exponential = min(8.0, 2.0 ** (attempt - 1))
-                    # Bound provider-directed sleeps so a single request cannot stall CI indefinitely.
-                    delay = min(30.0, max(exponential, provider_delay))
+                    # Groq publishes Retry-After on 429s. Respect the provider window,
+                    # but retain a hard ceiling so one request cannot stall CI forever.
+                    delay = min(self.max_retry_delay, max(exponential, provider_delay))
                     time.sleep(delay)
                     continue
 
                 raise RuntimeError(f"provider HTTP {exc.code} after {attempt} attempt(s): {provider_body}") from exc
+            except (error.URLError, TimeoutError) as exc:
+                if attempt < self.max_attempts:
+                    time.sleep(min(self.max_retry_delay, min(8.0, 2.0 ** (attempt - 1))))
+                    continue
+                raise RuntimeError(f"provider transport error after {attempt} attempt(s): {exc}") from exc
 
         raise RuntimeError("provider request exhausted retry loop")
