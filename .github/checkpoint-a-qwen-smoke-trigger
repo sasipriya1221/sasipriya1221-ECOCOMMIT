@@ -1,2 +1,2 @@
-2026-09-01T00:39:00+05:30
-Purpose: run the frozen 10-clear + 10-ambiguous development smoke on Groq qwen/qwen3.8-27b using the same implementation, schema, scorer, and acceptance thresholds. This is diagnostic evidence only; it cannot pass Checkpoint A by itself.
+2026-09-01T00:52:00+05:30
+Purpose: rerun the frozen 10-clear + 10-ambiguous Qwen development smoke after the prompt/ontology repair for temporal deadlines, extraction confidence, and exception gating. Same implementation schema/scorer and frozen thresholds; diagnostic only and cannot pass Checkpoint A by itself.
