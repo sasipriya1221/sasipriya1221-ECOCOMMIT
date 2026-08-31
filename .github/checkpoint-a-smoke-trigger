@@ -1,2 +1,2 @@
-trigger: 2026-08-31T17:50:00Z
-reason: rerun 10 clear + 10 ambiguous cases after offline regression correction
+trigger: 2026-08-31T18:45:00Z
+reason: rerun 10 clear + 10 ambiguous cases from current head with bounded provider retry delays
