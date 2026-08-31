@@ -134,8 +134,9 @@ class OpenAICompatibleIntentProvider(IntentProvider):
 
     @staticmethod
     def _repair_source_spans(payload: dict, instruction: str) -> dict:
-        """Repair exact user spans and derive only provenance proven by those spans."""
-        for clause in payload.get("clauses", []):
+        """Repair exact user spans and derive only relationships already proven by the candidate graph."""
+        clauses = payload.get("clauses", [])
+        for clause in clauses:
             span = clause.get("source_span")
             if not isinstance(span, dict):
                 continue
@@ -159,6 +160,18 @@ class OpenAICompatibleIntentProvider(IntentProvider):
             # do not manufacture provenance for ungrounded clauses.
             if not clause.get("provenance"):
                 clause["provenance"] = "EXPLICIT_USER"
+
+        # An EXCEPTION edge already identifies the clause it gates. Mirror that
+        # existing graph edge into depends_on when the provider omitted only the
+        # duplicate dependency representation. This adds no new target or meaning;
+        # it prevents representational style from looking like a lost dependency.
+        for clause in clauses:
+            if clause.get("clause_type") != "EXCEPTION":
+                continue
+            targets = clause.get("exception_to")
+            if isinstance(targets, list) and targets and not clause.get("depends_on"):
+                clause["depends_on"] = list(targets)
+
         payload["instruction"] = instruction
         payload["schema_version"] = "0.1"
         return payload
