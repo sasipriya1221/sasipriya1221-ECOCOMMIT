@@ -55,7 +55,8 @@ class FidelityValidator:
     )
     VAGUE_MATERIAL_PATTERNS = (
         r"\baround\b", r"\broughly\b", r"\babout\b", r"\breasonable\b",
-        r"\breasonably\b", r"\breliable\b", r"\bbest\b", r"\benough\b",
+        r"\breasonably\b", r"\breliable\b", r"\breputable\b", r"\btrustworthy\b",
+        r"\bgood\b", r"\bclearly better\b", r"\bbest\b", r"\benough\b",
         r"\bsufficient\b", r"\bsuitable\b", r"\busual\b", r"\bnormal\b",
         r"\bsensible\b", r"\bacceptable\b", r"\bfair\b", r"\bpractical\b",
         r"\bappropriate\b", r"\bpreferred\b", r"\bmodest\b",
