@@ -2,15 +2,6 @@ name: Checkpoint A - Live Intent Evaluation
 
 on:
   workflow_dispatch:
-    inputs:
-      base_url:
-        description: OpenAI-compatible base URL
-        required: true
-        default: https://api.openai.com/v1
-      model:
-        description: Model name exposed by the configured endpoint
-        required: true
-        default: gpt-5.6-luna
   push:
     branches: [main]
     paths:
@@ -22,9 +13,9 @@ jobs:
     permissions:
       contents: read
     env:
-      ECOCOMMIT_LLM_BASE_URL: ${{ inputs.base_url || 'https://api.openai.com/v1' }}
-      ECOCOMMIT_LLM_MODEL: ${{ inputs.model || 'gpt-5.6-luna' }}
-      ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_LLM_API_KEY }}
+      ECOCOMMIT_LLM_BASE_URL: https://api.groq.com/openai/v1
+      ECOCOMMIT_LLM_MODEL: openai/gpt-oss-120b
+      ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -39,7 +30,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "$ECOCOMMIT_LLM_API_KEY" ]; then
-            echo 'ECOCOMMIT_LLM_API_KEY is not configured. Checkpoint A cannot be claimed with fixtures.' >&2
+            echo 'ECOCOMMIT_GROQ_API_KEY is not configured. Checkpoint A cannot be claimed with fixtures.' >&2
             exit 3
           fi
       - name: Run live Checkpoint A evaluation
