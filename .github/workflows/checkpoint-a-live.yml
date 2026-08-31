@@ -7,9 +7,14 @@ on:
     paths:
       - '.github/checkpoint-a-trigger'
 
+concurrency:
+  group: checkpoint-a-live-gate
+  cancel-in-progress: true
+
 jobs:
   checkpoint-a:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     permissions:
       contents: read
     env:
