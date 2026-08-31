@@ -1,2 +1,2 @@
-trigger: 2026-08-31T16:15:00Z
-reason: rerun Groq preflight after explicit User-Agent fix
+trigger: 2026-08-31T19:05:00Z
+reason: validate strict JSON schema, low reasoning, token budget, and current ECOCOMMIT contract end-to-end
