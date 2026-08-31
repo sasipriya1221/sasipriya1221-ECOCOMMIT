@@ -82,7 +82,8 @@ class FidelityValidator:
         findings: list[ValidationFinding] = []
         material = [c for c in contract.clauses if c.materiality >= self.config.materiality_threshold]
         inferred_material = 0
-        total_risk = 0.0
+        weighted_uncertainty = 0.0
+        risk_weight = 0.0
 
         for clause in material:
             grounded = (
@@ -97,7 +98,15 @@ class FidelityValidator:
                     severity="clarify",
                     clause_id=clause.clause_id,
                 ))
-            total_risk += (1.0 - clause.confidence) * clause.materiality
+            weighted_uncertainty += (1.0 - clause.confidence) * clause.materiality
+            risk_weight += clause.materiality
+
+        # Confidence risk is a weighted *average*, not a sum. A sum makes an
+        # otherwise identical, fully grounded instruction look riskier merely
+        # because the compiler represented it with more clauses (for example,
+        # PRODUCT + CERTIFICATION + AUTHORIZATION). Complexity alone must not
+        # force abstention; actual low-confidence material meaning still can.
+        selective_risk = weighted_uncertainty / risk_weight if risk_weight else 0.0
 
         coverage = self._coverage(contract, findings)
         faithfulness = 1.0 if not material else max(0.0, 1.0 - inferred_material / len(material))
@@ -111,7 +120,7 @@ class FidelityValidator:
 
         if coverage < self.config.minimum_coverage or hard_failure:
             status = DecisionStatus.REJECTED
-        elif clarification_signal or faithfulness < self.config.minimum_faithfulness or total_risk >= self.config.risk_threshold:
+        elif clarification_signal or faithfulness < self.config.minimum_faithfulness or selective_risk >= self.config.risk_threshold:
             status = DecisionStatus.CLARIFICATION_REQUIRED
         else:
             status = DecisionStatus.VALIDATED
@@ -121,7 +130,7 @@ class FidelityValidator:
             status=status,
             coverage=coverage,
             faithfulness=faithfulness,
-            selective_risk=round(total_risk, 4),
+            selective_risk=round(selective_risk, 4),
             findings=findings,
             clarification_question=question,
         )
@@ -173,12 +182,12 @@ class FidelityValidator:
             ))
 
     def _check_dependency_structure(self, contract: EconomicIntentContract, findings: list[ValidationFinding]) -> None:
-        # A missing dependency is never silently validated, but it is clarification-
-        # class rather than a terminal rejection because the underlying instruction
-        # may itself be materially ambiguous. Word boundaries prevent 'certified'
-        # from producing a fake 'if' match.
+        # A dependency can be represented directly (DEPENDENCY/depends_on) or as an
+        # explicit exception edge. `exception_to` already proves the gated target
+        # for markers such as `unless`; requiring a duplicate depends_on edge would
+        # reject semantically complete graphs for representational style alone.
         if self._matches_any(contract.instruction, self.DEPENDENCY_PATTERNS) and not any(
-            c.clause_type == ClauseType.DEPENDENCY or c.depends_on for c in contract.clauses
+            c.clause_type == ClauseType.DEPENDENCY or c.depends_on or c.exception_to for c in contract.clauses
         ):
             findings.append(ValidationFinding(
                 code="DEPENDENCY_NOT_PRESERVED",
