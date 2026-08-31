@@ -39,7 +39,7 @@ jobs:
             exit 3
           fi
       - name: Run 10 clear + 10 ambiguous live smoke cases
-        run: python scripts/checkpoint_a_live.py --clear-limit 10 --ambiguous-limit 10 --workers 2 --output artifacts/checkpoint_a_smoke_results.json
+        run: python scripts/checkpoint_a_live.py --clear-limit 10 --ambiguous-limit 10 --workers 1 --output artifacts/checkpoint_a_smoke_results.json
       - name: Print compact smoke diagnostics
         if: always()
         run: python scripts/checkpoint_a_diagnostics.py artifacts/checkpoint_a_smoke_results.json
