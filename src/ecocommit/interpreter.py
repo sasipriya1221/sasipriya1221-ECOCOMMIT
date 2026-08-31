@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from abc import ABC, abstractmethod
 from urllib import error, request
@@ -51,7 +52,7 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         self.model = model
         self.timeout = timeout
         self.max_attempts = max(1, max_attempts)
-        self.reasoning_effort = reasoning_effort
+        self.reasoning_effort = reasoning_effort or os.getenv("ECOCOMMIT_LLM_REASONING_EFFORT")
         self.max_retry_delay = max(0.0, max_retry_delay)
 
     @staticmethod
