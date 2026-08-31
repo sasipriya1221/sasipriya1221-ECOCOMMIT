@@ -1,0 +1,48 @@
+name: Checkpoint A - Live Intent Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: OpenAI-compatible base URL
+        required: true
+        default: https://api.openai.com/v1
+      model:
+        description: Model name exposed by the configured endpoint
+        required: true
+
+jobs:
+  checkpoint-a:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      ECOCOMMIT_LLM_BASE_URL: ${{ inputs.base_url }}
+      ECOCOMMIT_LLM_MODEL: ${{ inputs.model }}
+      ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_LLM_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Offline regression suite
+        run: pytest
+      - name: Verify live-model secret exists
+        shell: bash
+        run: |
+          if [ -z "$ECOCOMMIT_LLM_API_KEY" ]; then
+            echo 'ECOCOMMIT_LLM_API_KEY is not configured. Checkpoint A cannot be claimed with fixtures.' >&2
+            exit 3
+          fi
+      - name: Run live Checkpoint A evaluation
+        run: python scripts/checkpoint_a_live.py --output artifacts/checkpoint_a_results.json
+      - name: Upload evaluation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoint-a-results
+          path: artifacts/checkpoint_a_results.json
+          if-no-files-found: warn
