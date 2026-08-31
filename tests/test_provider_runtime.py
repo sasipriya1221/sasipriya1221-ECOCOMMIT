@@ -50,6 +50,8 @@ def test_runtime_reasoning_effort_is_sent_when_configured(monkeypatch):
         return _FakeResponse(_provider_body(instruction))
 
     monkeypatch.setenv("ECOCOMMIT_LLM_REASONING_EFFORT", "low")
+    monkeypatch.delenv("ECOCOMMIT_LLM_JSON_SCHEMA", raising=False)
+    monkeypatch.delenv("ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS", raising=False)
     monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
 
     provider = OpenAICompatibleIntentProvider("https://example.invalid/v1", "secret", "model")
@@ -57,6 +59,30 @@ def test_runtime_reasoning_effort_is_sent_when_configured(monkeypatch):
 
     assert captured["reasoning_effort"] == "low"
     assert contract.clauses[0].source_span.text == "bearings"
+
+
+def test_strict_schema_and_completion_budget_are_sent_when_enabled(monkeypatch):
+    instruction = "Buy bearings."
+    captured = {}
+
+    def fake_urlopen(req, timeout):
+        captured.update(json.loads(req.data.decode("utf-8")))
+        return _FakeResponse(_provider_body(instruction))
+
+    monkeypatch.setenv("ECOCOMMIT_LLM_JSON_SCHEMA", "true")
+    monkeypatch.setenv("ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS", "2048")
+    monkeypatch.delenv("ECOCOMMIT_LLM_REASONING_EFFORT", raising=False)
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
+
+    provider = OpenAICompatibleIntentProvider("https://example.invalid/v1", "secret", "model")
+    provider.interpret(instruction)
+
+    assert captured["max_completion_tokens"] == 2048
+    assert captured["response_format"]["type"] == "json_schema"
+    assert captured["response_format"]["json_schema"]["strict"] is True
+    assert captured["response_format"]["json_schema"]["schema"]["additionalProperties"] is False
+    user_payload = json.loads(captured["messages"][1]["content"])
+    assert user_payload == {"instruction": instruction}
 
 
 def test_http_429_respects_retry_after_with_hard_ceiling(monkeypatch):
@@ -78,6 +104,8 @@ def test_http_429_respects_retry_after_with_hard_ceiling(monkeypatch):
         return _FakeResponse(_provider_body(instruction))
 
     monkeypatch.delenv("ECOCOMMIT_LLM_REASONING_EFFORT", raising=False)
+    monkeypatch.delenv("ECOCOMMIT_LLM_JSON_SCHEMA", raising=False)
+    monkeypatch.delenv("ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS", raising=False)
     monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
     monkeypatch.setattr("ecocommit.interpreter.time.sleep", sleeps.append)
 
@@ -107,6 +135,8 @@ def test_transport_error_is_retried(monkeypatch):
         return _FakeResponse(_provider_body(instruction))
 
     monkeypatch.delenv("ECOCOMMIT_LLM_REASONING_EFFORT", raising=False)
+    monkeypatch.delenv("ECOCOMMIT_LLM_JSON_SCHEMA", raising=False)
+    monkeypatch.delenv("ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS", raising=False)
     monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
     monkeypatch.setattr("ecocommit.interpreter.time.sleep", sleeps.append)
 
