@@ -15,22 +15,28 @@ class IntentProvider(ABC):
 
 
 class OpenAICompatibleIntentProvider(IntentProvider):
-    """Minimal provider for an OpenAI-compatible chat endpoint.
+    """OpenAI-compatible provider with local grounding and bounded retry behavior."""
 
-    Credentials are supplied at runtime and never stored in the repository.
-    Checkpoint A requires a real configured model; offline fixtures do not count.
-    Provider-produced source offsets are treated as untrusted metadata: exact source
-    text is grounded locally against the original instruction before schema validation.
-    """
+    COMPACT_SCHEMA = {
+        "instruction": "exact original instruction",
+        "schema_version": "0.1",
+        "clauses": [{
+            "clause_id": "unique string",
+            "clause_type": "PRODUCT|QUANTITY|AMOUNT|COUNTERPARTY|TEMPORAL|CERTIFICATION|REVERSIBILITY|AUTHORIZATION|CONDITION|EXCEPTION|DEPENDENCY",
+            "normalized_value": "string",
+            "source_span": {"text": "exact verbatim substring", "start": 0, "end": 1},
+            "provenance": "EXPLICIT_USER|INCORPORATED_POLICY|AUTHORITATIVE_EVIDENCE|INFERENCE",
+            "materiality": "0..1",
+            "confidence": "0..1",
+            "hardness": "HARD|SOFT",
+            "policy_class": None,
+            "negated": False,
+            "depends_on": [],
+            "exception_to": [],
+        }],
+    }
 
-    def __init__(
-        self,
-        base_url: str,
-        api_key: str,
-        model: str,
-        timeout: float = 30.0,
-        max_attempts: int = 4,
-    ):
+    def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 30.0, max_attempts: int = 4):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
@@ -39,12 +45,7 @@ class OpenAICompatibleIntentProvider(IntentProvider):
 
     @staticmethod
     def _repair_source_spans(payload: dict, instruction: str) -> dict:
-        """Recompute offsets from exact quoted source text rather than trusting the LLM.
-
-        If the quoted text cannot be found exactly (case-sensitive first, then
-        case-insensitive), the span is removed. This fails closed in the fidelity
-        validator instead of accepting fabricated offsets.
-        """
+        """Recompute offsets from exact quoted source text rather than trusting the LLM."""
         for clause in payload.get("clauses", []):
             span = clause.get("source_span")
             if not isinstance(span, dict):
@@ -65,30 +66,31 @@ class OpenAICompatibleIntentProvider(IntentProvider):
             span["start"] = start
             span["end"] = start + len(text)
         payload["instruction"] = instruction
+        payload["schema_version"] = "0.1"
         return payload
 
     def interpret(self, instruction: str) -> EconomicIntentContract:
-        schema = EconomicIntentContract.model_json_schema()
         system = (
-            "You are the ECOCOMMIT economic-intent compiler. Return only one JSON object conforming to the supplied schema. "
-            "Your output is an untrusted candidate contract, not financial authority. Preserve every economically material statement. "
-            "Rules: (1) preserve negations such as do not/never/reject with negated=true on the affected clause; "
-            "(2) represent actual exceptions such as unless/otherwise/only if/provided that using EXCEPTION or exception_to; "
-            "(3) represent actual conditional or ordering relationships such as if/before/after/until using DEPENDENCY or depends_on; "
-            "(4) do not invent dependencies merely because a word contains letters such as 'if'; "
-            "(5) preserve hard versus soft requirements and one-time versus recurring authorization; "
-            "(6) for PRODUCT keep the complete product phrase stated by the user, including stated grade/certification adjectives, while optionally also emitting CERTIFICATION; "
-            "(7) source_span.text MUST be an exact verbatim substring of the instruction; offsets may be approximate because the client recomputes them; "
-            "(8) vague terms such as around, reasonable, reliable, best, enough, usual, normal, suitable, appropriate, or similar open-textured commercial language must not be converted into invented precise constraints; encode them with lower confidence and never expand authority; "
-            "(9) every EXPLICIT_USER clause must be grounded to the exact user phrase; use INFERENCE only for genuinely inferred meaning; "
-            "(10) never invent hard financial authority."
+            "You are the ECOCOMMIT economic-intent compiler. Return only one JSON object matching the supplied compact contract shape. "
+            "Your output is an untrusted candidate, never financial authority. Preserve every economically material statement. "
+            "Use only clauses needed by the instruction. Rules: "
+            "1) preserve do not/never/reject/excluding with negated=true on the affected clause; "
+            "2) encode unless/otherwise/only if/provided that/in which case with EXCEPTION or exception_to; "
+            "3) encode real if/before/after/until dependencies with DEPENDENCY or depends_on; do not infer 'if' from letters inside other words; "
+            "4) preserve HARD versus SOFT and one-time versus recurring authority; "
+            "5) PRODUCT should keep the complete stated product phrase, including grade/certification adjectives; CERTIFICATION may also be emitted; "
+            "6) source_span.text must be an exact verbatim substring; the client recomputes offsets; "
+            "7) vague terms such as around/reasonable/reliable/best/enough/usual/normal/suitable/appropriate must stay vague, receive lower confidence, and never become invented precision; "
+            "8) EXPLICIT_USER requires an exact source span; use INFERENCE only for genuinely inferred meaning; "
+            "9) INFERENCE must never create hard AMOUNT, AUTHORIZATION, or COUNTERPARTY authority; "
+            "10) dependencies and exceptions must reference valid clause_id values."
         )
         payload = {
             "model": self.model,
             "temperature": 0,
             "messages": [
                 {"role": "system", "content": system},
-                {"role": "user", "content": json.dumps({"instruction": instruction, "schema": schema})},
+                {"role": "user", "content": json.dumps({"instruction": instruction, "contract_shape": self.COMPACT_SCHEMA}, separators=(",", ":"))},
             ],
             "response_format": {"type": "json_object"},
         }
@@ -120,14 +122,15 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                 if retryable and attempt < self.max_attempts:
                     retry_after = exc.headers.get("Retry-After") if exc.headers else None
                     try:
-                        delay = float(retry_after) if retry_after is not None else min(8.0, 2.0 ** (attempt - 1))
+                        provider_delay = float(retry_after) if retry_after is not None else 0.0
                     except ValueError:
-                        delay = min(8.0, 2.0 ** (attempt - 1))
+                        provider_delay = 0.0
+                    exponential = min(8.0, 2.0 ** (attempt - 1))
+                    # Bound provider-directed sleeps so a single request cannot stall CI indefinitely.
+                    delay = min(30.0, max(exponential, provider_delay))
                     time.sleep(delay)
                     continue
 
-                raise RuntimeError(
-                    f"provider HTTP {exc.code} after {attempt} attempt(s): {provider_body}"
-                ) from exc
+                raise RuntimeError(f"provider HTTP {exc.code} after {attempt} attempt(s): {provider_body}") from exc
 
         raise RuntimeError("provider request exhausted retry loop")
