@@ -41,7 +41,7 @@ class FidelityValidator:
     """
 
     NEGATION_PATTERNS = (
-        r"\bnot\b", r"\bdon't\b", r"\bdo not\b", r"\bnever\b",
+        r"\bdon't\b", r"\bdo not\b", r"\bnever\b", r"\bnot\s+recurring\b",
         r"\bexcluding\b", r"\bexcept\b", r"\breject\b",
     )
     EXCEPTION_PATTERNS = (
@@ -152,6 +152,9 @@ class FidelityValidator:
         return covered / len(numeric)
 
     def _check_negation(self, contract: EconomicIntentContract, findings: list[ValidationFinding]) -> None:
+        # Do not treat every occurrence of the word "not" as a prohibition. Phrases
+        # such as "not too much" are open-textured comparisons and are handled by
+        # the material-vagueness guard instead. Explicit prohibitions remain strict.
         if self._matches_any(contract.instruction, self.NEGATION_PATTERNS) and not any(c.negated for c in contract.clauses):
             findings.append(ValidationFinding(
                 code="NEGATION_NOT_PRESERVED",
