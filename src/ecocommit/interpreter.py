@@ -57,7 +57,7 @@ class OpenAICompatibleIntentProvider(IntentProvider):
 
     @staticmethod
     def _repair_source_spans(payload: dict, instruction: str) -> dict:
-        """Recompute offsets from exact quoted source text rather than trusting the LLM."""
+        """Repair exact user spans and derive only provenance proven by those spans."""
         for clause in payload.get("clauses", []):
             span = clause.get("source_span")
             if not isinstance(span, dict):
@@ -77,6 +77,11 @@ class OpenAICompatibleIntentProvider(IntentProvider):
             span["text"] = text
             span["start"] = start
             span["end"] = start + len(text)
+            # Exact grounding in the original instruction proves EXPLICIT_USER
+            # provenance when the model omitted only that field. We intentionally
+            # do not manufacture provenance for ungrounded clauses.
+            if not clause.get("provenance"):
+                clause["provenance"] = "EXPLICIT_USER"
         payload["instruction"] = instruction
         payload["schema_version"] = "0.1"
         return payload
