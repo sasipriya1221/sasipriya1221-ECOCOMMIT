@@ -6,7 +6,7 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 | Checkpoint | Status | Acceptance gate |
 |---|---|---|
 | A — M0/M1 specification and contract language | 🟢 PASSED (offline scope) | Frozen specifications and authority invariants retained |
-| A — M2/M3 intent intelligence and abstention | 🟠 RESUMABLE LIVE EVALUATION 14/80 RETAINED; ATTEMPT 6 RUNNING — NOT PASSED | Complete all 80 frozen cases, then satisfy every frozen A threshold together |
+| A — M2/M3 intent intelligence and abstention | 🟠 RESUMABLE LIVE EVALUATION 26/80 RETAINED; ATTEMPT 12 ACTIVE — NOT PASSED | Complete all 80 frozen cases, then satisfy every frozen A threshold together |
 | B — deterministic economic safety | 🟡 B1–B7 LOCALLY VALIDATED — BLOCKED / NOT PASSED | A pass, real A-to-B evidence, durability/security work, and Razorpay Test Mode evidence |
 | C — comparative benchmark | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Frozen real suite/plan, TEL weights and quantitative decision rule, real comparator outputs, validated A+B candidate, and separately gated final held-out run |
 | D — product/API/UI/operations | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Authoritative upstream evidence, real A/B/C integration, provider Test Mode boundary, durable operations, and final security/operational evidence |
@@ -40,19 +40,19 @@ the unchanged 80-case dataset, prompt semantics, and thresholds. Each frozen
 case is one independently resumable job; only failed provider-deferred jobs are
 eligible for a later attempt.
 
-Attempt 5 completed with conclusion `failure` at 2026-09-01T13:06:59Z and
-produced aggregate artifact `checkpoint-a-results`, artifact ID `9801782811`,
-at 2026-09-01T13:06:55Z. Verified archive SHA-256:
-`360afe759656329b88eb4cb6a7356adad4d7690e7899e86ea80d24815f1fe3d7`;
+Attempt 11 completed with conclusion `failure` at 2026-09-01T16:25:08Z and
+produced aggregate artifact `checkpoint-a-results`, artifact ID `9809949908`,
+at 2026-09-01T16:25:05Z. Verified archive SHA-256:
+`bd824382c8b3d4b3ef85976cf72f8792419b38e05d811f4b482633d39fe55424`;
 downloaded JSON SHA-256:
-`89d2669ee971a948a6eb478cd4f1d23bf7977094a975710a7d499563b766ca4a`.
+`2ea8dfdeeebaaabe5731d02f526df662ac1356b13886cfb1d089757aa70960d2`.
 
 Its truthful partial state is:
 
-- retained terminal case rows: 14 / 80;
-- retained semantic passes: 9;
-- retained terminal local contract-validation failures: 5;
-- provider-deferred/missing cases: 66;
+- retained terminal case rows: 26 / 80;
+- retained semantic passes: 19;
+- retained terminal local contract-validation failures: 7;
+- provider-deferred/missing cases: 54;
 - full frozen run: false;
 - Checkpoint A gate: false / not passed.
 
@@ -60,10 +60,18 @@ The aggregate's four gate metrics are not interpreted from this partial set.
 Checkpoint A cannot pass until all 80 immutable cases have terminal rows and the
 complete aggregate satisfies all four frozen thresholds together.
 
-Attempt 6 was started through GitHub's failed-jobs-only rerun operation after
-attempt 5. It targets only the 66 provider-deferred case jobs. Previously
-successful or terminal case jobs were not rescheduled, and their artifacts remain
-immutable inputs to later aggregation.
+Between the verified Attempt 10 and Attempt 11 aggregates, two terminal rows were
+added, no retained row was removed, and no retained row changed. `A010` was a
+semantic pass; `C014` was a terminal local contract-validation failure and is not
+provider-retry eligible. All 51 failed Attempt 11 case logs and the three missing
+case jobs carried from Attempt 10 were verified as `transient_provider_error`
+deferrals with exit code 75, with no different failure class found.
+
+Attempt 12 was started at 2026-09-01T16:29:46Z through GitHub's
+failed-jobs-only rerun operation after that verification. Previously successful
+or terminal case jobs are not eligible for replay, and their artifacts remain
+immutable inputs to later aggregation. Attempt 12 is active; no partial Attempt
+12 result is interpreted as an acceptance metric or pass.
 
 ### Latest completed 80-case run
 
@@ -127,9 +135,14 @@ provider workflows, model configuration, or frozen thresholds.
 
 ## Parallel local implementation evidence
 
-The full deterministic regression suite passes **197/197 tests** in an isolated
-local environment. This is local engineering evidence only; it does not substitute
-for any live or final checkpoint gate.
+At integrated revision `b7d522cb817fb4d8cf796c08043ecd88c02550aa`, the
+combined B/C/D/E-focused suite passes **143/143 tests** and the full deterministic
+suite passes **197/197 tests** in both the working checkout and a new detached
+clean clone installed into a fresh environment from `requirements-dev.lock`.
+Compilation, dependency consistency, JavaScript syntax, all three deterministic D
+scenarios, all eight E structural checks, diff whitespace, and clean-clone status
+also pass. No integration defect was found. This is local engineering evidence
+only; it does not substitute for any live or final checkpoint gate.
 
 ### Checkpoint B — 53 focused tests
 
@@ -270,6 +283,25 @@ Razorpay Test Mode proof, final economic comparison, hosted integrated product,
 screenshots, and video remain deliberately empty. No license has been selected,
 the validation was not independently reproduced on another machine, and the
 local commits have not been pushed or exercised by public CI.
+
+## Release-validation dependency snapshot
+
+- **Checkpoint A:** **NOT PASSED** — the verified aggregate is incomplete at
+  26/80 and failed-jobs-only Attempt 12 is active.
+- **A-to-B admission:** **NOT RUN / BLOCKED** — a complete passing A artifact does
+  not exist.
+- **Checkpoint B:** B1–B7 are **LOCALLY VALIDATED**; B8 is **NOT RUN / BLOCKED**
+  because no Razorpay adapter or verified Test Mode credentials/evidence exist.
+- **Checkpoint C:** the preliminary synthetic harness is **LOCALLY VALIDATED**;
+  the authentic comparator/TEL and final held-out evaluations are **NOT RUN /
+  BLOCKED** because their real prerequisites and inputs do not exist.
+- **Checkpoint D:** deterministic local product flows are **LOCALLY VALIDATED**;
+  authoritative final integration is **NOT RUN / BLOCKED** by A/B/C and provider,
+  durability, hosting, and final security/operations prerequisites.
+- **Checkpoint E:** local readiness checks are **LOCALLY VALIDATED**; final
+  readiness remains **BLOCKED / NOT PASSED**. Public CI on the local commits is
+  **NOT RUN** because nothing was pushed. The owner-selected license, independent
+  reproduction, final metrics, screenshots, and five-minute video remain absent.
 
 ## Payment truth
 
