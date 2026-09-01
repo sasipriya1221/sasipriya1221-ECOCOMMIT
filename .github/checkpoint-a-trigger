@@ -1,2 +1,2 @@
-trigger: 2026-09-01T08:45:00Z
-reason: run frozen 50-clear + 30-ambiguous Checkpoint A after bounded Qwen JSON transport probe passed; 16 resumable 5-case shards; thresholds unchanged
+trigger: 2026-09-01T09:40:00Z
+reason: run frozen 50-clear + 30-ambiguous Checkpoint A as 80 independent fail-fast resumable case jobs after Qwen JSON transport passed; thresholds, prompts, model, dataset and scoring unchanged
