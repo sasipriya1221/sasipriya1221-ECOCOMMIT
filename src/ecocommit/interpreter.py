@@ -28,13 +28,25 @@ class InterpretationResult:
 
 
 class CandidateContractError(RuntimeError):
-    """A provider candidate stayed schema-invalid after bounded correction."""
+    """A provider candidate was terminally schema-invalid."""
 
-    def __init__(self, issues: list[dict[str, str]], provider_trace: list[dict[str, Any]]):
+    def __init__(
+        self,
+        issues: list[dict[str, str]],
+        provider_trace: list[dict[str, Any]],
+        *,
+        correction_attempted: bool,
+    ):
         self.issues = tuple(dict(issue) for issue in issues)
         self.provider_trace = tuple(dict(item) for item in provider_trace)
+        self.correction_attempted = bool(correction_attempted)
         compact = ", ".join(f"{i['location']}:{i['code']}" for i in issues)
-        super().__init__(f"candidate contract invalid after bounded correction ({compact})")
+        phase = (
+            "after bounded correction"
+            if self.correction_attempted
+            else "before correction could be attempted"
+        )
+        super().__init__(f"candidate contract invalid {phase} ({compact})")
 
 
 class _CandidateShapeError(ValueError):
@@ -446,7 +458,11 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                             {"role": "user", "content": self._correction_message(issues)}
                         ]
                         continue
-                    raise CandidateContractError(issues, provider_trace) from exc
+                    raise CandidateContractError(
+                        issues,
+                        provider_trace,
+                        correction_attempted=correction_used,
+                    ) from exc
                 provider_trace.append({**candidate_meta, "outcome": "accepted"})
                 return InterpretationResult(contract=contract, provider_trace=tuple(provider_trace))
             except (

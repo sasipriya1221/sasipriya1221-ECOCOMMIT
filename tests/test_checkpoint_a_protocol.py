@@ -28,7 +28,11 @@ from checkpoint_a_protocol import (
 from checkpoint_a_shard import _load_resume
 from ecocommit.contracts import EconomicClause, EconomicIntentContract, Provenance, SourceSpan
 from ecocommit.checkpoint_a_evidence import CheckpointAEvidenceReceipt, CheckpointAMetrics
-from ecocommit.interpreter import OpenAICompatibleIntentProvider, ProviderRequestError
+from ecocommit.interpreter import (
+    CandidateContractError,
+    OpenAICompatibleIntentProvider,
+    ProviderRequestError,
+)
 from ecocommit.validator import FidelityValidator
 
 
@@ -282,6 +286,45 @@ class _FailingProvider:
             transient=True,
             provider_trace=self.trace,
         )
+
+
+class _SchemaFailingProvider:
+    def __init__(self, correction_attempted):
+        self.correction_attempted = correction_attempted
+
+    def interpret_with_metadata(self, instruction):
+        raise CandidateContractError(
+            [{"location": "clauses.0.confidence", "code": "missing"}],
+            [{
+                "attempt": 2,
+                "outcome": "schema_invalid",
+                "issues": [{"location": "clauses.0.confidence", "code": "missing"}],
+            }],
+            correction_attempted=self.correction_attempted,
+        )
+
+
+@pytest.mark.parametrize(
+    ("correction_attempted", "expected_code"),
+    [
+        (False, "SCHEMA_INVALID_BEFORE_CORRECTION"),
+        (True, "SCHEMA_INVALID_AFTER_CORRECTION"),
+    ],
+)
+def test_terminal_schema_evidence_distinguishes_whether_correction_ran(
+    correction_attempted,
+    expected_code,
+):
+    gold = (_clear_cases() + _ambiguous_cases())[0]
+    row = _evaluate_one(
+        gold,
+        _SchemaFailingProvider(correction_attempted),
+        FidelityValidator(),
+    )
+
+    assert row["error_kind"] == "candidate_contract_error"
+    assert row["error_code"] == expected_code
+    assert row["correction_attempted"] is correction_attempted
 
 
 def test_correction_interruption_is_terminal_not_resumable_provider_deferral():

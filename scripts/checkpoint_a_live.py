@@ -244,7 +244,12 @@ def _evaluate_one(gold: GoldCase, provider: OpenAICompatibleIntentProvider, vali
             "instruction": gold.instruction,
             "passed": False,
             "error_kind": "candidate_contract_error",
-            "error_code": "SCHEMA_INVALID_AFTER_CORRECTION",
+            "error_code": (
+                "SCHEMA_INVALID_AFTER_CORRECTION"
+                if exc.correction_attempted
+                else "SCHEMA_INVALID_BEFORE_CORRECTION"
+            ),
+            "correction_attempted": exc.correction_attempted,
             "error": str(exc),
             "provider_trace": list(exc.provider_trace),
         }

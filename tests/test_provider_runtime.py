@@ -356,6 +356,38 @@ def test_only_one_schema_correction_is_attempted_even_with_larger_retry_budget(m
 
     assert calls == 2
     assert len(caught.value.provider_trace) == 2
+    assert caught.value.correction_attempted is True
+
+
+def test_retry_budget_exhaustion_before_first_schema_failure_is_not_called_corrected(
+    monkeypatch,
+):
+    instruction = "Buy bearings."
+    malformed = _provider_body(instruction)
+    raw = json.loads(malformed["choices"][0]["message"]["content"])
+    del raw["clauses"][0]["confidence"]
+    malformed["choices"][0]["message"]["content"] = json.dumps(raw)
+    calls = 0
+
+    def fake_urlopen(req, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise error.URLError("temporary")
+        return _FakeResponse(malformed)
+
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("ecocommit.interpreter.time.sleep", lambda delay: None)
+
+    with pytest.raises(CandidateContractError) as caught:
+        _provider(instruction, max_attempts=2).interpret(instruction)
+
+    assert calls == 2
+    assert caught.value.correction_attempted is False
+    assert [item["outcome"] for item in caught.value.provider_trace] == [
+        "provider_error",
+        "schema_invalid",
+    ]
 
 
 def test_original_instruction_mismatch_requires_model_correction(monkeypatch):
