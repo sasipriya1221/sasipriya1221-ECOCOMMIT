@@ -210,6 +210,8 @@ def build_report(root: Path = REPOSITORY_ROOT) -> dict[str, object]:
     blockers = list(EVIDENCE_MARKERS)
     if not license_present:
         blockers.append("LICENSE_OWNER_DECISION_REQUIRED")
+    if not remote_url:
+        blockers.append("REMOTE_ORIGIN_NOT_CONFIGURED")
     if not clean:
         blockers.append("WORKING_TREE_NOT_CLEAN")
     if ahead is None:

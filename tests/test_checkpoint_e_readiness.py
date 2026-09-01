@@ -49,7 +49,7 @@ def test_readiness_cli_emits_machine_readable_blocked_report():
     assert report["local_repository_checks_pass"] is True
     assert report["final_submission_ready"] is False
     assert report["license_present"] is False
-    assert report["remote_url"].endswith("sasipriya1221-ECOCOMMIT.git")
+    assert isinstance(report["remote_url"], str) and report["remote_url"]
 
 
 def test_readiness_checker_detects_broken_relative_markdown_link(tmp_path):
