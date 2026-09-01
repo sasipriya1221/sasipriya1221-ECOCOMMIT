@@ -522,12 +522,45 @@ the same 325 tests plus compilation, `pip check`, JavaScript syntax, readiness,
 diff, and clean-status checks. That is same-host clean-environment validation,
 not independent reproduction.
 
-This is local fake-transport and same-host evidence. No genuine Candidate 2 A
-receipt, complete B receipt, final C evidence, provider Checkout/capture/refund,
-webhook delivery, public TLS host, managed key, backup/restore, HA, hosted
-security review, or D receipt was created. SQLite digests are not protection
-against an attacker who can rewrite both a row and its unkeyed digest. The
-bundled WSGI server remains loopback development software.
+These new execution paths have local fake-transport and same-host evidence. The
+separately retained real Razorpay evidence reaches only Test authentication and
+order create/fetch/idempotent replay. No genuine Candidate 2 A receipt, complete
+B receipt, final C evidence, provider Checkout/capture/refund, webhook delivery,
+public TLS host, managed key, backup/restore, HA, hosted security review, or D
+receipt was created. SQLite digests are not protection against an attacker who
+can rewrite both a row and its unkeyed digest. The bundled WSGI server remains
+loopback development software.
+
+## 2026-09-02 — Checkpoint E evidence-report status drift
+
+### What broke
+
+The Checkpoint E report correctly gained a current-tree addendum as later work
+expanded the suite from 197 to 271 and then 325 tests, but its readiness matrix
+still called the 197-test clone current. More seriously, an older explicit
+non-claim said no Razorpay credential, request, Test transaction, or provider
+result had been used. That became false after the retained Test authentication
+and order-boundary runs, even though the report elsewhere described the newer
+evidence. The contradictory text could understate real evidence and make the
+submission record internally unreliable.
+
+### How it was fixed
+
+- Labeled the 197- and 271-test results as historical snapshots rather than
+  current evidence.
+- Bound the current clean-clone row to the validated 325-test parent revision.
+- Replaced the obsolete all-provider non-claim with the exact proven boundary:
+  Test authentication plus one INR 1.00 order create/fetch/idempotent replay.
+- Kept Checkout authorization, capture, refund, webhook, reconciliation, and
+  hosted evidence explicitly unproven.
+- Added a regression that requires both the retained order-boundary statement
+  and the lifecycle non-claim while forbidding the obsolete contradictory text.
+
+### Regression evidence and limitation
+
+The focused Checkpoint E suite passes with the new truth-consistency assertion.
+This corrects repository wording only; it does not create any new provider,
+checkpoint, independent-reproduction, or submission evidence.
 
 ## Log discipline
 

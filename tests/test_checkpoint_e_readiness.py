@@ -150,6 +150,24 @@ def test_submission_evidence_contains_no_final_metric_or_media_claims():
     ) in normalized
 
 
+def test_checkpoint_e_report_distinguishes_order_boundary_from_payment_lifecycle():
+    report = (REPOSITORY_ROOT / "CHECKPOINT_E_VALIDATION.md").read_text(
+        encoding="utf-8"
+    )
+    normalized = " ".join(report.split())
+
+    assert (
+        "retained prior evidence proves Razorpay Test authentication and order "
+        "creation only"
+    ) in normalized
+    assert (
+        "No genuine Checkout authorization, capture, refund, webhook lifecycle, "
+        "or reconciliation result is claimed"
+    ) in normalized
+    assert "No Razorpay credential, request, Test Mode transaction" not in normalized
+    assert "passed 325/325 tests" in normalized
+
+
 def test_digest_bound_checkpoint_c_protocol_files_force_lf_checkout():
     attributes = (REPOSITORY_ROOT / ".gitattributes").read_text(encoding="utf-8")
 

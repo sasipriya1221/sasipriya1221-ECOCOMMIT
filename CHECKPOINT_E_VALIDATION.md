@@ -24,13 +24,13 @@ state, validates a revision-bound independent-reproduction receipt, and supports
 `--mode final`. It still reports false today because the real slots, license,
 push, independent reproduction, and media are absent.
 
-A subsequent fresh-virtual-environment run exposed an unrecorded build bootstrap:
+A historical fresh-virtual-environment run exposed an unrecorded build bootstrap:
 the hash lock installed runtime/test packages but not setuptools/wheel, so the
 local package could not be installed and ten tests correctly failed on missing
 distribution/import provenance. Exact build-backend wheels and hashes are now in
 the lock, and a regression requires both entries. Installing the project from
 that corrected lock in the same no-hardlink clone produced a 270/270 pass before
-the new lock guard was added; the completed tree passes 271/271.
+the new lock guard was added; that historical hardening snapshot passed 271/271.
 
 The current tree subsequently added the authoritative A/B/C[/D] evidence loader,
 single-host SQLite/OS-lock durability, prepared Razorpay Test API/UI boundary,
@@ -61,9 +61,9 @@ No competing provider run was started.
 | pytest | 8.4.2 |
 | Pydantic | 2.13.5 |
 | Node.js syntax check | v24.18.1 |
-| Validated source revision | `5a7aef7be2827c9af49d01ab949a08fb530e6619` |
+| Latest fully validated implementation parent revision | `4a4850a8f5fce4c4033fbed81ba570550714c22e` |
 | Public remote HEAD during validation | `6485d3b24f4967c178cce9b1a9b67cdf0230840c` |
-| Provider/payment mode | No provider call; `SIMULATED_LOCAL` documentation only |
+| Provider/payment mode | Current local run made no provider call; retained prior evidence proves Razorpay Test authentication and order creation only |
 
 ## Local readiness matrix
 
@@ -74,7 +74,7 @@ No competing provider run was started.
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
 | Reproducibility | Exact runtime, test, and build-backend distributions plus published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Published wheels must still be obtained; independent reproduction is absent |
-| Clean clone | Separate clone at the validated SHA passed 197/197 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
+| Clean clone | Separate no-hardlink clone at `4a4850a8f5fce4c4033fbed81ba570550714c22e` passed 325/325 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
 | Engineering log | Real provider, semantic, schema, harness, product, documentation, and portability failures remain recorded with fixes and limitations | **LOCAL PASS** | Log is repository evidence, not external attestation |
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
 | Demo/pitch | Runbook and five-minute outline distinguish local simulation from provider/final evidence | **LOCAL PASS** | No final screenshots or video were produced |
@@ -84,16 +84,13 @@ No competing provider run was started.
 
 ## Tests and checks retained
 
-- Checkpoint E focused regression: **5/5 passed**.
-- Full deterministic regression in the working repository: **197/197 passed**.
-- Full deterministic regression from a separate clean clone: **197/197 passed**.
-- Current Candidate 2/release-hardening regression in the working repository:
-  **271/271 passed**.
-- Current no-hardlink clone with a new virtual environment, hash-locked runtime,
-  test, and build-backend wheels, plus editable local install: **271/271 passed**.
+- Historical initial Checkpoint E snapshot: focused **5/5** and full working/
+  clean-clone **197/197** passed.
+- Historical Candidate 2/release-hardening snapshot: working repository and
+  no-hardlink fresh-environment clone **271/271** passed.
 - Current authoritative-evidence/durability/provider-Test integration tree:
   **325/325 passed** in the working repository and in a separate no-hardlink
-  clone at `6f72d9bf2b7dcdc0abfc8aff282cdbbc989bf43e` with a new hash-locked
+  clone at `4a4850a8f5fce4c4033fbed81ba570550714c22e` with a new hash-locked
   virtual environment.
 - Current Checkpoint E-focused readiness regression: **9/9 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
@@ -159,11 +156,15 @@ discarded or described as a passing run.
 ## Explicit non-claims
 
 - No final ECOCOMMIT-versus-baseline metrics were generated.
-- No Razorpay credential, request, Test Mode transaction, webhook, or provider
-  result was used or fabricated.
+- Retained real Razorpay Test evidence proves credential authentication and one
+  INR 1.00 order create/fetch/idempotent-replay boundary. Credential values and
+  provider response bodies were not retained or fabricated.
+- No genuine Checkout authorization, capture, refund, webhook lifecycle, or
+  reconciliation result is claimed.
 - No final screenshot or demo video was produced.
-- No hosted end-to-end product evidence exists; the provider-Test route and
-  webhook receiver have fake-transport/local validation only.
+- No hosted end-to-end product evidence exists; beyond the retained order
+  boundary, the provider-Test route and webhook receiver have fake-transport/
+  local validation only.
 - No independent machine/operator reproduction was performed.
 - No license was selected on the owner's behalf.
 - No local commit was pushed.
