@@ -64,8 +64,8 @@ production-readiness claim.
 | Concurrent local audit writers | Shared resolved-path in-process lock | 80-event concurrent test | Cross-process/distributed lock absent |
 | Non-finite observability data | Finite value and aggregate-overflow rejection | D metric regressions | External telemetry pipeline absent |
 | HTTP parser abuse | 64 KiB bound, JSON object/media checks, WSGI length/stream checks | D negative tests | Production server/rate limits/auth absent |
-| Mode confusion | Explicit simulation labels and permanently disabled real-money field | API/UI/browser checks | Real Test Mode proof absent |
-| Provider ambiguity | No real provider adapter; default deny | Real endpoint tests | Test Mode timeout/webhook reconciliation unbuilt |
+| Mode confusion | Explicit simulation/Test labels, non-test credential refusal, and permanently disabled real-money field | API/UI/browser checks plus redacted Test authentication/order evidence | Authorization/capture evidence absent; D route remains simulation-only |
+| Provider ambiguity | Exact provider bindings, ECOCOMMIT idempotency, receipt recovery, and capture re-fetch | Adapter adversarial tests plus live order replay | Genuine authorization, asynchronous refund, and webhook reconciliation evidence absent |
 | Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation | C artifact tests | Real preregistration/final run absent |
 | Fabricated submission media | Blocked evidence markers and promotion rule | E readiness checks | Human review/final evidence still required |
 | Secret committed | CI secret references, ignored artifacts, current-tree/history pattern scan | E local scan | Dedicated secret-scanner service/history audit not retained |
@@ -74,10 +74,13 @@ production-readiness claim.
 ## Key and credential boundary
 
 Local certificate tests and D synthetic workflows use named test keys embedded in
-test/local code. They are not provider credentials or production authority. A
-future provider/signing boundary must use an approved secret store or CI secret,
-prove Test Mode before sending requests, use explicit key IDs/rotation, restrict
-access, and keep secrets out of logs, artifacts, screenshots, and command lines.
+test/local code. They are not provider credentials or production authority. The
+Razorpay Test adapter reads API credentials only from environment injection; its
+Actions workflows use repository secrets, refuse non-test key IDs, and retain no
+credential values or provider response bodies. This proves the scoped Test
+boundary, not production-grade rotation/access control. A production signing or
+provider boundary still requires managed secret storage, explicit key IDs and
+rotation, least-privilege access, and retained access/audit evidence.
 
 The repository references secret names in GitHub workflows; secret values are not
 part of the tracked tree. A pattern scan is helpful but cannot prove that all
@@ -93,7 +96,9 @@ access controls, clock discipline, backup, and recovery evidence.
 
 ## Public-repository risks
 
-- The remote is public; local unpushed validation commits are not public evidence.
+- The remote is public; only the isolated B8 validation snapshot was pushed for
+  provider evidence. The integrated local main revision remains unpushed and is
+  not public evidence.
 - No license has been selected, so open-source reuse rights are not asserted.
 - Generated artifacts, audit logs, virtual environments, and test temporary
   directories are ignored and must be reviewed before intentional retention.
@@ -108,8 +113,8 @@ Before D/E or any payment integration passes:
 
 1. complete a formal API/authentication/authorization and abuse-rate review;
 2. implement authoritative status/evidence loading and durable state/audit stores;
-3. implement and adversarially test Razorpay Test Mode, webhooks, ambiguous
-   outcomes, idempotency, and reconciliation;
+3. complete a genuine Razorpay Test Checkout authorization, manual capture,
+   refund, webhook delivery, duplicate-event handling, and reconciliation run;
 4. replace local HMAC signing with an appropriate managed-key boundary;
 5. add dependency hashes/provenance and a dedicated secret/dependency scan;
 6. perform accessibility, cross-browser, hosted operational, backup/recovery, and

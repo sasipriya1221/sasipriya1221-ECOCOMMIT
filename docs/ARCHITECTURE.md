@@ -49,7 +49,7 @@ Natural-language procurement mandate
                   |
        final verification + idempotency
                   v
-    [SIMULATED_LOCAL now | Test Mode adapter later]
+    [SIMULATED_LOCAL | guarded RAZORPAY_TEST_MODE]
 
 Audit and observability describe the D API boundary and outcomes.
 They never grant authority.
@@ -67,7 +67,7 @@ They never grant authority.
 | Exposure policy | Compute a cap from trusted configuration and verified evidence | Accept a model- or evidence-supplied monetary ceiling |
 | Commitment engine | Enforce explicit legal state transitions | Skip stages or silently move backward |
 | Certificate signer/verifier | Bind policy, evidence, contract, merchant, amount, currency, transaction, time, and nonce | Authorize a changed/replayed transaction |
-| Payment adapter | Simulate locally; later call an explicitly verified Test Mode provider | Present simulation as provider evidence or enable live money by default |
+| Payment adapter | Simulate locally or call the explicitly verified Razorpay Test Mode boundary | Present simulation/order-only evidence as a completed payment or enable live money |
 | Reconciliation/compensation | Detect divergence and record cleanup/reversal | Erase the original attempt |
 | D API/UI | Report gate truth, run fixed synthetic scenarios, deny real commits | Infer acceptance from health or caller claims |
 | Audit/observability | Record D boundary requests, denials, workflow summaries, correlations, and metrics | Change decisions or suppress blockers |
@@ -89,11 +89,16 @@ This path remains incomplete and has not passed the four frozen live thresholds.
 The B integration boundary accepts a complete current contract plus an explicit
 Checkpoint A gate report. It recomputes fidelity, maps obligations, evaluates
 registered evidence and exposure, and may issue a transaction-bound certificate.
-The commitment engine and `SIMULATED_LOCAL` adapter then enforce reserve/capture
-ordering, idempotency, freshness, reconciliation, and compensation.
+The commitment engine and explicit `SIMULATED_LOCAL` adapter enforce the local
+reserve/capture sequence. A separate `RAZORPAY_TEST_MODE` adapter creates and
+validates bound orders, binds a genuine Checkout-authorized payment only after
+HMAC and provider checks, and preserves the same certificate/freshness gate before
+capture. It is not wired into the D endpoint.
 
 A synthetic passed-A fixture proves interface compatibility only. The actual A
-gate releases no B authority until it passes.
+gate releases no B authority until it passes. Live evidence currently stops at
+Test authentication and order creation/fetch/idempotency; no provider payment
+lifecycle was executed.
 
 ### Preliminary C path
 
@@ -175,12 +180,15 @@ blockers.
 | Mode | External provider | Real money | Current availability |
 |---|---:|---:|---|
 | `SIMULATED` / `SIMULATED_LOCAL` | No | No | Implemented for local tests/demo |
-| `REAL_PROVIDER_TEST` + verified `RAZORPAY_TEST_MODE` | Test provider only | No real money | Model exists; adapter/evidence absent |
+| `REAL_PROVIDER_TEST` + verified `RAZORPAY_TEST_MODE` | Test provider only | No real money | Adapter implemented; authentication and order subgates have retained live evidence; payment lifecycle blocked |
 | Live/production | Disabled and out of current scope | Not allowed | No code path |
 
-A configuration string or credential presence is not provider-mode proof. A
-future Test Mode adapter must verify context, retain provider IDs and webhook/
-reconciliation evidence, and deny ambiguous outcomes.
+A configuration string or credential presence is not provider-mode proof. The
+Test Mode adapter refuses non-test key IDs and validates provider entities, but
+only the redacted authentication and order-level subgates have run. A genuine
+Checkout authorization plus capture, webhook/reconciliation, and compensation
+evidence are still required. Ambiguous order/capture outcomes recover only from
+an exact provider-side binding match.
 
 ## Repository map
 
@@ -188,7 +196,7 @@ reconciliation evidence, and deny ambiguous outcomes.
 |---|---|
 | A contracts/interpretation | `contracts.py`, `interpreter.py`, `validator.py`, `evaluation.py` |
 | A-to-B admission | `checkpoint_b_integration.py` |
-| B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `payments.py`, `reconciliation.py` |
+| B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `payments.py`, `razorpay.py`, `reconciliation.py` |
 | C benchmark | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py` |
 | D product/operations | `checkpoint_status.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, `checkpoint_d_workflow.py`, `demo_server.py`, `ui/` |
 | E evidence discipline | `REPRODUCIBILITY.md`, `ENGINEERING_LOG.md`, `SUBMISSION_EVIDENCE.md`, `DEMO_RUNBOOK.md`, `PITCH_OUTLINE.md`, readiness checker |

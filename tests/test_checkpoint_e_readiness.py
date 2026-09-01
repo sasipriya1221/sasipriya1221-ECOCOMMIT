@@ -76,7 +76,10 @@ def test_submission_evidence_contains_no_final_metric_or_media_claims():
     assert "No final ECOCOMMIT-versus-baseline numbers are available" in normalized
     assert "No final screenshot is retained" in normalized
     assert "No final video is recorded" in normalized
-    assert "No Razorpay request was made" in normalized
+    assert (
+        "no payment authorization, capture, refund, webhook delivery, "
+        "reconciliation, or settlement was executed"
+    ) in normalized
 
 
 def test_digest_bound_checkpoint_c_protocol_files_force_lf_checkout():

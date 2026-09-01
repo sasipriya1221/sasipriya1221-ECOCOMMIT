@@ -1,8 +1,9 @@
 # Five-Minute Pitch Outline
 
-This outline is ready for rehearsal, but its final metric, Razorpay, screenshot,
-and video evidence slots remain blocked. Bracketed evidence cues may be filled
-only from the retained final bundle described in `SUBMISSION_EVIDENCE.md`.
+This outline is ready for rehearsal, but its final metric, complete Razorpay
+payment lifecycle, screenshot, and video evidence slots remain blocked. Bracketed
+evidence cues may be filled only from the retained final bundle described in
+`SUBMISSION_EVIDENCE.md`.
 
 ## 0:00–0:35 — The problem
 
@@ -54,11 +55,12 @@ simulation banner visible. Do not imply Razorpay execution.
 Explain the checkpoint discipline:
 
 - A has frozen live semantic thresholds and cannot pass on a partial run;
-- B, C, and D have locally passing adversarial suites but remain blocked on their
-  real dependencies;
+- B has two real Razorpay authentication/order subgates, but its retained result
+  explicitly says B8 is false because Checkout authorization and capture did not
+  run; B, C, and D remain blocked on their real dependencies;
 - C retains error rows and forbids preliminary artifacts from becoming final; and
-- E keeps absent screenshots, video, provider results, and final metrics visibly
-  blocked.
+- E keeps absent screenshots, video, complete provider-lifecycle results, and
+  final metrics visibly blocked.
 
 Final evidence cue: **[BLOCKED — insert only the retained A/B/C/D/E summary after
 all gates pass.]**
@@ -84,8 +86,8 @@ Close on the product boundary:
 > until the final verified boundary.
 
 Final results cue: **[BLOCKED — do not insert benchmark percentages, TEL savings,
-Razorpay success, screenshots, or a video URL until the final evidence manifest
-is complete.]**
+Razorpay payment success, screenshots, or a video URL until the final evidence
+manifest is complete.]**
 
 ## Delivery checklist
 

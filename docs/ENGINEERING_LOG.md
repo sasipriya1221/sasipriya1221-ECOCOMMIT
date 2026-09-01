@@ -192,6 +192,45 @@ result. The real commit endpoint still always denies; authoritative gate loading
 provider Test Mode, durability, hosted operations, and final integration remain
 blocked.
 
+## 2026-09-01 — Checkpoint B8 Razorpay Test Mode boundary
+
+### What broke or remained unknown
+
+The repository had only `SIMULATED_LOCAL`: no credential preflight, no provider
+adapter, no order/payment binding, and no retained Razorpay evidence. Credential
+presence alone could not prove valid Test Mode authentication. Razorpay's
+server-side Payments API also cannot collect a payment, so an order-only script
+could not truthfully manufacture authorization or capture evidence. Razorpay's
+default auto-capture behavior conflicts with ECOCOMMIT's delayed capture gate.
+
+### How it was fixed
+
+- Added a read-only, redacted Actions credential preflight that refuses non-test
+  key IDs and never prints or retains secret values or provider responses.
+- Added an environment-injected Test Mode adapter with a fixed provider origin,
+  safe error metadata, exact transaction/order/payment/refund binding, Checkout
+  and webhook HMAC verification, ECOCOMMIT-boundary idempotency, ambiguous-order
+  recovery, capture-gate preservation, and explicit unsupported-void behavior.
+- Kept `SIMULATED_LOCAL` as a separate explicit backend.
+- Added manual-only order validation requiring a successful preflight run ID and
+  retaining only redacted identifiers, bindings, call paths, and non-claims.
+- Added 27 focused adapter/workflow tests covering authentication-header safety,
+  binding mutations, signature failures, idempotency collisions/replay, provider
+  failures, ambiguous capture, refund states, webhook HMAC, and secret redaction.
+
+### Retained evidence and limitation
+
+Actions preflights `33534255136` and `33535533432` authenticated successfully.
+Run `33535533557` created and fetched one INR 1.00 Test order with exact binding
+and one create call after identical replay; its redacted artifact is retained as
+ID `9811456771` with GitHub SHA-256
+`6d8cdcabbc78093f2638c8fbefd2e7bcd4d566d1eb807cd6fa0abf709d700f4d`.
+The validator retained `checkpoint_b8_passed=false`. Exact blocker:
+`RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`. No payment authorization, capture,
+refund, webhook delivery, reconciliation, or settlement ran; manual capture and
+webhook configuration remain external prerequisites. Checkpoint A also remains
+incomplete, so Checkpoint B is not passed.
+
 ## Validation-environment incident
 
 One Checkpoint B full-suite attempt failed while pytest created a Windows

@@ -10,9 +10,12 @@ procurement. It turns natural-language mandates into provenance-preserving
 economic contracts, abstains on unresolved material ambiguity, and places a
 deterministic safety boundary between model output and payment commitment.
 
-Current payment behavior is **`SIMULATED_LOCAL` only**. There is no Razorpay
-adapter, credential use, Test Mode result, or live-money path. Local validation
-does not mean a checkpoint passed.
+Payment behavior is explicit: **`SIMULATED_LOCAL`** remains the local/test
+backend, and a separate **`RAZORPAY_TEST_MODE`** adapter now sits behind the same
+safety boundary. Redacted Actions evidence validates Test authentication and one
+bound Test order, but no payment authorization, capture, refund, webhook, or
+settlement ran. B8 and Checkpoint B therefore remain blocked/not passed; there is
+no live-money path.
 
 ## Why ECOCOMMIT
 
@@ -52,7 +55,7 @@ Natural-language mandate
 [Progressive commitment + bound certificate]
         |
         v
-[SIMULATED_LOCAL today | verified Test Mode adapter later]
+[SIMULATED_LOCAL | RAZORPAY_TEST_MODE behind the same boundary]
 ```
 
 The full component map, trust boundaries, runtime modes, and acceptance
@@ -153,7 +156,8 @@ green by omission.
 The final evidence slots are deliberately empty and blocked:
 
 - complete Checkpoint A final metrics — **BLOCKED**;
-- Razorpay Test Mode execution — **BLOCKED**;
+- complete Razorpay Test Mode payment lifecycle — **BLOCKED** (authentication
+  and order-level evidence retained; authorization/capture not run);
 - final ECOCOMMIT-versus-baseline comparison — **BLOCKED**;
 - integrated hosted product evidence — **BLOCKED**;
 - final screenshots — **BLOCKED**; and
@@ -179,7 +183,9 @@ captures, mocked provider output, or preliminary benchmark numbers.
 - The actual Checkpoint A gate has not passed.
 - B/C/D local success does not clear their dependency or final integration gates.
 - `SIMULATED_LOCAL` is in-memory and moves no real money.
-- There is no Razorpay adapter or retained provider Test Mode evidence.
+- The Razorpay adapter is Test Mode only. Retained evidence covers authentication
+  and order binding/idempotency, not payment authorization, capture, refund,
+  webhook delivery, reconciliation, or settlement.
 - Registries, audit, idempotency, and payment state are not production-durable.
 - Local HMAC keys are test boundaries, not KMS or production key management.
 - The checked-in C plan/suite is synthetic and preliminary, not a final economic

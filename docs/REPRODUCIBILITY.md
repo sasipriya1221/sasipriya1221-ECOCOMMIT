@@ -138,19 +138,36 @@ the approved CI secret boundary.
 
 ## Razorpay Test Mode evidence
 
-Razorpay integration is not implemented. When the dedicated adapter and approved
-test credentials exist:
+The repository includes a dedicated `RAZORPAY_TEST_MODE` adapter and two
+manual-only workflows. Keep the API key ID and secret exclusively in GitHub
+Actions secrets named `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`; never place
+either value in a workflow input, shell command, artifact, or report.
 
-1. prove the account/context is Test Mode before sending a request;
-2. use unique transaction and idempotency identifiers;
-3. retain redacted request digests, provider IDs, timestamps, webhooks, and
-   reconciliation results;
-4. exercise authorize/reserve/capture/release/refund, duplicate delivery,
-   signature failure, timeout/ambiguous outcome, and compensation;
-5. retain application denials and provider/transport failures; and
-6. checksum the complete evidence bundle.
+1. Dispatch **Razorpay Test Credential Preflight**. It refuses a non-test key ID,
+   performs only a read-only order-list request, discards the provider response,
+   and publishes safe status fields. Record the successful run ID.
+2. Inspect the preflight summary before continuing. It must say Test mode,
+   authentication verified, and response discarded; it must contain no key value.
+3. Dispatch **Razorpay Test Lifecycle Validation** with confirmation
+   `RUN_TEST_MODE_ORDER` and the numeric successful preflight run ID. This creates
+   one INR 1.00 Test Mode order, revalidates its transaction notes/amount/currency,
+   replays the same ECOCOMMIT idempotency key, fetches the order's payments, and
+   retains a redacted JSON artifact.
+4. Treat `ORDER_API_VALIDATED_PAYMENT_LIFECYCLE_BLOCKED` and
+   `checkpoint_b8_passed=false` literally. A successful workflow conclusion only
+   means the validator retained this truthful partial result.
+5. Before testing payment authorization/capture, set the Razorpay account to
+   manual capture. Complete a genuine Test Checkout and pass its order ID,
+   payment ID, and signature into the adapter's authorization-binding boundary.
+6. Configure a separate `RAZORPAY_WEBHOOK_SECRET` and endpoint before claiming
+   webhook delivery/reconciliation. Retain signed raw-event evidence, duplicate
+   delivery behavior, asynchronous refund state, and reconciliation results.
+7. Retain application denials and provider/transport failures and checksum the
+   complete redacted evidence bundle.
 
-No simulation or mocked HTTP response counts as this evidence.
+The server-side Payments API cannot collect a payment, so step 5 requires an
+interactive Test Checkout. No simulation, mocked HTTP response, credential
+presence, or order-only run counts as complete B8 evidence.
 
 ## Clean-environment verification protocol
 

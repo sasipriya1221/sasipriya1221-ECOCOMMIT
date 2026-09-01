@@ -10,7 +10,9 @@ ECOCOMMIT evidence.
 PASSED.**
 
 No final ECOCOMMIT-versus-baseline numbers are available. No final screenshot is
-retained. No final video is recorded. No Razorpay request was made.
+retained. No final video is recorded. Razorpay Test Mode authentication and one
+order-level validation ran, but no payment authorization, capture, refund,
+webhook delivery, reconciliation, or settlement was executed.
 
 ## Evidence slots
 
@@ -32,12 +34,20 @@ retained. No final video is recorded. No Razorpay request was made.
 
 - Status: **BLOCKED**
 - Required: accepted A evidence, the real A-to-B path, a dedicated Razorpay Test
-  Mode adapter, verified test context, retained provider identifiers, webhook and
-  reconciliation results, idempotency, and compensation evidence.
+  Mode adapter, verified test context, retained provider identifiers, genuine
+  authorization/capture plus webhook and reconciliation results, idempotency,
+  and compensation evidence.
 - Do not insert: `SIMULATED_LOCAL`, mocked provider replies, credential presence,
   or a certificate-only unit test.
-- Provider evidence reference: **BLOCKED — not available**
-- Redacted provider artifact SHA-256: **BLOCKED — not available**
+- Partial provider evidence: Actions preflights `33534255136` and `33535533432`;
+  order-boundary run `33535533557` at isolated snapshot `596001c`.
+- Partial redacted artifact: `checkpoint-b8-razorpay-test-evidence-33535533557`,
+  artifact ID `9811456771`, GitHub artifact SHA-256
+  `6d8cdcabbc78093f2638c8fbefd2e7bcd4d566d1eb807cd6fa0abf709d700f4d`.
+- Exact blocker: `RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`; the Payments API
+  cannot collect a payment, and no genuine Test Checkout callback/signature was
+  available. Manual capture and webhook configuration also remain unverified.
+- Promotion state: **BLOCKED — partial order evidence is not final B8 evidence**.
 
 ### Checkpoint C final economic comparison
 
@@ -93,12 +103,12 @@ fields. Empty fields stay blocked; they are never filled with examples.
 | `source_revision` | Immutable full Git commit SHA | Await final integrated commit |
 | `working_tree_clean` | `true`, measured before each retained run | Await final run |
 | `checkpoint_statuses` | A–E state plus evidence references | A–E not all passed |
-| `execution_mode` | Exact mode; Test Mode distinguished from simulation | `SIMULATED_LOCAL` development only |
+| `execution_mode` | Exact mode; Test Mode distinguished from simulation | `SIMULATED_LOCAL` development plus partial `RAZORPAY_TEST_MODE` order evidence; full lifecycle blocked |
 | `environment` | OS, Python, resolved dependencies, lock digest | Local manifest exists; independent reproduction pending |
 | `commands` | Exact invocations with secrets removed | Framework available |
 | `raw_artifacts` | Complete outputs, including failures/error rows | Final artifacts blocked |
 | `artifact_sha256` | Digest for every retained file | Final artifacts blocked |
-| `provider_evidence` | Redacted provider IDs, events, reconciliation | Blocked |
+| `provider_evidence` | Redacted provider IDs, events, reconciliation | Order-level artifact retained; authorization/capture/webhook/reconciliation blocked |
 | `metric_definitions` | Frozen definitions/weights/decision rules | C final freeze blocked |
 | `screenshots` | Final integrated UI captures and provenance | Blocked |
 | `video` | Final demo URL and source revision | Blocked |

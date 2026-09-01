@@ -1,13 +1,15 @@
 # ECOCOMMIT Checkpoint B Validation Report
 
 - Validation date: 2026-09-01
-- Implementation under test: `6877a817f458f1ea7294566931fcf89b9a8eb4cc`
+- Local implementation under test: `3d4a14300c66d6ed775321048ab20af9182ebc68`
+- Live Razorpay validation snapshot: `596001c` on the isolated validation branch
 - Overall verdict: **BLOCKED — NOT PASSED**
-- Payment mode: **`SIMULATED_LOCAL` only**
+- Payment backends: **`SIMULATED_LOCAL`** and **`RAZORPAY_TEST_MODE`**
 
-No acceptance threshold was changed. No Razorpay API request was made, no
-Razorpay outcome is claimed, and no local simulation is counted as provider
-evidence.
+No acceptance threshold was changed. Razorpay Test Mode authentication and the
+order-level boundary were exercised with credentials injected only by GitHub
+Actions. No payment was authorized, captured, refunded, or settled, and no such
+outcome is claimed. Test Mode moved no real money.
 
 ## Acceptance rule
 
@@ -20,90 +22,133 @@ Checkpoint B may pass only when all of the following are true together:
    commitment, TOCTOU protection, certificates, idempotency, reconciliation, and
    compensation pass their adversarial tests;
 4. required state and idempotency records are durable enough for the claimed
-   execution environment, and signing-key handling satisfies the security
-   boundary being claimed;
-5. Razorpay Test Mode is exercised with a dedicated adapter, verified test
-   credentials, provider/webhook reconciliation, and retained end-to-end evidence.
+   execution environment, and signing-key handling satisfies the claimed
+   security boundary; and
+5. Razorpay Test Mode is exercised through the dedicated adapter with provider
+   identifiers plus authorization, capture, webhook/reconciliation, failure, and
+   compensation evidence as applicable.
 
-Unit tests or simulated payment results alone cannot satisfy this rule.
+Unit tests, credential presence, order creation, or simulated payment results
+alone cannot satisfy this rule.
 
-## Validation evidence
+## Live Razorpay Test Mode evidence
+
+| Validation | Evidence | Result |
+|---|---|---:|
+| Redacted credential preflight | GitHub Actions run `33534255136` | **PASS** — read-only `GET /v1/orders?count=1` returned HTTP 200 in Test Mode; secret values, headers, and provider body were not printed or retained |
+| Independent repeat preflight at the adapter snapshot | GitHub Actions run `33535533432` | **PASS** — authenticated Test Mode probe repeated successfully |
+| Order-boundary lifecycle validator | GitHub Actions run `33535533557`, job `validate-order-api-boundary-without-capture-claim` | **PASS FOR THE ORDER SUBGATE ONLY** — one INR 1.00 Test Mode order was created, fetched, and rebound to the exact transaction digest, amount, currency, contract hash, and merchant digest |
+| ECOCOMMIT idempotency boundary | Same lifecycle run | **PASS FOR IDENTICAL REPLAY** — the replay returned the same provider order and the recorder observed exactly one provider `POST /orders` |
+| Newly-created order payment listing | Same lifecycle run | **PASS** — the bound order was revalidated before its payments were fetched; zero payments were attached |
+| Redacted evidence artifact | Artifact `checkpoint-b8-razorpay-test-evidence-33535533557`, ID `9811456771` | **RETAINED** — 1,408-byte archive; GitHub artifact SHA-256 `6d8cdcabbc78093f2638c8fbefd2e7bcd4d566d1eb807cd6fa0abf709d700f4d` |
+| Payment authorization/reservation | No genuine Checkout callback | **NOT RUN / EXTERNALLY BLOCKED** |
+| Capture, refund, webhook, reconciliation, settlement | No authorized payment or separately configured webhook endpoint/secret | **NOT RUN / BLOCKED** |
+
+The lifecycle workflow's successful conclusion means its truthful validation
+script completed and retained the blocked result; it does **not** mean B8 or
+Checkpoint B passed. Its evidence field `checkpoint_b8_passed` remained `false`.
+
+Exact external blocker:
+`RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`. Razorpay's
+[server-side Payments API](https://razorpay.com/docs/api/payments/) can fetch and
+capture a payment but cannot collect one. Continuing requires a successful
+[Test Checkout callback](https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/)
+containing the bound `razorpay_order_id`, `razorpay_payment_id`, and
+`razorpay_signature`. ECOCOMMIT then verifies the signature and provider entities
+before representing the authorization as `RESERVED`. The account must also use
+[manual capture](https://razorpay.com/docs/payments/payments/capture-settings/);
+the default auto-capture setting would bypass ECOCOMMIT's delayed capture gate
+and is rejected by the adapter.
+
+The isolated live snapshot was used so the active frozen Checkpoint A retry and
+its main-branch inputs were not changed. The local implementation commit adds
+follow-up hardening: permanent manual-only preflight/lifecycle workflows, a
+required numeric preflight-run reference, current action majors, protected HTTP
+authentication headers, and coherent provider-result validation. Those follow-up
+changes have local test evidence but were not relabeled as part of the earlier
+live run.
+
+## Local deterministic validation
 
 | Validation | Result |
 |---|---:|
-| Focused Checkpoint B suite | **53 / 53 passed** |
-| Full deterministic regression suite | **147 / 147 passed** |
-| Repeated concurrency adversarial runs | **20 / 20 runs passed** (2 race tests per run) |
-| Source/test bytecode compilation | **Passed** |
+| Focused Checkpoint B suite | **80 / 80 passed** |
+| Focused Razorpay adapter/workflow suite | **27 / 27 passed** |
+| Full deterministic regression suite | **224 / 224 passed** |
+| Source/script/test bytecode compilation | **Passed** |
 | Installed dependency consistency | **Passed** |
-| Razorpay credential variables | **Not present** |
-| Razorpay adapter/API calls | **Not implemented / not run** |
+| Current-tree credential-value marker scan | **Passed** |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 
-Commands used for the final deterministic evidence:
+Commands used for the current deterministic evidence:
 
 ```powershell
-.venv\Scripts\python -m compileall -q src tests
-.venv\Scripts\python -m pytest -q -p no:cacheprovider --basetemp=.test-tmp-b-final tests/test_checkpoint_b_a_integration.py tests/test_checkpoint_b_policy_exposure.py tests/test_checkpoint_b_evidence_certificates.py tests/test_checkpoint_b_commitment_idempotency.py tests/test_checkpoint_b_compensation_reconciliation.py
-.venv\Scripts\python -m pytest -q -p no:cacheprovider --basetemp=.test-tmp-full-final
-.venv\Scripts\python -m pip check
+.venv\Scripts\python.exe -m compileall -q src scripts tests
+.venv\Scripts\python.exe -m pytest -o addopts="" -q -p no:cacheprovider --basetemp=.test-tmp-b8-focused-3d4a143 tests -k checkpoint_b
+.venv\Scripts\python.exe -m pytest -o addopts="" -q -p no:cacheprovider --basetemp=.test-tmp-b8-full-3d4a143
+.venv\Scripts\python.exe -m pip check
 ```
 
-The first unrestricted full-suite attempt encountered a Windows temporary-folder
-permission error in pytest setup. It was rerun with an isolated workspace-local
-temporary directory and passed 147/147; the setup error is not counted as a
-product failure or as passing evidence.
+The Razorpay tests use deterministic fake transports to exercise binding and
+failure branches. They never count as live provider evidence.
 
 ## Gate results
 
-| Gate | Pass criterion | Evidence and result | Status |
-|---|---|---|---|
-| A prerequisite | One real full A run passes every frozen A threshold together | Latest real full gate, GitHub Actions run `33477953132`, failed enforcement | **BLOCKED** |
-| B1 — Policy Class Mapper | Every A clause type maps deterministically to exactly one closed policy class; non-validated contracts release no obligations | Exhaustive 11/11 class matrix; mapper now consumes the current `FidelityReport`; the integration boundary recomputes A validation | **LOCAL PASS** |
-| A-to-B admission | A failure, clarification, rejection, or contract-hash substitution cannot produce B authority | Actual failed-A fixture releases no obligations/certificate; synthetic passed-A fixture proves interface compatibility only and is explicitly not A evidence | **LOCAL PASS; REAL RUN BLOCKED BY A** |
-| B2 — Evidence Registry | Only registered issuer/kind/subject identities, monotonic versions/times, unrevoked current records, and fresh exact claims can be used | Authority takeover, timestamp rollback, conflicting version, mutation, revocation, stale/future, wrong subject, and negative-claim tests pass | **LOCAL PASS** |
-| B3 — Evidence-to-Exposure Policy | Only trusted policy caps plus exact authoritative claim predicates determine exposure; payload/model values cannot raise the cap | Negative authorization and injected `max_exposure_minor` fail closed; wrong authority, subject, currency, expiry, and over-cap requests deny | **LOCAL PASS** |
-| B4 — Progressive Commitment | Capture cannot skip `PROPOSED -> AUTHORIZED -> RESERVED -> CAPTURE_ALLOWED`; state history, certificate, and reservation reference must match | Illegal history/state jumps, irreversible reserve, wrong stage, wrong hold, cancellation-after-capture, and stranded-failure tests pass | **LOCAL PASS** |
-| B5 — Freshness / TOCTOU | Transaction and evidence mutations deny; a concurrent evidence update cannot land between final verification and local capture | All transaction fields, evidence digest/version/revocation/expiry, contract hash, and atomic capture-boundary race tests pass; race tests repeated 20 times | **LOCAL PASS** |
-| B6 — Commit Certificates | A denied/forged decision or any signed-payload mutation cannot authorize capture; certificate is transaction/evidence/policy/time/nonce bound | Trusted-policy recomputation, HMAC/id/nonce/signature tampering, expiry, key ID, and full transaction-binding tests pass | **LOCAL PASS — HMAC TEST BOUNDARY ONLY** |
-| B7 — Idempotency / Compensation | Identical retries do not duplicate side effects; collisions deny; failed and ambiguous outcomes remain recoverable and auditable | Concurrent execute-once, full-request collision, retry, refund, duplicate-refund denial, capture-journal recovery, existing-refund recovery, and reconciliation tests pass | **LOCAL PASS — PROCESS-LOCAL ONLY** |
-| B8 — Razorpay Test Mode | Real Razorpay Test Mode adapter executes permitted transitions and rejects forbidden ones with retained provider/webhook evidence | No credentials are available and no adapter exists | **NOT RUN / BLOCKED** |
+| Gate | Evidence and result | Status |
+|---|---|---:|
+| A prerequisite | Current resumable run `33493409547` remains incomplete; the retained aggregate has 26/80 rows and no complete passing A artifact exists | **BLOCKED** |
+| B1 — Policy Class Mapper | Exhaustive mapping and fail-closed A admission tests pass | **LOCAL PASS** |
+| B2 — Evidence Registry | Authority, identity, version, time, freshness, revocation, subject, and exact-claim adversarial tests pass | **LOCAL PASS** |
+| B3 — Evidence-to-Exposure Policy | Only trusted caps and authoritative exact claims determine exposure | **LOCAL PASS** |
+| B4 — Progressive Commitment | Illegal transitions and capture without the exact reservation/certificate/state are denied | **LOCAL PASS** |
+| B5 — Freshness / TOCTOU | Bound-field mutation and concurrent evidence changes fail closed | **LOCAL PASS** |
+| B6 — Commit Certificates | Transaction/evidence/policy/expiry/nonce binding and tamper tests pass | **LOCAL PASS — HMAC TEST BOUNDARY ONLY** |
+| B7 — Idempotency / Compensation | Execute-once, collision, crash-window, reconciliation, and compensation tests pass | **LOCAL PASS — PROCESS-LOCAL ONLY** |
+| B8a — Test credentials/authentication | Two redacted Actions preflights authenticated successfully | **LIVE SUBGATE PASS** |
+| B8b — Order/binding/idempotency | Real Test Mode order creation, exact binding, fetch, and identical replay validated | **LIVE SUBGATE PASS** |
+| B8c — Authorization/capture/refund/webhook lifecycle | Checkout authorization and the downstream provider lifecycle were not executed | **BLOCKED / NOT PASSED** |
 
-## Defects found and fixed during validation
+## B8 implementation boundary
 
-- Replaced the bare A status handoff with a fail-closed bridge that recomputes the
-  current fidelity report and honors the actual Checkpoint A gate.
-- Added exact claim predicates so authoritative evidence with `approved: false`
-  cannot satisfy an exposure tier, while arbitrary monetary claims cannot raise a
-  trusted cap.
-- Prevented an evidence ID from changing authority, issuer, kind, subject, or
-  moving its observation time backwards across versions.
-- Held the evidence version lock through the final simulated capture mutation,
-  closing the concurrent freshness check/use window.
-- Required capture to carry the exact `CAPTURE_ALLOWED` commitment, certificate,
-  transaction, and real reservation reference; a certificate alone can no longer
-  bypass the progressive state machine.
-- Included the complete signed certificate and commitment in capture idempotency
-  identity, so a tampered request collides instead of replaying success.
-- Validated the legality and stored references of reconstructed commitment
-  histories and prevented captured funds from entering a terminal failed state
-  that makes compensation impossible.
-- Added recovery for capture-before-journal and refund-before-journal crash windows,
-  plus immutable compensation-reason and duplicate-refund checks.
+The Test Mode adapter:
+
+- loads only `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` from the environment and
+  refuses non-test key IDs;
+- fixes the provider origin to `https://api.razorpay.com/v1`, protects its
+  authentication/host/content-length headers, emits only safe error metadata,
+  and never logs credentials or provider bodies;
+- binds orders and payments to the exact transaction ID digest, amount, currency,
+  contract hash, merchant digest, provider receipt, order ID, and payment ID;
+- recovers an ambiguous order create only through an exact provider-side receipt
+  and binding match;
+- verifies the Checkout HMAC before fetching and binding a genuinely authorized,
+  uncaptured payment;
+- retains ECOCOMMIT's existing `CAPTURE_ALLOWED` certificate, freshness, and
+  TOCTOU gate before an exact-amount provider capture;
+- uses the provider's refund idempotency header and distinguishes pending from
+  processed refunds; the shared compensation boundary remains
+  `COMPENSATION_PENDING` until the provider confirms `processed`;
+- explicitly rejects immediate void because Razorpay exposes no immediate void
+  API for an authorization; and
+- provides raw-body HMAC verification for a separately configured webhook
+  secret, without claiming that a live webhook was delivered.
+
+`SIMULATED_LOCAL` remains an explicit local/test backend and was not silently
+replaced by provider behavior.
 
 ## Remaining blockers
 
-1. **Checkpoint A has not passed.** The real A-to-B admission path therefore
-   remains locked, even though a synthetic passed-gate fixture proves interface
-   compatibility.
-2. **B8 is unavailable.** There is no Razorpay adapter, no verified Test Mode
-   credential set, no webhook path, and no retained provider evidence.
-3. **Durability is not proven.** Evidence, commitment/payment state, and the
-   idempotency ledger remain process-local; restart/crash persistence is not
-   claimed.
-4. **Key management is not production-grade.** The local HMAC key boundary is not
-   a KMS, rotation, access-control, or production-secret-handling claim.
+1. **Checkpoint A has not passed.** The real A-to-B admission path remains locked.
+2. **B8 payment execution is incomplete.** A genuine Test Checkout authorization
+   and signature are required before reserve/capture can be validated. Manual
+   capture must be configured first.
+3. **Webhook and asynchronous reconciliation evidence is absent.** The user
+   supplied API credentials, not a webhook secret/endpoint or delivered events.
+4. **Durability is not proven.** Evidence, payment state, and the ECOCOMMIT
+   idempotency ledger remain process-local.
+5. **Key management is not production-grade.** The local certificate HMAC
+   boundary is not a KMS, rotation, or production access-control claim.
 
-Until every blocker is cleared and the complete gate is rerun, Checkpoint B must
-remain **not passed**.
+Until every blocker is cleared and the complete gate is rerun, B8 and Checkpoint
+B remain **blocked / not passed**.

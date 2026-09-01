@@ -7,7 +7,7 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 |---|---|---|
 | A — M0/M1 specification and contract language | 🟢 PASSED (offline scope) | Frozen specifications and authority invariants retained |
 | A — M2/M3 intent intelligence and abstention | 🟠 RESUMABLE LIVE EVALUATION 26/80 RETAINED; ATTEMPT 12 ACTIVE — NOT PASSED | Complete all 80 frozen cases, then satisfy every frozen A threshold together |
-| B — deterministic economic safety | 🟡 B1–B7 LOCALLY VALIDATED — BLOCKED / NOT PASSED | A pass, real A-to-B evidence, durability/security work, and Razorpay Test Mode evidence |
+| B — deterministic economic safety | 🟡 B1–B7 + B8 ORDER SUBGATES VALIDATED — BLOCKED / NOT PASSED | A pass, real A-to-B evidence, durable/security work, and the complete Razorpay payment lifecycle |
 | C — comparative benchmark | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Frozen real suite/plan, TEL weights and quantitative decision rule, real comparator outputs, validated A+B candidate, and separately gated final held-out run |
 | D — product/API/UI/operations | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Authoritative upstream evidence, real A/B/C integration, provider Test Mode boundary, durable operations, and final security/operational evidence |
 | E — repository/submission readiness | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Integrated A/B/C/D evidence, owner-selected license, independent reproduction, final media, intentional push, and retained public CI |
@@ -135,16 +135,15 @@ provider workflows, model configuration, or frozen thresholds.
 
 ## Parallel local implementation evidence
 
-At integrated revision `b7d522cb817fb4d8cf796c08043ecd88c02550aa`, the
-combined B/C/D/E-focused suite passes **143/143 tests** and the full deterministic
-suite passes **197/197 tests** in both the working checkout and a new detached
-clean clone installed into a fresh environment from `requirements-dev.lock`.
-Compilation, dependency consistency, JavaScript syntax, all three deterministic D
-scenarios, all eight E structural checks, diff whitespace, and clean-clone status
-also pass. No integration defect was found. This is local engineering evidence
-only; it does not substitute for any live or final checkpoint gate.
+At B8 implementation revision `3d4a14300c66d6ed775321048ab20af9182ebc68`,
+the combined B/C/D/E-focused suite passes **170/170 tests** and the full
+deterministic suite passes **224/224 tests** in the working checkout.
+Compilation and installed dependency consistency also pass. The prior integrated
+revision remains independently clean-clone validated; a new exact-revision clean
+environment check is recorded with the B8 validation update. This is engineering
+evidence only; it does not substitute for any live or final checkpoint gate.
 
-### Checkpoint B — 53 focused tests
+### Checkpoint B — 80 focused tests
 
 Implemented and locally verified:
 
@@ -168,17 +167,25 @@ Implemented and locally verified:
 - thread-safe process-local idempotency with complete signed-request collision
   checks, retry-safe compensation, capture/refund crash-window recovery, and
   reconciliation;
-- an explicitly labelled `SIMULATED_LOCAL` payment adapter.
+- an explicitly labelled `SIMULATED_LOCAL` payment adapter;
+- a separate environment-injected `RAZORPAY_TEST_MODE` adapter that refuses live
+  credentials, fixes the official API origin, redacts errors, binds provider
+  orders/payments/refunds to ECOCOMMIT transactions, verifies Checkout and
+  webhook HMAC signatures, and preserves the existing capture gate; and
+- manual-only redacted credential-preflight and Test-order evidence workflows.
 
-The full local B1–B7 validation matrix is recorded in
-`CHECKPOINT_B_VALIDATION.md` against implementation commit `6877a81`. A synthetic
+The current B1–B8 matrix is recorded in `CHECKPOINT_B_VALIDATION.md`. A synthetic
 passed-A fixture proves interface compatibility only; it is not Checkpoint A
 evidence.
 
-Checkpoint B is not passed. The actual latest A gate failed and the real A-to-B
-path correctly remains locked. The registries/ledgers are process-local, the HMAC
-key is a local-test boundary rather than a KMS claim, and no Razorpay adapter,
-credentialed Test Mode run, webhook evidence, or provider result exists.
+Checkpoint B is not passed. The actual latest A gate is incomplete and the real
+A-to-B path correctly remains locked. Razorpay authentication and a real INR 1.00
+Test Mode order were validated in Actions runs `33534255136`, `33535533432`, and
+`33535533557`; exact order binding and identical-replay idempotency passed. The
+retained lifecycle result explicitly leaves `checkpoint_b8_passed=false` because
+no Checkout payment was authorized and no capture, refund, webhook, reconciliation,
+or settlement was executed. Registries/ledgers remain process-local and the HMAC
+key remains a local-test boundary rather than a KMS claim.
 
 ### Checkpoint C — 41 focused tests
 
@@ -243,10 +250,10 @@ defects found during validation are in `CHECKPOINT_D_VALIDATION.md`.
 
 Checkpoint D is **blocked / not passed**. The local positive scenario uses a
 synthetic A-pass fixture and `SIMULATED_LOCAL`; it is interface-compatibility
-evidence only. The actual A, B, and C gates are not all passed, the real commit
-route has no execution adapter, and no authoritative gate-evidence loader,
-Razorpay Test Mode path, durable multi-process audit store, hosted deployment,
-or final security/operational review exists.
+evidence only. The actual A, B, and C gates are not all passed, the D commit route
+does not integrate the new Razorpay adapter, and no authoritative gate-evidence
+loader, durable multi-process audit store, hosted deployment, or final
+security/operational review exists.
 
 ### Checkpoint E — 5 focused tests
 
@@ -278,11 +285,12 @@ diff-whitespace, current-tree credential-marker, and Git-history credential-mark
 checks passed. The matrix and defects are retained in
 `CHECKPOINT_E_VALIDATION.md`.
 
-Checkpoint E is **blocked / not passed**. The final A/B/C/D evidence slots,
-Razorpay Test Mode proof, final economic comparison, hosted integrated product,
-screenshots, and video remain deliberately empty. No license has been selected,
-the validation was not independently reproduced on another machine, and the
-local commits have not been pushed or exercised by public CI.
+Checkpoint E is **blocked / not passed**. The final A/B/C/D evidence slots, full
+Razorpay payment-lifecycle proof, final economic comparison, hosted integrated
+product, screenshots, and video remain deliberately incomplete. No license has
+been selected and validation was not independently reproduced on another
+machine. Only the isolated B8 validation snapshot—not the integrated local main
+revision—was pushed and exercised by public CI.
 
 ## Release-validation dependency snapshot
 
@@ -290,8 +298,10 @@ local commits have not been pushed or exercised by public CI.
   26/80 and failed-jobs-only Attempt 12 is active.
 - **A-to-B admission:** **NOT RUN / BLOCKED** — a complete passing A artifact does
   not exist.
-- **Checkpoint B:** B1–B7 are **LOCALLY VALIDATED**; B8 is **NOT RUN / BLOCKED**
-  because no Razorpay adapter or verified Test Mode credentials/evidence exist.
+- **Checkpoint B:** B1–B7 are **LOCALLY VALIDATED**. B8's credential,
+  authentication, order-binding, fetch, and identical-replay subgates have real
+  Test Mode evidence; authorization/capture/refund/webhook/reconciliation remain
+  **NOT RUN / BLOCKED**. B8 and Checkpoint B are not passed.
 - **Checkpoint C:** the preliminary synthetic harness is **LOCALLY VALIDATED**;
   the authentic comparator/TEL and final held-out evaluations are **NOT RUN /
   BLOCKED** because their real prerequisites and inputs do not exist.
@@ -299,20 +309,24 @@ local commits have not been pushed or exercised by public CI.
   authoritative final integration is **NOT RUN / BLOCKED** by A/B/C and provider,
   durability, hosting, and final security/operations prerequisites.
 - **Checkpoint E:** local readiness checks are **LOCALLY VALIDATED**; final
-  readiness remains **BLOCKED / NOT PASSED**. Public CI on the local commits is
-  **NOT RUN** because nothing was pushed. The owner-selected license, independent
-  reproduction, final metrics, screenshots, and five-minute video remain absent.
+  readiness remains **BLOCKED / NOT PASSED**. The integrated local revision has
+  not been intentionally pushed; the isolated B8 validation snapshot alone ran
+  in public CI. The owner-selected license, independent reproduction, final
+  metrics, screenshots, and five-minute video remain absent.
 
 ## Payment truth
 
-- Current payment behavior is only `SIMULATED_LOCAL`.
-- No Razorpay credentials were present or used.
-- No Razorpay API request was made.
-- No Test Mode or live-money outcome is claimed.
-
-Real Razorpay Test Mode work begins only when a dedicated adapter, verified test
-credentials, secret handling, webhook/reconciliation paths, and retained end-to-end
-evidence are available. Live money remains out of scope.
+- `SIMULATED_LOCAL` remains an explicit local/test backend.
+- `RAZORPAY_TEST_MODE` is implemented behind the same payment safety boundary;
+  credentials are injected only from environment/Actions secrets and never
+  retained in repository evidence.
+- Two redacted authentication preflights passed. One INR 1.00 Test Mode order was
+  created, fetched, transaction-bound, and replayed idempotently with one provider
+  create call.
+- No payment authorization, capture, refund, webhook delivery, reconciliation,
+  settlement, or live-money outcome is claimed.
+- Exact external blocker: `RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`; a genuine
+  Test Checkout callback and manual-capture account configuration are required.
 
 ## Gate discipline
 
