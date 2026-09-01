@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 from .certificates import CertificateSigner, CertificateVerifier
+from .checkpoint_a_evidence import CheckpointAEvidenceReceipt
 from .checkpoint_b_integration import (
     AtoBPolicyBridge,
     AuthorizationStatus,
@@ -185,7 +186,7 @@ class CheckpointDSimulatedWorkflow:
             trusted_policy=policy,
         )
         authorizer = CheckpointBAuthorizer(
-            bridge=AtoBPolicyBridge(),
+            bridge=AtoBPolicyBridge(allow_test_evidence=True),
             exposure=ExposureCalculator(policy),
             signer=signer,
         )
@@ -206,6 +207,11 @@ class CheckpointDSimulatedWorkflow:
         authorization = authorizer.authorize_capture(
             contract=contract,
             checkpoint_a_gate=gate,
+            checkpoint_a_receipt=(
+                CheckpointAEvidenceReceipt.test_fixture(gate.evidence)
+                if gate.accepted and gate.evidence is not None
+                else None
+            ),
             transaction=transaction,
             snapshot=snapshot,
             registry=registry,

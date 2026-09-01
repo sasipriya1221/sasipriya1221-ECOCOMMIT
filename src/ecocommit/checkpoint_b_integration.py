@@ -6,6 +6,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .certificates import CertificateSigner, CommitCertificate
+from .checkpoint_a_evidence import CheckpointAEvidenceReceipt
 from .checkpoint_status import GateReport, GateState
 from .contracts import DecisionStatus, EconomicIntentContract
 from .evidence import EvidenceRegistry, EvidenceSnapshot
@@ -37,6 +38,7 @@ class AtoBPolicyAdmission(BaseModel):
     contract_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     checkpoint_a_state: GateState
     checkpoint_a_evidence: str | None = None
+    checkpoint_a_manifest_sha256: str | None = None
     fidelity_report: FidelityReport
     obligations: tuple[PolicyObligation, ...] = ()
     blockers: tuple[str, ...] = ()
@@ -46,6 +48,8 @@ class AtoBPolicyAdmission(BaseModel):
         if self.ready:
             if self.checkpoint_a_state != GateState.PASSED or not self.checkpoint_a_evidence:
                 raise ValueError("ready A-to-B admission requires accepted Checkpoint A evidence")
+            if not self.checkpoint_a_manifest_sha256:
+                raise ValueError("ready A-to-B admission requires a verified Checkpoint A receipt")
             if self.fidelity_report.status != DecisionStatus.VALIDATED:
                 raise ValueError("ready A-to-B admission requires a validated contract")
             if not self.obligations or self.blockers:
@@ -88,15 +92,18 @@ class AtoBPolicyBridge:
         *,
         validator: FidelityValidator | None = None,
         mapper: PolicyClassMapper | None = None,
+        allow_test_evidence: bool = False,
     ) -> None:
         self.validator = validator or FidelityValidator()
         self.mapper = mapper or PolicyClassMapper()
+        self.allow_test_evidence = allow_test_evidence
 
     def evaluate(
         self,
         contract: EconomicIntentContract,
         *,
         checkpoint_a_gate: GateReport,
+        checkpoint_a_receipt: CheckpointAEvidenceReceipt | None = None,
     ) -> AtoBPolicyAdmission:
         if checkpoint_a_gate.checkpoint != "A":
             raise CheckpointBIntegrationError("A-to-B admission requires a Checkpoint A gate report")
@@ -105,6 +112,15 @@ class AtoBPolicyBridge:
         blockers: list[str] = []
         if not checkpoint_a_gate.accepted:
             blockers.append(f"CHECKPOINT_A_{checkpoint_a_gate.state.value}")
+        elif checkpoint_a_receipt is None:
+            blockers.append("CHECKPOINT_A_EVIDENCE_UNVERIFIED")
+        elif checkpoint_a_receipt.evidence_reference != checkpoint_a_gate.evidence:
+            blockers.append("CHECKPOINT_A_EVIDENCE_REFERENCE_MISMATCH")
+        elif (
+            checkpoint_a_receipt.verification_mode == "TEST_FIXTURE"
+            and not self.allow_test_evidence
+        ):
+            blockers.append("CHECKPOINT_A_TEST_EVIDENCE_REFUSED")
         if report.status != DecisionStatus.VALIDATED:
             blockers.append(f"CONTRACT_{report.status.value}")
 
@@ -117,6 +133,11 @@ class AtoBPolicyBridge:
             contract_hash=contract.canonical_hash(),
             checkpoint_a_state=checkpoint_a_gate.state,
             checkpoint_a_evidence=checkpoint_a_gate.evidence,
+            checkpoint_a_manifest_sha256=(
+                checkpoint_a_receipt.manifest_sha256
+                if checkpoint_a_receipt is not None and not blockers
+                else None
+            ),
             fidelity_report=report,
             obligations=obligations,
             blockers=tuple(blockers),
@@ -142,6 +163,7 @@ class CheckpointBAuthorizer:
         *,
         contract: EconomicIntentContract,
         checkpoint_a_gate: GateReport,
+        checkpoint_a_receipt: CheckpointAEvidenceReceipt | None = None,
         transaction: TransactionBinding,
         snapshot: EvidenceSnapshot,
         registry: EvidenceRegistry,
@@ -149,7 +171,11 @@ class CheckpointBAuthorizer:
         ttl_seconds: int = 60,
         nonce: str | None = None,
     ) -> CheckpointBAuthorizationResult:
-        admission = self.bridge.evaluate(contract, checkpoint_a_gate=checkpoint_a_gate)
+        admission = self.bridge.evaluate(
+            contract,
+            checkpoint_a_gate=checkpoint_a_gate,
+            checkpoint_a_receipt=checkpoint_a_receipt,
+        )
         if not admission.ready:
             return CheckpointBAuthorizationResult(
                 status=AuthorizationStatus.BLOCKED,

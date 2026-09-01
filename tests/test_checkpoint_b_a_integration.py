@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from ecocommit.certificates import CertificateSigner
+from ecocommit.checkpoint_a_evidence import CheckpointAEvidenceReceipt
 from ecocommit.checkpoint_b_integration import (
     AtoBPolicyBridge,
     AuthorizationStatus,
@@ -128,7 +129,7 @@ def _bundle(contract: EconomicIntentContract):
         ),
     )
     authorizer = CheckpointBAuthorizer(
-        bridge=AtoBPolicyBridge(),
+        bridge=AtoBPolicyBridge(allow_test_evidence=True),
         exposure=ExposureCalculator(policy),
         signer=CertificateSigner(
             key_id="a-to-b-key",
@@ -176,6 +177,7 @@ def test_synthetic_passed_gate_proves_interface_compatibility_without_claiming_a
     result = authorizer.authorize_capture(
         contract=contract,
         checkpoint_a_gate=fixture_gate,
+        checkpoint_a_receipt=CheckpointAEvidenceReceipt.test_fixture(fixture_gate.evidence),
         transaction=transaction,
         snapshot=snapshot,
         registry=registry,
@@ -196,11 +198,12 @@ def test_transaction_cannot_swap_the_admitted_a_contract_hash():
 
     result = authorizer.authorize_capture(
         contract=contract,
-        checkpoint_a_gate=GateReport(
+        checkpoint_a_gate=(gate := GateReport(
             "A",
             GateState.PASSED,
             evidence="test-fixture://synthetic-a-pass",
-        ),
+        )),
+        checkpoint_a_receipt=CheckpointAEvidenceReceipt.test_fixture(gate.evidence),
         transaction=swapped,
         snapshot=snapshot,
         registry=registry,
@@ -229,16 +232,57 @@ def test_bridge_rejects_materially_ambiguous_contract_even_with_fixture_gate():
         ],
     )
 
-    admission = AtoBPolicyBridge().evaluate(
+    gate = GateReport(
+        "A",
+        GateState.PASSED,
+        evidence="test-fixture://synthetic-a-pass",
+    )
+    admission = AtoBPolicyBridge(allow_test_evidence=True).evaluate(
         contract,
-        checkpoint_a_gate=GateReport(
-            "A",
-            GateState.PASSED,
-            evidence="test-fixture://synthetic-a-pass",
-        ),
+        checkpoint_a_gate=gate,
+        checkpoint_a_receipt=CheckpointAEvidenceReceipt.test_fixture(gate.evidence),
     )
 
     assert admission.ready is False
     assert admission.fidelity_report.status == DecisionStatus.CLARIFICATION_REQUIRED
     assert admission.obligations == ()
     assert admission.blockers == ("CONTRACT_CLARIFICATION_REQUIRED",)
+
+
+def test_passed_string_without_typed_receipt_releases_no_authority():
+    contract = clear_contract()
+    gate = GateReport("A", GateState.PASSED, evidence="github-actions://candidate-2/result")
+
+    admission = AtoBPolicyBridge().evaluate(contract, checkpoint_a_gate=gate)
+
+    assert admission.ready is False
+    assert admission.obligations == ()
+    assert admission.blockers == ("CHECKPOINT_A_EVIDENCE_UNVERIFIED",)
+
+
+def test_production_bridge_refuses_explicit_test_fixture_receipt():
+    contract = clear_contract()
+    gate = GateReport("A", GateState.PASSED, evidence="test-fixture://synthetic-a-pass")
+
+    admission = AtoBPolicyBridge().evaluate(
+        contract,
+        checkpoint_a_gate=gate,
+        checkpoint_a_receipt=CheckpointAEvidenceReceipt.test_fixture(gate.evidence),
+    )
+
+    assert admission.ready is False
+    assert admission.blockers == ("CHECKPOINT_A_TEST_EVIDENCE_REFUSED",)
+
+
+def test_receipt_reference_must_match_gate_reference():
+    contract = clear_contract()
+    gate = GateReport("A", GateState.PASSED, evidence="test-fixture://expected")
+
+    admission = AtoBPolicyBridge(allow_test_evidence=True).evaluate(
+        contract,
+        checkpoint_a_gate=gate,
+        checkpoint_a_receipt=CheckpointAEvidenceReceipt.test_fixture("test-fixture://other"),
+    )
+
+    assert admission.ready is False
+    assert admission.blockers == ("CHECKPOINT_A_EVIDENCE_REFERENCE_MISMATCH",)

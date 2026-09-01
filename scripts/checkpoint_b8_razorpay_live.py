@@ -5,7 +5,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Mapping
@@ -20,6 +20,7 @@ from ecocommit.razorpay import (
     RazorpayTransport,
     RazorpayTransportError,
 )
+from ecocommit.razorpay_checkout import RazorpayCheckoutHandoff, render_checkout_html
 
 
 class EvidenceTransport:
@@ -87,7 +88,12 @@ def _base_evidence() -> dict[str, Any]:
     }
 
 
-def run(output: Path) -> int:
+def run(
+    output: Path,
+    *,
+    checkout_handoff: Path | None = None,
+    checkout_html: Path | None = None,
+) -> int:
     evidence = _base_evidence()
     key_id = os.environ.get("RAZORPAY_KEY_ID", "")
     key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "")
@@ -165,6 +171,32 @@ def run(output: Path) -> int:
             "transaction_digest": first.transaction_digest,
             "provider_response_recovered": first.recovered,
         }
+        if checkout_handoff is not None or checkout_html is not None:
+            if checkout_handoff is None or checkout_html is None:
+                raise ValueError("both Checkout handoff and HTML paths are required")
+            created_at = datetime.now(timezone.utc)
+            handoff = RazorpayCheckoutHandoff.create(
+                public_key_id=key_id,
+                transaction=transaction,
+                order=first,
+                created_at=created_at,
+                expires_at=created_at + timedelta(hours=24),
+            )
+            checkout_handoff.parent.mkdir(parents=True, exist_ok=True)
+            checkout_html.parent.mkdir(parents=True, exist_ok=True)
+            checkout_handoff.write_text(
+                handoff.model_dump_json(indent=2) + "\n",
+                encoding="utf-8",
+            )
+            checkout_html.write_text(render_checkout_html(handoff), encoding="utf-8")
+            evidence["checkout_handoff"] = {
+                "generated": True,
+                "schema_version": handoff.schema_version,
+                "handoff_sha256": handoff.handoff_sha256,
+                "expires_at": handoff.expires_at.isoformat(),
+                "public_key_id_retained_only_in_handoff": True,
+                "secret_key_retained": False,
+            }
         evidence["idempotency"] = {
             "validated": True,
             "identical_replay_returned_same_order": True,
@@ -283,8 +315,14 @@ def main() -> int:
         type=Path,
         default=Path("artifacts/checkpoint-b8-razorpay-test.json"),
     )
+    parser.add_argument("--checkout-handoff", type=Path)
+    parser.add_argument("--checkout-html", type=Path)
     args = parser.parse_args()
-    return run(args.output)
+    return run(
+        args.output,
+        checkout_handoff=args.checkout_handoff,
+        checkout_html=args.checkout_html,
+    )
 
 
 if __name__ == "__main__":
