@@ -6,7 +6,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from .commitment import CommitmentStage, CommitmentState, ProgressiveCommitmentEngine
+from .commitment import (
+    CommitmentEvent,
+    CommitmentStage,
+    CommitmentState,
+    ProgressiveCommitmentEngine,
+)
 from .payments import (
     PaymentSnapshot,
     PaymentState,
@@ -166,6 +171,7 @@ class CompensationOutcome(BaseModel):
     state: CommitmentState
     payment_result: SimulatedPaymentResult | None = None
     error: str | None = None
+    reconciled_existing_refund: bool = False
 
 
 class CompensationCoordinator:
@@ -188,6 +194,23 @@ class CompensationCoordinator:
         idempotency_key: str,
         at: datetime,
     ) -> CompensationOutcome:
+        payment = self.payments.snapshot(state.transaction.transaction_id)
+        if state.stage == CommitmentStage.CAPTURE_ALLOWED:
+            if (
+                payment.state != PaymentState.CAPTURED
+                or payment.transaction_digest != state.transaction.digest()
+                or not payment.last_reference
+            ):
+                raise CompensationError(
+                    "CAPTURE_ALLOWED compensation requires a reconciled captured payment"
+                )
+            state = self.engine.record_capture(
+                state,
+                payment_reference=payment.last_reference,
+                event_id=f"compensation:{idempotency_key}:reconcile-capture",
+                at=at,
+            )
+
         if state.stage == CommitmentStage.CAPTURED:
             pending = self.engine.begin_compensation(
                 state,
@@ -197,8 +220,41 @@ class CompensationCoordinator:
             )
         elif state.stage == CommitmentStage.COMPENSATION_PENDING:
             pending = state
+            begin = next(
+                (
+                    transition
+                    for transition in reversed(state.transitions)
+                    if transition.event == CommitmentEvent.BEGIN_COMPENSATION
+                ),
+                None,
+            )
+            if begin is None or begin.reference != reason_reference:
+                raise CompensationError(
+                    "compensation retry reason must match the pending compensation"
+                )
         else:
             raise CompensationError("compensation requires CAPTURED or COMPENSATION_PENDING state")
+
+        payment = self.payments.snapshot(pending.transaction.transaction_id)
+        if payment.state == PaymentState.REFUNDED:
+            if (
+                payment.transaction_digest != pending.transaction.digest()
+                or not payment.last_reference
+            ):
+                raise CompensationError(
+                    "existing refund cannot be reconciled to the pending transaction"
+                )
+            completed = self.engine.complete_compensation(
+                pending,
+                compensation_reference=payment.last_reference,
+                event_id=f"compensation:{idempotency_key}:complete",
+                at=at,
+            )
+            return CompensationOutcome(
+                succeeded=True,
+                state=completed,
+                reconciled_existing_refund=True,
+            )
 
         try:
             result = self.payments.refund(

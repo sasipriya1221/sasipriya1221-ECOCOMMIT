@@ -18,6 +18,7 @@ from ecocommit.evidence import (
     EvidenceVersionError,
 )
 from ecocommit.exposure import (
+    EvidenceClaimRequirement,
     EvidenceRequirement,
     ExposureCalculator,
     ExposureDecision,
@@ -75,6 +76,7 @@ def exposure_policy(*, cap: int = 5_000):
                     EvidenceRequirement(
                         kind=EvidenceKind.USER_AUTHORIZATION,
                         authority_ids={"user-auth"},
+                        claims=(EvidenceClaimRequirement(key="approved", expected_value=True),),
                     ),
                 ),
                 max_irreversible_minor=cap,
@@ -150,6 +152,33 @@ def test_evidence_version_replays_conflicts_and_exact_retries():
         registry.register(record(), now=NOW + timedelta(seconds=1))
 
 
+def test_evidence_version_cannot_change_issuer_identity_or_move_time_backwards():
+    registry = EvidenceRegistry(
+        [
+            authority(),
+            EvidenceAuthority(
+                authority_id="other-auth",
+                issuer="other-issuer",
+                permitted_kinds={EvidenceKind.USER_AUTHORIZATION},
+                max_age_seconds=300,
+            ),
+        ]
+    )
+    registry.register(record(), now=NOW)
+    takeover = record(version=2).model_copy(
+        update={"authority_id": "other-auth", "issuer": "other-issuer"}
+    )
+
+    with pytest.raises(EvidenceVersionError, match="identity metadata"):
+        registry.register(takeover, now=NOW)
+
+    with pytest.raises(EvidenceVersionError, match="cannot move backwards"):
+        registry.register(
+            record(version=2, observed_at=NOW - timedelta(seconds=1)),
+            now=NOW,
+        )
+
+
 def test_registered_claims_cannot_be_mutated_without_a_new_version():
     registry = EvidenceRegistry([authority()])
     returned = registry.register(record(), now=NOW)
@@ -217,6 +246,44 @@ def test_certificate_rejects_signature_tampering_and_transaction_substitution():
             certificate,
             expected_transaction=tx,
             expected_contract_hash="e" * 64,
+            registry=registry,
+            now=NOW,
+        )
+
+
+@pytest.mark.parametrize(
+    "updates",
+    [
+        {"transaction_id": "tx-attacker"},
+        {"merchant_id": "merchant-attacker"},
+        {"amount_minor": 3_999},
+        {"currency": "USD"},
+        {"contract_hash": "e" * 64},
+    ],
+)
+def test_every_transaction_field_is_bound_by_the_commit_certificate(updates):
+    registry, _, _, tx, _, _, certificate, verifier = issued_bundle()
+    changed = tx.model_copy(update=updates)
+
+    with pytest.raises(CertificateError, match="transaction binding"):
+        verifier.verify(
+            certificate,
+            expected_transaction=changed,
+            expected_contract_hash=changed.contract_hash,
+            registry=registry,
+            now=NOW,
+        )
+
+
+def test_signed_certificate_payload_and_nonce_tampering_are_rejected():
+    registry, _, _, tx, _, _, certificate, verifier = issued_bundle()
+    tampered = certificate.model_copy(update={"nonce": "e" * 32})
+
+    with pytest.raises(CertificateError, match="certificate id"):
+        verifier.verify(
+            tampered,
+            expected_transaction=tx,
+            expected_contract_hash=tx.contract_hash,
             registry=registry,
             now=NOW,
         )

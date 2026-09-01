@@ -1,15 +1,21 @@
 from datetime import datetime, timedelta, timezone
+from threading import Event, Lock, Thread
 
 import pytest
+from pydantic import ValidationError
 
 from ecocommit.certificates import CertificateError, CertificateSigner, CertificateVerifier
 from ecocommit.commitment import (
+    CommitmentEvent,
     CommitmentStage,
+    CommitmentState,
     CommitmentTransitionError,
     ProgressiveCommitmentEngine,
+    TransitionRecord,
 )
 from ecocommit.evidence import EvidenceAuthority, EvidenceKind, EvidenceRecord, EvidenceRegistry
 from ecocommit.exposure import (
+    EvidenceClaimRequirement,
     EvidenceRequirement,
     ExposureCalculator,
     ExposurePolicy,
@@ -17,7 +23,7 @@ from ecocommit.exposure import (
     TransactionBinding,
 )
 from ecocommit.idempotency import IdempotencyConflict, IdempotencyLedger, request_fingerprint
-from ecocommit.payments import PaymentStateError, SimulatedPaymentAdapter
+from ecocommit.payments import PaymentState, PaymentStateError, SimulatedPaymentAdapter
 
 
 NOW = datetime(2026, 9, 1, 7, 30, tzinfo=timezone.utc)
@@ -67,6 +73,7 @@ def authorization_bundle():
                     EvidenceRequirement(
                         kind=EvidenceKind.USER_AUTHORIZATION,
                         authority_ids={"user-auth"},
+                        claims=(EvidenceClaimRequirement(key="approved", expected_value=True),),
                     ),
                 ),
                 max_irreversible_minor=2_000,
@@ -101,6 +108,32 @@ def authorized_state(engine: ProgressiveCommitmentEngine, tx: TransactionBinding
     )
 
 
+def capture_allowed_state(
+    tx: TransactionBinding,
+    registry: EvidenceRegistry,
+    certificate,
+    verifier: CertificateVerifier,
+    *,
+    reservation_reference: str,
+):
+    engine = ProgressiveCommitmentEngine()
+    state = engine.reserve(
+        authorized_state(engine, tx),
+        reservation_reference=reservation_reference,
+        reversible=True,
+        event_id="payment-boundary-reserve",
+        at=NOW + timedelta(seconds=2),
+    )
+    return engine.allow_capture(
+        state,
+        certificate=certificate,
+        verifier=verifier,
+        registry=registry,
+        event_id="payment-boundary-allow",
+        at=NOW + timedelta(seconds=3),
+    )
+
+
 def test_progressive_commitment_happy_path_preserves_irreversible_boundary():
     tx, registry, certificate, verifier = authorization_bundle()
     engine = ProgressiveCommitmentEngine()
@@ -125,6 +158,7 @@ def test_progressive_commitment_happy_path_preserves_irreversible_boundary():
     )
     capture = payments.capture(
         tx,
+        commitment=state,
         certificate=certificate,
         verifier=verifier,
         registry=registry,
@@ -317,6 +351,51 @@ def test_idempotency_key_collision_and_failed_operation_retry():
     assert calls == 2
 
 
+def test_concurrent_identical_idempotency_calls_execute_only_once():
+    ledger = IdempotencyLedger()
+    entered = Event()
+    release = Event()
+    count_lock = Lock()
+    calls = 0
+    results: list[dict[str, int]] = []
+    errors: list[BaseException] = []
+
+    def operation():
+        nonlocal calls
+        with count_lock:
+            calls += 1
+        entered.set()
+        assert release.wait(2)
+        return {"calls": calls}
+
+    def invoke():
+        try:
+            results.append(
+                ledger.execute(
+                    scope="capture:tx-concurrent",
+                    key="same-key",
+                    fingerprint=request_fingerprint({"amount": 10}),
+                    operation=operation,
+                )
+            )
+        except BaseException as exc:  # pragma: no cover - asserted below
+            errors.append(exc)
+
+    first = Thread(target=invoke)
+    second = Thread(target=invoke)
+    first.start()
+    assert entered.wait(2)
+    second.start()
+    release.set()
+    first.join(2)
+    second.join(2)
+
+    assert not first.is_alive() and not second.is_alive()
+    assert errors == []
+    assert calls == 1
+    assert results == [{"calls": 1}, {"calls": 1}]
+
+
 def test_simulated_adapter_is_explicit_stateful_and_transaction_bound():
     tx, registry, certificate, verifier = authorization_bundle()
     payments = SimulatedPaymentAdapter()
@@ -324,9 +403,17 @@ def test_simulated_adapter_is_explicit_stateful_and_transaction_bound():
     with pytest.raises(TypeError, match="certificate"):
         payments.capture(tx, idempotency_key="missing-authority")
 
+    early_commitment = capture_allowed_state(
+        tx,
+        registry,
+        certificate,
+        verifier,
+        reservation_reference="hold-that-does-not-exist",
+    )
     with pytest.raises(PaymentStateError, match="cannot CAPTURE"):
         payments.capture(
             tx,
+            commitment=early_commitment,
             certificate=certificate,
             verifier=verifier,
             registry=registry,
@@ -340,8 +427,39 @@ def test_simulated_adapter_is_explicit_stateful_and_transaction_bound():
     assert first.simulated is True
     assert first.adapter_name == "SIMULATED_LOCAL"
 
+    with pytest.raises(PaymentStateError, match="stage CAPTURE_ALLOWED"):
+        payments.capture(
+            tx,
+            commitment=authorized_state(ProgressiveCommitmentEngine(), tx),
+            certificate=certificate,
+            verifier=verifier,
+            registry=registry,
+            now=NOW,
+            idempotency_key="capture-wrong-stage",
+        )
+
+    with pytest.raises(PaymentStateError, match="reservation does not match"):
+        payments.capture(
+            tx,
+            commitment=early_commitment,
+            certificate=certificate,
+            verifier=verifier,
+            registry=registry,
+            now=NOW,
+            idempotency_key="capture-wrong-hold",
+        )
+
+    commitment = capture_allowed_state(
+        tx,
+        registry,
+        certificate,
+        verifier,
+        reservation_reference=first.provider_reference,
+    )
+
     captured = payments.capture(
         tx,
+        commitment=commitment,
         certificate=certificate,
         verifier=verifier,
         registry=registry,
@@ -350,6 +468,7 @@ def test_simulated_adapter_is_explicit_stateful_and_transaction_bound():
     )
     assert payments.capture(
         tx,
+        commitment=commitment,
         certificate=certificate,
         verifier=verifier,
         registry=registry,
@@ -360,3 +479,193 @@ def test_simulated_adapter_is_explicit_stateful_and_transaction_bound():
     changed = tx.model_copy(update={"merchant_id": "merchant-attacker"})
     with pytest.raises(PaymentStateError, match="binding changed"):
         payments.refund(changed, idempotency_key="refund-changed")
+
+
+def test_capture_idempotency_rejects_same_id_with_tampered_signed_request():
+    tx, registry, certificate, verifier = authorization_bundle()
+    payments = SimulatedPaymentAdapter()
+    reservation = payments.reserve(tx, idempotency_key="reserve")
+    commitment = capture_allowed_state(
+        tx,
+        registry,
+        certificate,
+        verifier,
+        reservation_reference=reservation.provider_reference,
+    )
+    payments.capture(
+        tx,
+        commitment=commitment,
+        certificate=certificate,
+        verifier=verifier,
+        registry=registry,
+        now=NOW,
+        idempotency_key="capture",
+    )
+    replacement = "0" if certificate.signature[0] != "0" else "1"
+    tampered = certificate.model_copy(
+        update={"signature": replacement + certificate.signature[1:]}
+    )
+
+    with pytest.raises(IdempotencyConflict, match="different request"):
+        payments.capture(
+            tx,
+            commitment=commitment,
+            certificate=tampered,
+            verifier=verifier,
+            registry=registry,
+            now=NOW + timedelta(seconds=1),
+            idempotency_key="capture",
+        )
+
+
+def test_capture_boundary_excludes_concurrent_evidence_supersession(monkeypatch):
+    tx, registry, certificate, verifier = authorization_bundle()
+    payments = SimulatedPaymentAdapter()
+    reservation = payments.reserve(tx, idempotency_key="reserve")
+    commitment = capture_allowed_state(
+        tx,
+        registry,
+        certificate,
+        verifier,
+        reservation_reference=reservation.provider_reference,
+    )
+    verified = Event()
+    release_verifier = Event()
+    update_completed = Event()
+    errors: list[BaseException] = []
+    original_verify = verifier.verify
+
+    def blocking_verify(*args, **kwargs):
+        result = original_verify(*args, **kwargs)
+        verified.set()
+        assert release_verifier.wait(2)
+        return result
+
+    monkeypatch.setattr(verifier, "verify", blocking_verify)
+
+    def capture():
+        try:
+            payments.capture(
+                tx,
+                commitment=commitment,
+                certificate=certificate,
+                verifier=verifier,
+                registry=registry,
+                now=NOW + timedelta(seconds=1),
+                idempotency_key="capture",
+            )
+        except BaseException as exc:  # pragma: no cover - asserted below
+            errors.append(exc)
+
+    def supersede():
+        try:
+            registry.register(
+                EvidenceRecord(
+                    evidence_id="auth-state",
+                    authority_id="user-auth",
+                    issuer="identity-service",
+                    kind=EvidenceKind.USER_AUTHORIZATION,
+                    subject=tx.transaction_id,
+                    version=2,
+                    observed_at=NOW + timedelta(seconds=1),
+                    claims={"approved": False},
+                ),
+                now=NOW + timedelta(seconds=1),
+            )
+            update_completed.set()
+        except BaseException as exc:  # pragma: no cover - asserted below
+            errors.append(exc)
+
+    capture_thread = Thread(target=capture)
+    update_thread = Thread(target=supersede)
+    capture_thread.start()
+    assert verified.wait(2)
+    update_thread.start()
+
+    # Supersession must wait until the capture critical section has completed.
+    assert update_completed.wait(0.2) is False
+    release_verifier.set()
+    capture_thread.join(2)
+    update_thread.join(2)
+
+    assert not capture_thread.is_alive() and not update_thread.is_alive()
+    assert errors == []
+    assert payments.snapshot(tx.transaction_id).state == PaymentState.CAPTURED
+    assert update_completed.is_set()
+
+
+def test_captured_or_compensation_pending_state_cannot_be_failed_and_stranded():
+    tx, registry, certificate, verifier = authorization_bundle()
+    engine = ProgressiveCommitmentEngine()
+    state = engine.reserve(
+        authorized_state(engine, tx),
+        reservation_reference="hold",
+        reversible=True,
+        event_id="reserve",
+        at=NOW + timedelta(seconds=2),
+    )
+    state = engine.allow_capture(
+        state,
+        certificate=certificate,
+        verifier=verifier,
+        registry=registry,
+        event_id="allow",
+        at=NOW + timedelta(seconds=3),
+    )
+    captured = engine.record_capture(
+        state,
+        payment_reference="capture",
+        event_id="capture",
+        at=NOW + timedelta(seconds=4),
+    )
+
+    with pytest.raises(CommitmentTransitionError, match="compensation must remain actionable"):
+        engine.fail(
+            captured,
+            failure_reference="downstream-failed",
+            event_id="fail-captured",
+            at=NOW + timedelta(seconds=5),
+        )
+
+    pending = engine.begin_compensation(
+        captured,
+        reason_reference="downstream-failed",
+        event_id="begin-compensation",
+        at=NOW + timedelta(seconds=5),
+    )
+    with pytest.raises(CommitmentTransitionError, match="compensation must remain actionable"):
+        engine.fail(
+            pending,
+            failure_reference="refund-timeout",
+            event_id="fail-compensation",
+            at=NOW + timedelta(seconds=6),
+        )
+
+
+def test_constructed_commitment_history_cannot_forge_an_illegal_state_jump():
+    tx, _, _, _ = authorization_bundle()
+    illegal = TransitionRecord(
+        event_id="forged",
+        event=CommitmentEvent.AUTHORIZE,
+        from_stage=CommitmentStage.PROPOSED,
+        to_stage=CommitmentStage.CAPTURED,
+        occurred_at=NOW,
+        reference="forged-capture",
+    )
+
+    with pytest.raises(ValidationError, match="illegal commitment history transition"):
+        CommitmentState(
+            transaction=tx,
+            stage=CommitmentStage.CAPTURED,
+            proposed_at=NOW,
+            authorization_reference="forged-capture",
+            payment_reference="forged-capture",
+            transitions=(illegal,),
+        )
+
+    with pytest.raises(ValidationError, match="proposed commitment cannot contain"):
+        CommitmentState(
+            transaction=tx,
+            proposed_at=NOW,
+            payment_reference="forged-payment",
+        )
