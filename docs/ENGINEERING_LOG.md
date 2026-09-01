@@ -507,9 +507,10 @@ with only a reservation needed a more precise authority boundary.
 
 ### Regression evidence and limitation
 
-The current tree passes 95 Checkpoint B-focused tests, 76 Checkpoint D-focused
-tests, and 325 total deterministic tests, plus compilation, dependency, and
-JavaScript syntax checks. Tests cover evidence tampering, restart/cross-process
+At implementation commit `6f72d9bf2b7dcdc0abfc8aff282cdbbc989bf43e`,
+the tree passed 95 Checkpoint B-focused tests, 76 Checkpoint D-focused tests, and
+325 total deterministic tests, plus compilation, dependency, and JavaScript
+syntax checks. Tests cover evidence tampering, restart/cross-process
 state, payment journal crash windows, completed and pending lifecycle replay,
 adapter request authority, authentication/rate limiting, strict/canonical JSON,
 pending-to-processed refund polling, expiry authority, raw webhook signatures,
@@ -559,8 +560,22 @@ submission record internally unreliable.
 ### Regression evidence and limitation
 
 The focused Checkpoint E suite passes with the new truth-consistency assertion.
-This corrects repository wording only; it does not create any new provider,
-checkpoint, independent-reproduction, or submission evidence.
+The working repository and a separate no-hardlink clone at
+`fc63416d7e53455285d89837b17680ea2b9e65e7` both pass the resulting 326-test
+suite; the clone also passes compilation, dependency consistency, JavaScript
+syntax, readiness, diff, and clean-status checks.
+
+The first clone invocation was accidentally started from the shared parent
+directory without an explicit test path. Pytest collected identically named
+modules from sibling historical clones and correctly stopped with 32 import-file
+mismatch collection errors. No repository assertion ran or failed. Rerunning
+from the clone root with `tests` explicitly bounded collected exactly 326 tests
+and passed all of them. The failed invocation is retained here rather than
+silently represented as a product failure or discarded pass.
+
+This corrects repository wording and validation discipline only; it does not
+create any new provider, checkpoint, independent-reproduction, or submission
+evidence.
 
 ## Log discipline
 

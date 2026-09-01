@@ -35,7 +35,9 @@ the new lock guard was added; that historical hardening snapshot passed 271/271.
 The current tree subsequently added the authoritative A/B/C[/D] evidence loader,
 single-host SQLite/OS-lock durability, prepared Razorpay Test API/UI boundary,
 and bound raw-webhook ingestion/export. The deterministic suite is now **325 / 325
-passed** in the working repository. These additions close implementation gaps;
+passed** at the integration implementation snapshot. The later truth-consistency
+regression brings the current tracked suite to **326 / 326 passed** in the working
+repository. These additions close implementation gaps;
 they do not fill any final evidence slot.
 
 ## Frozen-boundary check
@@ -61,7 +63,7 @@ No competing provider run was started.
 | pytest | 8.4.2 |
 | Pydantic | 2.13.5 |
 | Node.js syntax check | v24.18.1 |
-| Latest fully validated implementation parent revision | `4a4850a8f5fce4c4033fbed81ba570550714c22e` |
+| Latest fully validated code/test revision | `fc63416d7e53455285d89837b17680ea2b9e65e7` |
 | Public remote HEAD during validation | `6485d3b24f4967c178cce9b1a9b67cdf0230840c` |
 | Provider/payment mode | Current local run made no provider call; retained prior evidence proves Razorpay Test authentication and order creation only |
 
@@ -74,7 +76,7 @@ No competing provider run was started.
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
 | Reproducibility | Exact runtime, test, and build-backend distributions plus published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Published wheels must still be obtained; independent reproduction is absent |
-| Clean clone | Separate no-hardlink clone at `4a4850a8f5fce4c4033fbed81ba570550714c22e` passed 325/325 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
+| Clean clone | Separate no-hardlink clone at `fc63416d7e53455285d89837b17680ea2b9e65e7` passed 326/326 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
 | Engineering log | Real provider, semantic, schema, harness, product, documentation, and portability failures remain recorded with fixes and limitations | **LOCAL PASS** | Log is repository evidence, not external attestation |
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
 | Demo/pitch | Runbook and five-minute outline distinguish local simulation from provider/final evidence | **LOCAL PASS** | No final screenshots or video were produced |
@@ -89,8 +91,10 @@ No competing provider run was started.
 - Historical Candidate 2/release-hardening snapshot: working repository and
   no-hardlink fresh-environment clone **271/271** passed.
 - Current authoritative-evidence/durability/provider-Test integration tree:
-  **325/325 passed** in the working repository and in a separate no-hardlink
-  clone at `4a4850a8f5fce4c4033fbed81ba570550714c22e` with a new hash-locked
+  **325/325 passed** at its implementation snapshot.
+- Current tree after the evidence-report truth-consistency regression:
+  **326/326 passed** in the working repository and in a separate no-hardlink
+  clone at `fc63416d7e53455285d89837b17680ea2b9e65e7` using its hash-locked
   virtual environment.
 - Current Checkpoint E-focused readiness regression: **9/9 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
