@@ -78,6 +78,7 @@ live run.
 | Source/script/test bytecode compilation | **Passed** |
 | Installed dependency consistency | **Passed** |
 | Current-tree credential-value marker scan | **Passed** |
+| Fresh clone at `68d6798ecf1577529a07ef8585bea7d9999bd863` with a new virtual environment | **224 / 224 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 
@@ -90,8 +91,11 @@ Commands used for the current deterministic evidence:
 .venv\Scripts\python.exe -m pip check
 ```
 
-The Razorpay tests use deterministic fake transports to exercise binding and
-failure branches. They never count as live provider evidence.
+The clean clone was created without hardlinks, installed from
+`requirements-dev.lock`, and validated on the same host/operator; it is a clean
+environment check, not independent-machine reproduction. The Razorpay tests use
+deterministic fake transports to exercise binding and failure branches. They
+never count as live provider evidence.
 
 ## Gate results
 

@@ -139,9 +139,12 @@ At B8 implementation revision `3d4a14300c66d6ed775321048ab20af9182ebc68`,
 the combined B/C/D/E-focused suite passes **170/170 tests** and the full
 deterministic suite passes **224/224 tests** in the working checkout.
 Compilation and installed dependency consistency also pass. The prior integrated
-revision remains independently clean-clone validated; a new exact-revision clean
-environment check is recorded with the B8 validation update. This is engineering
-evidence only; it does not substitute for any live or final checkpoint gate.
+revision remains clean-clone validated. A new clone at
+`68d6798ecf1577529a07ef8585bea7d9999bd863`, installed into a fresh environment
+from `requirements-dev.lock`, also passes **224/224 tests**, compilation,
+dependency consistency, JavaScript syntax, all eight readiness structure checks,
+diff checking, and clean status. This same-host check is not independent-machine
+reproduction and does not substitute for any live or final checkpoint gate.
 
 ### Checkpoint B — 80 focused tests
 

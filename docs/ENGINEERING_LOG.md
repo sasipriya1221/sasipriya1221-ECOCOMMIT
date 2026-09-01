@@ -229,7 +229,10 @@ The validator retained `checkpoint_b8_passed=false`. Exact blocker:
 `RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`. No payment authorization, capture,
 refund, webhook delivery, reconciliation, or settlement ran; manual capture and
 webhook configuration remain external prerequisites. Checkpoint A also remains
-incomplete, so Checkpoint B is not passed.
+incomplete, so Checkpoint B is not passed. A fresh same-host clone at
+`68d6798ecf1577529a07ef8585bea7d9999bd863` passed all 224 tests, compilation,
+dependency consistency, JavaScript syntax, structural readiness checks, and clean
+status; this is not independent-machine reproduction.
 
 ## Validation-environment incident
 
