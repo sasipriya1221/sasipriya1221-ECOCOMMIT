@@ -15,7 +15,7 @@
   <main>
     <header class="page-header">
       <div>
-        <p class="eyebrow">ECOCOMMIT / CHECKPOINT D SCAFFOLD</p>
+        <p class="eyebrow">ECOCOMMIT / CHECKPOINT D LOCAL VALIDATION CONSOLE</p>
         <h1>Safety console</h1>
         <p class="lede">Operational visibility without an acceptance claim.</p>
       </div>
@@ -26,9 +26,10 @@
     </header>
 
     <section class="notice" aria-label="Safety notice">
-      <strong>This interface is scaffolding.</strong>
+      <strong>This interface is local validation software.</strong>
       A healthy service is not proof that any checkpoint passed. Only recorded gate
-      evidence and final integration verification can change readiness.
+      evidence and final integration verification can change readiness. The workflow
+      below uses synthetic evidence and the local payment simulator only.
     </section>
 
     <section class="summary-grid" aria-label="System summary">
@@ -43,6 +44,10 @@
       <article class="summary-card">
         <span>Final integration</span>
         <strong id="integration-status">NOT REPORTED</strong>
+      </article>
+      <article class="summary-card">
+        <span>Real money</span>
+        <strong id="real-money-status">DISABLED</strong>
       </article>
     </section>
 
@@ -73,6 +78,26 @@
       </div>
     </section>
 
+    <section class="panel" aria-labelledby="economic-state-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">ECONOMIC STATE</p>
+          <h2 id="economic-state-title">Progressive commitment trace</h2>
+        </div>
+        <span id="workflow-outcome" class="state-chip">NO SIMULATION RUN</span>
+      </div>
+      <div class="economic-grid">
+        <article><span>Requested</span><strong id="requested-exposure">—</strong></article>
+        <article><span>Authorized cap</span><strong id="authorized-exposure">—</strong></article>
+        <article><span>Simulated capture</span><strong id="captured-exposure">—</strong></article>
+        <article><span>Final state</span><strong id="final-state">NOT RUN</strong></article>
+      </div>
+      <ol id="state-trace" class="state-trace">
+        <li><strong>Waiting</strong><span>Run a synthetic scenario to render its state transitions.</span></li>
+      </ol>
+      <div id="workflow-alert" class="workflow-alert" role="alert" hidden></div>
+    </section>
+
     <section class="panel simulation-panel" aria-labelledby="simulation-title">
       <div class="panel-heading">
         <div>
@@ -81,17 +106,18 @@
         </div>
         <span class="simulation-chip">SIMULATION ONLY</span>
       </div>
-      <p class="muted">This sends data only to the simulation endpoint. It does not evaluate authority, call Razorpay, reserve funds, or move money.</p>
+      <p class="muted">This runs a fixed synthetic contract through the real local A-to-B, exposure, certificate, commitment, and SIMULATED_LOCAL payment components. It never calls Razorpay or moves real money.</p>
       <form id="simulation-form">
-        <label for="simulation-payload">Untrusted request JSON</label>
-        <textarea id="simulation-payload" spellcheck="false">{
-  "contract_hash": "example-only",
-  "amount_minor": 10000,
-  "currency": "INR"
-}</textarea>
+        <label for="simulation-scenario">Synthetic scenario</label>
+        <select id="simulation-scenario">
+          <option value="HAPPY_PATH">Happy path — simulated capture</option>
+          <option value="CHECKPOINT_A_BLOCKED">Checkpoint A blocked — no authority released</option>
+          <option value="CAPTURE_FAILURE">Injected capture failure — hold voided</option>
+        </select>
         <button type="submit">Run simulation — no provider call</button>
       </form>
-      <pre id="simulation-result" tabindex="0">No simulation run.</pre>
+      <p class="failure-note">Errors remain visible with a correlation ID and never enable a fallback commit path.</p>
+      <pre id="simulation-result" tabindex="0" aria-live="polite">No simulation run.</pre>
     </section>
   </main>
 

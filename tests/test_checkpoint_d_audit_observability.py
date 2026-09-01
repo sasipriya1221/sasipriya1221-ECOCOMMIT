@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
+import json
 
 import pytest
 
@@ -87,3 +89,65 @@ def test_metrics_and_structured_events_are_machine_readable():
     }
     assert sink.events[0]["event"] == "commit.denied"
     assert sink.events[0]["correlation_id"] == "corr-1"
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_metrics_reject_non_finite_values_before_they_break_json(value):
+    metrics = MetricsRegistry()
+
+    with pytest.raises(ValueError, match="finite"):
+        metrics.increment("bad_counter", value)
+    with pytest.raises(ValueError, match="finite"):
+        metrics.set_gauge("bad_gauge", value)
+    with pytest.raises(ValueError, match="finite"):
+        metrics.observe("bad_histogram", value)
+
+    json.dumps(metrics.snapshot(), allow_nan=False)
+
+
+def test_metric_aggregate_cannot_overflow_to_infinity():
+    metrics = MetricsRegistry()
+    metrics.increment("large_counter", 1e308)
+    metrics.observe("large_histogram", 1e308)
+
+    with pytest.raises(ValueError, match="aggregate must remain finite"):
+        metrics.increment("large_counter", 1e308)
+    with pytest.raises(ValueError, match="aggregate must remain finite"):
+        metrics.observe("large_histogram", 1e308)
+
+    json.dumps(metrics.snapshot(), allow_nan=False)
+
+
+def test_multiple_audit_instances_share_a_process_lock(tmp_path):
+    path = tmp_path / "shared-audit.ndjson"
+    first = AppendOnlyAuditLog(path, clock=lambda: FIXED_TIME)
+    second = AppendOnlyAuditLog(path, clock=lambda: FIXED_TIME)
+
+    def append(index):
+        target = first if index % 2 else second
+        target.append("concurrent.event", f"corr-{index}", {"index": index})
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(append, range(80)))
+
+    verification = first.verify()
+    assert verification.valid is True
+    assert verification.entries == 80
+    assert {event.payload["index"] for event in first.events()} == set(range(80))
+
+
+def test_audit_verifier_rejects_rehashed_but_malformed_record(tmp_path):
+    path = tmp_path / "malformed-audit.ndjson"
+    log = AppendOnlyAuditLog(path, clock=lambda: FIXED_TIME)
+    log.append("request.received", "corr-1", {"amount_minor": 100})
+    record = json.loads(path.read_text(encoding="utf-8"))
+    record["timestamp"] = "2026-09-01T08:30:00"
+    record["event_hash"] = AppendOnlyAuditLog._expected_hash(record)
+    path.write_text(
+        json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+
+    verification = log.verify()
+    assert verification.valid is False
+    assert "non-timezone-aware timestamp" in verification.error

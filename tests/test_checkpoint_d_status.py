@@ -28,6 +28,8 @@ def test_default_status_reports_every_gate_without_accepting_anything():
 def test_gate_cannot_pass_without_evidence():
     with pytest.raises(ValueError, match="requires a non-empty evidence"):
         GateReport("A", GateState.PASSED)
+    with pytest.raises(ValueError, match="requires a non-empty evidence"):
+        GateReport("A", GateState.PASSED, evidence="   ")
 
 
 def test_downstream_gate_cannot_pass_before_its_prerequisites():
@@ -65,3 +67,30 @@ def test_fully_evidenced_test_mode_status_is_test_ready_but_never_real_money_rea
 
     assert status.irreversible_commit_ready is True
     assert status.snapshot()["safe_to_move_real_money"] is False
+
+
+def test_status_takes_an_immutable_snapshot_of_the_supplied_gate_mapping():
+    supplied = {"A": GateReport("A", GateState.BLOCKED, detail="live gate incomplete")}
+    status = SafetyStatus(gates=supplied)
+    supplied["A"] = passed("A")
+
+    assert status.gates["A"].state == GateState.BLOCKED
+    with pytest.raises(TypeError):
+        status.gates["A"] = passed("A")
+
+
+def test_d_can_be_locally_blocked_without_being_mislabeled_failed_or_passed():
+    status = SafetyStatus(
+        gates={
+            "A": GateReport("A", GateState.IN_PROGRESS, detail="frozen live evaluation"),
+            "B": GateReport("B", GateState.BLOCKED, detail="requires A"),
+            "C": GateReport("C", GateState.BLOCKED, detail="requires A and B"),
+            "D": GateReport("D", GateState.BLOCKED, detail="locally validated only"),
+            "E": GateReport("E", GateState.IN_PROGRESS, detail="local validation"),
+        }
+    )
+
+    snapshot = status.snapshot()
+    assert snapshot["checkpoint_gates"]["D"]["state"] == "BLOCKED"
+    assert snapshot["checkpoint_gates"]["D"]["accepted"] is False
+    assert "CHECKPOINT_D_NOT_ACCEPTED" in snapshot["blockers"]

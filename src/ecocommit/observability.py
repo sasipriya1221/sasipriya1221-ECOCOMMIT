@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 import threading
 import uuid
@@ -42,6 +43,20 @@ def _validate_metric_name(name: str) -> None:
         raise ValueError(f"invalid metric name: {name!r}")
 
 
+def _finite_metric_value(value: float, *, nonnegative: bool) -> float:
+    if isinstance(value, bool):
+        raise TypeError("metric values must be finite numbers")
+    try:
+        normalized = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise TypeError("metric values must be finite numbers") from exc
+    if not math.isfinite(normalized):
+        raise ValueError("metric values must be finite")
+    if nonnegative and normalized < 0:
+        raise ValueError("metric values cannot be negative")
+    return normalized
+
+
 class MetricsRegistry:
     """Small in-process metric registry with deterministic JSON snapshots."""
 
@@ -61,11 +76,13 @@ class MetricsRegistry:
         labels: Mapping[str, str] | None = None,
     ) -> None:
         _validate_metric_name(name)
-        if value < 0:
-            raise ValueError("counter increments cannot be negative")
+        normalized = _finite_metric_value(value, nonnegative=True)
         key = (name, _labels(labels))
         with self._lock:
-            self._counters[key] = self._counters.get(key, 0.0) + float(value)
+            updated = self._counters.get(key, 0.0) + normalized
+            if not math.isfinite(updated):
+                raise ValueError("metric aggregate must remain finite")
+            self._counters[key] = updated
 
     def set_gauge(
         self,
@@ -75,9 +92,10 @@ class MetricsRegistry:
         labels: Mapping[str, str] | None = None,
     ) -> None:
         _validate_metric_name(name)
+        normalized = _finite_metric_value(value, nonnegative=False)
         key = (name, _labels(labels))
         with self._lock:
-            self._gauges[key] = float(value)
+            self._gauges[key] = normalized
 
     def observe(
         self,
@@ -87,18 +105,20 @@ class MetricsRegistry:
         labels: Mapping[str, str] | None = None,
     ) -> None:
         _validate_metric_name(name)
-        if value < 0:
-            raise ValueError("observations cannot be negative")
+        normalized = _finite_metric_value(value, nonnegative=True)
         key = (name, _labels(labels))
         with self._lock:
             summary = self._histograms.setdefault(
                 key,
-                {"count": 0.0, "sum": 0.0, "min": float(value), "max": float(value)},
+                {"count": 0.0, "sum": 0.0, "min": normalized, "max": normalized},
             )
+            updated_sum = summary["sum"] + normalized
+            if not math.isfinite(updated_sum):
+                raise ValueError("metric aggregate must remain finite")
             summary["count"] += 1.0
-            summary["sum"] += float(value)
-            summary["min"] = min(summary["min"], float(value))
-            summary["max"] = max(summary["max"], float(value))
+            summary["sum"] = updated_sum
+            summary["min"] = min(summary["min"], normalized)
+            summary["max"] = max(summary["max"], normalized)
 
     @staticmethod
     def _row(

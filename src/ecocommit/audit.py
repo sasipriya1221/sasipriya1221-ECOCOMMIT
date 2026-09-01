@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -21,6 +22,9 @@ _RECORD_KEYS = {
     "previous_hash",
     "event_hash",
 }
+_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
+_PATH_LOCKS_GUARD = threading.Lock()
+_PATH_LOCKS: dict[str, threading.RLock] = {}
 
 
 class AuditIntegrityError(RuntimeError):
@@ -51,6 +55,12 @@ def _normalized_mapping(value: Mapping[str, object]) -> dict[str, object]:
     if not isinstance(normalized, dict):
         raise TypeError("audit payload must be a JSON object")
     return normalized
+
+
+def _shared_path_lock(path: Path) -> threading.RLock:
+    key = str(path.resolve())
+    with _PATH_LOCKS_GUARD:
+        return _PATH_LOCKS.setdefault(key, threading.RLock())
 
 
 @dataclass(frozen=True)
@@ -94,9 +104,11 @@ class AppendOnlyAuditLog:
         *,
         clock: Callable[[], datetime] = _utc_now,
     ) -> None:
-        self.path = Path(path)
+        self.path = Path(path).resolve()
         self._clock = clock
-        self._lock = threading.RLock()
+        # Multiple log objects in one process must serialize against the same
+        # file; an instance-local lock permits lost updates and forked chains.
+        self._lock = _shared_path_lock(self.path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if not self.path.exists():
             self.path.touch()
@@ -134,7 +146,15 @@ class AppendOnlyAuditLog:
     def _verify_records(self, records: list[dict[str, object]]) -> AuditVerification:
         previous_hash = GENESIS_HASH
         for expected_sequence, record in enumerate(records, start=1):
-            if record["sequence"] != expected_sequence:
+            shape_error = self._record_shape_error(record)
+            if shape_error:
+                return AuditVerification(
+                    False,
+                    expected_sequence - 1,
+                    previous_hash,
+                    f"{shape_error} at entry {expected_sequence}",
+                )
+            if type(record["sequence"]) is not int or record["sequence"] != expected_sequence:
                 return AuditVerification(
                     False,
                     expected_sequence - 1,
@@ -158,6 +178,36 @@ class AppendOnlyAuditLog:
                 )
             previous_hash = expected_hash
         return AuditVerification(True, len(records), previous_hash)
+
+    @staticmethod
+    def _record_shape_error(record: Mapping[str, object]) -> str | None:
+        for key in ("event_type", "correlation_id", "actor"):
+            value = record.get(key)
+            if not isinstance(value, str) or not value or value != value.strip():
+                return f"invalid {key}"
+        timestamp = record.get("timestamp")
+        if not isinstance(timestamp, str):
+            return "invalid timestamp"
+        try:
+            parsed = datetime.fromisoformat(timestamp)
+        except ValueError:
+            return "invalid timestamp"
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            return "non-timezone-aware timestamp"
+        payload = record.get("payload")
+        if not isinstance(payload, Mapping):
+            return "invalid payload"
+        try:
+            normalized = _normalized_mapping(payload)
+        except TypeError:
+            return "invalid payload"
+        if normalized != dict(payload):
+            return "non-canonical payload"
+        for key in ("previous_hash", "event_hash"):
+            value = record.get(key)
+            if not isinstance(value, str) or not _SHA256_HEX.fullmatch(value):
+                return f"invalid {key}"
+        return None
 
     def verify(self) -> AuditVerification:
         with self._lock:

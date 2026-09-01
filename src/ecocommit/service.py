@@ -7,6 +7,10 @@ from hashlib import sha256
 from typing import Callable, Mapping
 
 from .audit import AppendOnlyAuditLog, AuditIntegrityError
+from .checkpoint_d_workflow import (
+    CheckpointDSimulatedWorkflow,
+    SimulationInputError,
+)
 from .checkpoint_status import SafetyStatus
 from .observability import MetricsRegistry, StructuredLogger, resolve_correlation_id
 
@@ -100,12 +104,14 @@ class CheckpointDService:
         *,
         metrics: MetricsRegistry | None = None,
         logger: StructuredLogger | None = None,
+        simulation_workflow: CheckpointDSimulatedWorkflow | None = None,
         monotonic: Callable[[], float] = time.perf_counter,
     ) -> None:
         self._status_source = status if callable(status) else lambda: status
         self.audit_log = audit_log
         self.metrics = metrics or MetricsRegistry()
         self.logger = logger or StructuredLogger()
+        self.simulation_workflow = simulation_workflow or CheckpointDSimulatedWorkflow()
         self._monotonic = monotonic
 
     def _status(self) -> SafetyStatus:
@@ -269,17 +275,84 @@ class CheckpointDService:
             )
             return ServiceReply(400, body)
 
+        scenario = payload.get("scenario", "HAPPY_PATH")
+        if not isinstance(scenario, str):
+            return self._simulation_input_failure(
+                started=started,
+                correlation_id=correlation.correlation_id,
+                detail="scenario must be a string",
+            )
+        try:
+            workflow = self.simulation_workflow.run(scenario)
+        except SimulationInputError as exc:
+            return self._simulation_input_failure(
+                started=started,
+                correlation_id=correlation.correlation_id,
+                detail=str(exc),
+            )
+        except Exception:
+            try:
+                self.audit_log.append(
+                    "simulation.failed_closed",
+                    correlation.correlation_id,
+                    {
+                        "reason": "SIMULATION_WORKFLOW_FAILURE",
+                        "money_moved": False,
+                        "real_provider_called": False,
+                    },
+                )
+            except (AuditIntegrityError, OSError):
+                return self._audit_failure(
+                    route="simulate",
+                    started=started,
+                    correlation_id=correlation.correlation_id,
+                )
+            self.logger.emit(
+                "ERROR",
+                "simulation.workflow.failed_closed",
+                correlation.correlation_id,
+                scenario=scenario,
+                money_moved=False,
+                real_provider_called=False,
+            )
+            self._finish(
+                route="simulate",
+                outcome="workflow_failure_closed",
+                started=started,
+                correlation_id=correlation.correlation_id,
+                status_code=503,
+            )
+            return ServiceReply(
+                503,
+                {
+                    "correlation_id": correlation.correlation_id,
+                    "outcome": "SIMULATION_FAILED_CLOSED",
+                    "reason": "SIMULATION_WORKFLOW_FAILURE",
+                    "simulated": True,
+                    "money_moved": False,
+                    "provider_called": False,
+                },
+            )
+
         body = {
             "correlation_id": correlation.correlation_id,
-            "outcome": "SIMULATED_ONLY",
+            "outcome": workflow["outcome"],
             "simulated": True,
             "simulation_label": "NO REAL PROVIDER CALL; NO MONEY MOVEMENT",
             "authority_evaluated": False,
+            "synthetic_authority_fixture_evaluated": True,
+            "authority_scope": "SYNTHETIC_FIXTURE_ONLY",
+            "authoritative_checkpoint_evidence_used": False,
             "money_moved": False,
             "provider_called": False,
+            "simulation_input_contract": "SCENARIO_SELECTOR_ONLY",
+            "ignored_simulation_request_fields": sorted(
+                key for key in payload if key != "scenario"
+            ),
             "ignored_untrusted_authority_claims": summary[
                 "ignored_untrusted_authority_claims"
             ],
+            "workflow": workflow,
             "checkpoint_snapshot": self._service_snapshot(self._status()),
         }
         try:
@@ -287,10 +360,15 @@ class CheckpointDService:
                 "simulation.completed",
                 correlation.correlation_id,
                 {
-                    "outcome": "SIMULATED_ONLY",
-                    "authority_evaluated": False,
+                    "outcome": workflow["outcome"],
+                    "scenario": workflow["scenario"],
+                    "final_commitment_stage": workflow["final_commitment_stage"],
+                    "authority_scope": "SYNTHETIC_FIXTURE_ONLY",
+                    "ignored_request_fields": sorted(
+                        key for key in payload if key != "scenario"
+                    ),
                     "money_moved": False,
-                    "provider_called": False,
+                    "real_provider_called": False,
                 },
             )
         except (AuditIntegrityError, OSError):
@@ -307,6 +385,111 @@ class CheckpointDService:
             status_code=200,
         )
         return ServiceReply(200, body)
+
+    def _simulation_input_failure(
+        self,
+        *,
+        started: float,
+        correlation_id: str,
+        detail: str,
+    ) -> ServiceReply:
+        try:
+            self.audit_log.append(
+                "simulation.rejected",
+                correlation_id,
+                {
+                    "reason": "INVALID_SIMULATION_SCENARIO",
+                    "money_moved": False,
+                    "real_provider_called": False,
+                },
+            )
+        except (AuditIntegrityError, OSError):
+            return self._audit_failure(
+                route="simulate",
+                started=started,
+                correlation_id=correlation_id,
+            )
+        self._finish(
+            route="simulate",
+            outcome="invalid_scenario",
+            started=started,
+            correlation_id=correlation_id,
+            status_code=400,
+        )
+        return ServiceReply(
+            400,
+            {
+                "correlation_id": correlation_id,
+                "outcome": "REJECTED_INVALID_REQUEST",
+                "reason": "INVALID_SIMULATION_SCENARIO",
+                "detail": detail,
+                "simulated": True,
+                "money_moved": False,
+                "provider_called": False,
+            },
+        )
+
+    def record_boundary_rejection(
+        self,
+        *,
+        correlation_id: str,
+        method: str,
+        path: str,
+        reason: str,
+        status_code: int,
+    ) -> None:
+        """Record a side-effect-free rejection at the HTTP parsing boundary."""
+
+        labels = {"reason": reason, "status_code": str(status_code)}
+        try:
+            self.metrics.increment("ecocommit_api_boundary_rejections_total", labels=labels)
+        except Exception:
+            pass
+        try:
+            self.logger.emit(
+                "WARNING",
+                "api.request.rejected",
+                correlation_id,
+                method=method,
+                path=path,
+                reason=reason,
+                status_code=status_code,
+                default_deny=True,
+            )
+        except Exception:
+            pass
+        try:
+            self.audit_log.append(
+                "api.request.rejected",
+                correlation_id,
+                {
+                    "method": method,
+                    "path": path,
+                    "reason": reason,
+                    "status_code": status_code,
+                    "default_deny": True,
+                    "money_moved": False,
+                    "provider_called": False,
+                },
+            )
+        except (AuditIntegrityError, OSError):
+            try:
+                self.metrics.increment(
+                    "ecocommit_audit_failures_total",
+                    labels={"route": "api_boundary"},
+                )
+            except Exception:
+                pass
+            try:
+                self.logger.emit(
+                    "ERROR",
+                    "audit.unavailable",
+                    correlation_id,
+                    route="api_boundary",
+                    default_deny=True,
+                )
+            except Exception:
+                pass
 
     def request_commit(
         self,
