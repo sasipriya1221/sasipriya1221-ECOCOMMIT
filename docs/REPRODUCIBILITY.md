@@ -151,6 +151,9 @@ do not retry it as an outage or accept a redirected response.
 
 Never print or pass a provider key in a shell command that will be retained. Use
 the approved CI secret boundary.
+Pushing the source and dispatching a credentialed workflow are separate actions.
+All secret-bearing workflows are manual-only `workflow_dispatch`; the legacy
+sentinel files remain historical and editing them has no runtime effect.
 
 ## Razorpay Test Mode evidence
 

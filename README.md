@@ -194,7 +194,7 @@ captures, mocked provider output, or preliminary benchmark numbers.
 | `scripts/` | Live A/B tooling, webhook/evidence export, C runner, D demo/prepared Test server, and E readiness checks |
 | `spec/` | Frozen scope, hypothesis, metrics, and evaluation protocol |
 | `docs/` | Architecture, threat model, reproducibility, engineering log, demo, pitch, and evidence framework |
-| `.github/workflows/` | Offline CI plus manually/guardedly triggered live-provider workflows |
+| `.github/workflows/` | Offline CI plus manual-only credentialed provider workflows |
 
 ## Safety and limitations
 

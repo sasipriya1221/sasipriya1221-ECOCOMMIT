@@ -124,6 +124,9 @@ authorization with `add_unredirected_header`, and reject any response whose fina
 URL differs from the exact request. This applies to model evaluation, GitHub run
 verification, Razorpay API execution, and the inline provider preflights; it does
 not replace TLS, provider trust, or a managed secret boundary.
+All workflows that reference secrets are manual-only. A push can run the offline
+regression workflow, but provider and Razorpay authority requires a separate
+explicit `workflow_dispatch` after the workflow exists on the default branch.
 
 A synthetic passed-A fixture proves interface compatibility only. The actual A
 gate releases no B authority until it passes. Live evidence currently stops at

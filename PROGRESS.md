@@ -130,6 +130,10 @@ unredirected header and reject any response whose final URL differs from the
 fixed request URL. This covers Candidate 2/model calls, GitHub run verification,
 Razorpay API calls, and both inline credential preflights. The new regressions do
 not create provider evidence or retroactively upgrade the retained historical run.
+Every workflow that references a repository secret is now `workflow_dispatch`
+only. Pushing the accumulated source can start offline regression but cannot by
+itself start a model-provider or Razorpay request; the retained legacy sentinel
+files are inert historical records.
 
 Locally, the order workflow now emits a digest-bound Test Checkout handoff and
 standalone page. A continuation validates the returned Checkout HMAC and exact

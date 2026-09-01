@@ -23,8 +23,8 @@ The current input loader rejects oversized, empty, symlinked, duplicate-key,
 non-finite, invalid-Unicode, over-complex, and non-object plan/suite JSON before
 Pydantic validation. This closes parser-differential ambiguity without changing
 any frozen fixture or final decision rule. The current focused C suite passes
-**47/47** and the full deterministic suite passes **368/368**; a separate
-no-hardlink clone at `652cc68075854531780df501373f1c6a59704e07`
+**47/47** and the full deterministic suite passes **369/369**; a separate
+no-hardlink clone at `60c85f0b75574007a7bf1de9a8b4be7214c69a75`
 passes the same suite and static/readiness checks. This remains same-host local
 evidence, not a final comparison or independent reproduction.
 

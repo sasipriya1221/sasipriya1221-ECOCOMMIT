@@ -30,6 +30,8 @@ production-readiness claim.
   side effect.
 - Provider/API redirect responses that could otherwise forward authorization or
   substitute a response origin.
+- Source pushes or pull requests accidentally triggering a secret-bearing
+  provider workflow without separate operational authorization.
 - Operator confusion between local simulation, provider Test Mode, and live money.
 - Audit deletion/modification, benchmark cherry-picking, or fabricated final
   screenshots/metrics/video.
@@ -70,6 +72,7 @@ production-readiness claim.
 | Mode confusion | Explicit simulation/Test labels, non-test credential refusal, same-revision GitHub-API-verified preflight receipt, read-only current-credential preflight, and permanently disabled real-money field | Preflight identity/tamper tests, API/UI/browser checks, and redacted Test authentication/order evidence | Current verifier not run remotely; authorization/capture evidence and external webhook Test-mode configuration absent |
 | Provider ambiguity | Exact provider bindings, complete redacted per-attempt retry chronology, explicit correction-attempt state, provider/local idempotency, durable result recovery, capture re-fetch, exact refund-ID polling, and raw webhook HMAC/stable event-ID binding | Provider retry/correction-state, adapter, and webhook adversarial tests plus live order replay | Genuine Candidate 2 evaluation, authorization, asynchronous refund, and webhook delivery evidence absent |
 | Credentialed HTTP redirect | Fixed HTTPS/allowlisted origins, non-redirectable authorization headers, exact final-URL checks, and non-transient model redirect evidence | Model, GitHub verifier, Razorpay transport, and inline-workflow redirect-policy regressions | Provider/TLS/proxy trust and remote workflow execution remain external; no managed egress proxy attestation |
+| Unintended provider workflow invocation | Every secret-bearing workflow is manual-only `workflow_dispatch`; offline regression is the only source-push CI path | Workflow trigger-policy regression enumerates all seven secret-bearing workflows | Repository write/Actions permission governance and manual operator intent remain external |
 | Malicious local DB writer | Payload digests, strict models, SQLite integrity check, CAS | Corruption/unknown-field/stale-write tests | Digests are unkeyed; a writer able to rewrite DB rows and hashes is outside the boundary |
 | Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation, and pre-outcome final registration/decision contract | C artifact/final-gate tests | Real registration/inputs/final run absent |
 | Fabricated submission media | Blocked evidence markers and promotion rule | E readiness checks | Human review/final evidence still required |
@@ -113,8 +116,8 @@ access controls, clock discipline, backup, and recovery evidence.
   use read-only `contents` permission, and provider secrets are limited to actual
   provider steps. Supply-chain attestations and an offline trusted build
   bootstrap are not implemented.
-- Provider workflows require named secrets and must remain guarded/manual; pull
-  requests must not receive provider credentials.
+- Provider workflows require named secrets and are manual-only; source pushes and
+  pull requests cannot invoke them or receive provider credentials.
 
 ## Remaining high-priority review
 

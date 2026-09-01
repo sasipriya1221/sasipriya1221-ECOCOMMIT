@@ -95,9 +95,9 @@ were not relabeled as part of the earlier live run.
 | Current-tree credential-value marker scan | **Passed** |
 | Fresh clone at `68d6798ecf1577529a07ef8585bea7d9999bd863` with a new virtual environment | **224 / 224 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 | Current Checkpoint B-focused suite | **115 / 115 passed** |
-| Current workflow-security suite | **6 / 6 passed** |
-| Current full deterministic suite | **368 / 368 passed** |
-| Current no-hardlink clone at `652cc68075854531780df501373f1c6a59704e07` using its hash-locked virtual environment | **368 / 368 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
+| Current workflow-security suite | **7 / 7 passed** |
+| Current full deterministic suite | **369 / 369 passed** |
+| Current no-hardlink clone at `60c85f0b75574007a7bf1de9a8b4be7214c69a75` using its hash-locked virtual environment | **369 / 369 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 
@@ -128,6 +128,8 @@ redirect handler and reject a changed final URL. Cross-origin and same-origin
 redirect regressions prove the verifier cannot accept redirected run evidence;
 the Razorpay transport regression proves its Basic value is non-redirectable.
 These are local controls for future runs, not new Razorpay evidence.
+Both Razorpay workflows and every other secret-bearing workflow are manual-only;
+a source push cannot independently authorize a credentialed call.
 
 ## Gate results
 

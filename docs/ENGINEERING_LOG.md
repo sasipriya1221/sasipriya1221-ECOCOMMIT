@@ -863,6 +863,42 @@ These tests enforce client behavior but do not attest DNS, TLS, proxy, runner, o
 provider infrastructure. They made no credentialed network call and do not
 upgrade any checkpoint or historical provider artifact.
 
+## 2026-09-02 — Secret-bearing workflows still had push triggers
+
+### What broke or remained unsafe
+
+The accumulated 42-commit push delta did not change any legacy sentinel, so its
+only automatic run would have been offline regression. However, five
+secret-bearing workflows still accepted narrow sentinel-file `push` events, and
+the legacy OpenAI preflight had no manual trigger at all. A future source commit
+to one of those sentinels could therefore conflate permission to push with
+permission to make a credentialed provider call.
+
+### How it was fixed
+
+- Remove every `push` trigger from the five affected model/provider workflows.
+- Add `workflow_dispatch` to the legacy preflight and retain it on all other
+  credentialed workflows.
+- Keep the existing sentinel files as inert historical records rather than
+  rewriting evidence of earlier launches.
+- Add a policy regression that enumerates all seven workflows referencing
+  repository secrets, requires `workflow_dispatch`, and rejects `push`,
+  `pull_request`, or `pull_request_target` triggers.
+- Update the Candidate 2 runbook so push and provider dispatch are explicitly
+  separate authorization steps.
+
+### Regression evidence and limitation
+
+Workflow security passes **7/7** and the full suite passes **369/369** in the
+working tree and a no-hardlink clone at
+`60c85f0b75574007a7bf1de9a8b4be7214c69a75`. The clone also passes compilation,
+dependency consistency, JavaScript syntax, 8/8 local readiness, diff, and clean
+status.
+
+This prevents tracked workflow triggers from turning a push into a provider call.
+It does not attest repository/Actions permissions, secret governance, a future
+manual operator's intent, or any remote run. Nothing was pushed or dispatched.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.
