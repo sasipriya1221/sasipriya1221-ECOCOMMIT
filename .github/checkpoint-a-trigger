@@ -1,2 +1,2 @@
-trigger: 2026-09-01T02:25:00Z
-reason: rerun full frozen 50-clear + 30-ambiguous Checkpoint A benchmark using four resumable 20-case shards; thresholds unchanged
+trigger: 2026-09-01T05:43:00Z
+reason: rerun frozen 50-clear + 30-ambiguous Checkpoint A with 16 resumable 5-case shards, transient 429 isolation, 1024-token cap, and Qwen 3.6 quota-safe live provider; thresholds unchanged
