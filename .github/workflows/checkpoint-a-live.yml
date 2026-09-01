@@ -28,71 +28,25 @@ jobs:
       - name: Offline regression suite
         run: pytest
 
-  shard:
+  case:
     needs: regression
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 8
     permissions:
       contents: read
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        include:
-          - shard: 0
-            start: 0
-            end: 5
-          - shard: 1
-            start: 5
-            end: 10
-          - shard: 2
-            start: 10
-            end: 15
-          - shard: 3
-            start: 15
-            end: 20
-          - shard: 4
-            start: 20
-            end: 25
-          - shard: 5
-            start: 25
-            end: 30
-          - shard: 6
-            start: 30
-            end: 35
-          - shard: 7
-            start: 35
-            end: 40
-          - shard: 8
-            start: 40
-            end: 45
-          - shard: 9
-            start: 45
-            end: 50
-          - shard: 10
-            start: 50
-            end: 55
-          - shard: 11
-            start: 55
-            end: 60
-          - shard: 12
-            start: 60
-            end: 65
-          - shard: 13
-            start: 65
-            end: 70
-          - shard: 14
-            start: 70
-            end: 75
-          - shard: 15
-            start: 75
-            end: 80
+        case: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79]
     env:
       ECOCOMMIT_LLM_BASE_URL: https://api.groq.com/openai/v1
       ECOCOMMIT_LLM_MODEL: qwen/qwen3.6-27b
-      ECOCOMMIT_LLM_REASONING_EFFORT: default
-      ECOCOMMIT_LLM_JSON_SCHEMA: 'true'
+      ECOCOMMIT_LLM_REASONING_EFFORT: none
+      ECOCOMMIT_LLM_JSON_SCHEMA: 'false'
       ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS: '1024'
+      ECOCOMMIT_LLM_CASE_MAX_ATTEMPTS: '2'
+      ECOCOMMIT_LLM_CASE_MAX_RETRY_DELAY: '15'
       ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -109,30 +63,33 @@ jobs:
             echo 'ECOCOMMIT_GROQ_API_KEY is not configured. Checkpoint A cannot be claimed with fixtures.' >&2
             exit 3
           fi
-      - name: Restore prior shard artifact
+      - name: Restore this case from an earlier attempt of the same run
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: checkpoint-a-shard-${{ matrix.shard }}
+          name: checkpoint-a-case-${{ matrix.case }}
           path: artifacts/resume
-      - name: Run frozen benchmark shard
-        run: >-
-          python scripts/checkpoint_a_shard.py
-          --start ${{ matrix.start }}
-          --end ${{ matrix.end }}
-          --output artifacts/shard-${{ matrix.shard }}.json
-          --resume artifacts/resume/shard-${{ matrix.shard }}.json
-      - name: Upload shard artifact
+      - name: Run one immutable frozen benchmark case
+        shell: bash
+        run: |
+          START=${{ matrix.case }}
+          END=$((START + 1))
+          python scripts/checkpoint_a_shard.py \
+            --start "$START" \
+            --end "$END" \
+            --output "artifacts/case-${START}.json" \
+            --resume "artifacts/resume/case-${START}.json"
+      - name: Upload this case result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: checkpoint-a-shard-${{ matrix.shard }}
-          path: artifacts/shard-${{ matrix.shard }}.json
+          name: checkpoint-a-case-${{ matrix.case }}
+          path: artifacts/case-${{ matrix.case }}.json
           if-no-files-found: warn
           overwrite: true
 
   aggregate:
-    needs: shard
+    needs: case
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -146,16 +103,16 @@ jobs:
           cache: pip
       - name: Install project
         run: python -m pip install -e '.[dev]'
-      - name: Download shard artifacts
+      - name: Download completed case artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: checkpoint-a-shard-*
-          path: artifacts/shards
+          pattern: checkpoint-a-case-*
+          path: artifacts/cases
           merge-multiple: false
       - name: Aggregate frozen Checkpoint A result
         id: aggregate
         continue-on-error: true
-        run: python scripts/checkpoint_a_aggregate.py --input-dir artifacts/shards --output artifacts/checkpoint_a_results.json
+        run: python scripts/checkpoint_a_aggregate.py --input-dir artifacts/cases --output artifacts/checkpoint_a_results.json
       - name: Print compact live diagnostics
         if: always()
         run: python scripts/checkpoint_a_diagnostics.py artifacts/checkpoint_a_results.json

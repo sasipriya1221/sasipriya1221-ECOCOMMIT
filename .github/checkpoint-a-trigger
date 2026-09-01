@@ -1,2 +1,2 @@
-trigger: 2026-09-01T06:00:00Z
-reason: rerun frozen 50-clear + 30-ambiguous Checkpoint A with 16 resumable 5-case shards after correcting Groq Qwen reasoning_effort from unsupported low to supported default; thresholds unchanged
+trigger: 2026-09-01T09:40:00Z
+reason: run frozen 50-clear + 30-ambiguous Checkpoint A as 80 independent fail-fast resumable case jobs after Qwen JSON transport passed; thresholds, prompts, model, dataset and scoring unchanged
