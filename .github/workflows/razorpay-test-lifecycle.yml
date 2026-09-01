@@ -48,9 +48,6 @@ jobs:
       - name: Publish only redacted validation facts
         if: always()
         shell: python
-        env:
-          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
-          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
         run: |
           import json
           import os
@@ -60,11 +57,6 @@ jobs:
           if not path.is_file():
               raise SystemExit("B8 evidence file was not produced")
           evidence = json.loads(path.read_text(encoding="utf-8"))
-          serialized = json.dumps(evidence, sort_keys=True)
-          for name in ("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"):
-              value = os.environ.get(name, "")
-              if value and value in serialized:
-                  raise SystemExit("B8 evidence contains a credential value")
 
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
               summary.write("# ECOCOMMIT B8 — Razorpay Test Mode\n\n")

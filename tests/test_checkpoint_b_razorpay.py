@@ -179,6 +179,8 @@ def test_live_workflows_are_manual_and_keep_credentials_in_secret_environment():
         assert "print(key_secret" not in workflow
     assert "credential_preflight_run_id" in lifecycle
     assert "RUN_TEST_MODE_ORDER" in lifecycle
+    assert lifecycle.count("${{ secrets.RAZORPAY_KEY_ID }}") == 1
+    assert lifecycle.count("${{ secrets.RAZORPAY_KEY_SECRET }}") == 1
 
 
 def adapter(transport: FakeTransport) -> RazorpayTestPaymentAdapter:
