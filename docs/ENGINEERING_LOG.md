@@ -215,6 +215,12 @@ The first E focused run also exposed a brittle documentation assertion: it looke
 for one exact sentence without normalizing Markdown line wrapping, so truthful
 wrapped prose failed the test.
 
+The first clean-clone run found a deeper portability defect: on a Windows checkout
+with `core.autocrlf=true`, Git converted the three byte-digested Checkpoint C
+prompt/guardrail fixtures to CRLF. Their registered SHA-256 values describe LF
+bytes, so the clean clone failed one digest-integrity test while the original
+working tree passed.
+
 ### How it was fixed
 
 - Added a resolved validation dependency manifest and verified a new virtual
@@ -230,6 +236,9 @@ wrapped prose failed the test.
   boundary.
 - Made the documentation regression normalize whitespace so formatting changes do
   not alter the semantic non-claim it protects.
+- Added a repository `.gitattributes` rule that forces LF checkout for every
+  byte-digested Checkpoint C protocol text file, independent of platform Git
+  defaults.
 
 ### Retained evidence and limitation
 

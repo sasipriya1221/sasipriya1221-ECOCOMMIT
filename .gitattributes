@@ -1,0 +1,3 @@
+# These files are byte-digested as frozen Checkpoint C protocol inputs.
+# Force one checkout representation regardless of core.autocrlf/platform.
+/tests/fixtures/checkpoint_c/*.txt text eol=lf

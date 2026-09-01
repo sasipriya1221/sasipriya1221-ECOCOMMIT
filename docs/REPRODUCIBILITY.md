@@ -32,6 +32,9 @@ git status --short
 
 For retained evidence, check out the exact full commit SHA named by the relevant
 validation report. Never infer a source revision from a downloaded artifact.
+The repository forces LF checkout for byte-digested Checkpoint C protocol text
+files through `.gitattributes`; do not override that attribute when reproducing
+their registered SHA-256 values.
 
 ## Create the deterministic environment
 

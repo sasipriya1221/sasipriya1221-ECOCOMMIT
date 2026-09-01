@@ -77,3 +77,9 @@ def test_submission_evidence_contains_no_final_metric_or_media_claims():
     assert "No final screenshot is retained" in normalized
     assert "No final video is recorded" in normalized
     assert "No Razorpay request was made" in normalized
+
+
+def test_digest_bound_checkpoint_c_protocol_files_force_lf_checkout():
+    attributes = (REPOSITORY_ROOT / ".gitattributes").read_text(encoding="utf-8")
+
+    assert "/tests/fixtures/checkpoint_c/*.txt text eol=lf" in attributes

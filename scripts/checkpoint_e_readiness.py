@@ -11,6 +11,7 @@ from urllib.parse import unquote
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = (
+    ".gitattributes",
     "README.md",
     "PROGRESS.md",
     "pyproject.toml",
