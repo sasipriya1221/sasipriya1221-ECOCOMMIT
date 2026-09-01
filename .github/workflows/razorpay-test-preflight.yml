@@ -1,0 +1,68 @@
+name: Razorpay Test Credential Preflight
+
+on:
+  push:
+    branches:
+      - b8-razorpay-preflight-20260901
+
+permissions:
+  contents: read
+
+jobs:
+  authenticate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+      RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+    steps:
+      - name: Verify redacted Test Mode authentication
+        shell: python
+        run: |
+          import base64
+          import json
+          import os
+          from urllib import error, request
+
+          key_id = os.environ.get("RAZORPAY_KEY_ID", "")
+          key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "")
+          if not key_id or not key_secret:
+              raise SystemExit("PREFLIGHT_FAILED reason=secret_missing")
+          if not key_id.startswith("rzp_test_"):
+              raise SystemExit("PREFLIGHT_FAILED reason=not_test_mode")
+
+          token = base64.b64encode(f"{key_id}:{key_secret}".encode()).decode()
+          probe = request.Request(
+              "https://api.razorpay.com/v1/orders?count=1",
+              headers={
+                  "Authorization": f"Basic {token}",
+                  "Accept": "application/json",
+                  "User-Agent": "ECOCOMMIT-B8-Preflight/1.0",
+              },
+              method="GET",
+          )
+          try:
+              with request.urlopen(probe, timeout=30) as response:
+                  status = response.status
+                  payload = json.load(response)
+          except error.HTTPError as exc:
+              # Deliberately discard the provider body and headers. They are not
+              # needed to identify an authentication/account restriction safely.
+              exc.read()
+              raise SystemExit(f"PREFLIGHT_FAILED reason=http_{exc.code}") from None
+          except (error.URLError, TimeoutError, ValueError):
+              raise SystemExit("PREFLIGHT_FAILED reason=transport_or_invalid_response") from None
+
+          if status != 200 or payload.get("entity") != "collection":
+              raise SystemExit("PREFLIGHT_FAILED reason=unexpected_response")
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as handle:
+                  handle.write("# Razorpay Test credential preflight\n\n")
+                  handle.write("- Secret presence: configured\n")
+                  handle.write("- Key mode: Test\n")
+                  handle.write("- Authentication: verified (HTTP 200)\n")
+                  handle.write("- Probe: read-only order listing\n")
+                  handle.write("- Secret values/response body: not printed or retained\n")
+          print("PREFLIGHT_OK mode=test authentication=verified response_body=discarded")
