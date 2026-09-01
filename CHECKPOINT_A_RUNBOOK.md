@@ -13,19 +13,25 @@ Do **not** commit the key to the repository, issue, README, workflow, or benchma
 Current committed live configuration:
 
 - base URL: `https://api.groq.com/openai/v1`
-- model: `openai/gpt-oss-120b`
-- reasoning effort: `low` for the extraction workload
-- structured output: strict JSON Schema mode
-- maximum completion budget: 2,048 tokens per request
-- live-request concurrency: serialized (`workers=1`)
+- model: `qwen/qwen3.6-27b`
+- reasoning effort: `none`
+- structured output: JSON object mode; strict JSON Schema mode disabled
+- maximum completion budget: 1,024 tokens per request
+- live-request scheduling: one immutable case per job, with at most two case
+  jobs running in parallel
+- per-case provider retry bound: two attempts, with a 15-second delay ceiling
 
-The model and endpoint are explicit workflow configuration; changing them creates different provider evidence and must be recorded with the resulting benchmark artifact.
+The model, endpoint, reasoning effort, structured-output mode, and completion
+budget are frozen for the current 80-case evaluation. Changing any of them
+creates different provider evidence and is not a resume of the same evaluation.
 
 ## Preflight
 
-Before spending a smoke/full benchmark budget, the **Groq Provider Preflight** workflow exercises the actual `OpenAICompatibleIntentProvider` with one procurement instruction. It runs the full offline regression suite first, verifies the secret is present, sends the same structured-output configuration used by the live workflows, validates the returned `EconomicIntentContract`, and runs the deterministic fidelity validator.
-
-A preflight pass proves provider/schema plumbing only. It does not count toward Checkpoint A metrics.
+The repository's current **Groq Provider Preflight** workflow still targets the
+earlier `openai/gpt-oss-120b`, `low`, 2,048-token configuration. It is not an
+exact preflight for the frozen Qwen evaluation above and must not be cited as
+proof of that configuration's provider/schema plumbing. Any preflight pass is
+operational evidence only and does not count toward Checkpoint A metrics.
 
 ## Run
 
@@ -62,6 +68,16 @@ This is the Checkpoint A development gate, not the final M8 held-out benchmark. 
 
 If the workflow fails the gate, Checkpoint A remains red. Retain the failed artifact, use its diagnostics to isolate implementation defects, add regression tests, and rerun. Do not delete difficult cases, change expected outcomes to fit the model, or lower thresholds to manufacture a pass.
 
-Provider failures are evidence too. Groq's HTTP 429/5xx responses are retried with bounded backoff using the provider `Retry-After` window, including longer rolling token windows; transient transport failures are also retried. If the provider remains unavailable after bounded attempts, affected cases fail rather than being replaced with fixtures.
+Provider failures are evidence too. Groq's HTTP 429/5xx responses are retried
+with bounded backoff using the provider `Retry-After` window, including longer
+rolling token windows; transient transport failures are also retried. If one of
+those transient classes remains unavailable after bounded attempts, that
+single-case job records the infrastructure error without a semantic case row and
+exits nonzero. Resume by re-running only failed jobs in the same workflow run.
+Completed case artifacts are immutable inputs to later aggregation and must not
+be replayed. Do not start a new full workflow run to retry provider-deferred
+cases. Non-transient provider responses and local contract-validation failures
+are terminal failed case evidence and are not eligible for a provider-deferred
+retry. Provider failures are never replaced with fixtures.
 
 Free-tier token-per-day exhaustion can make a smoke artifact mostly operational rather than semantic evidence. Such an artifact must still be retained and reported, but it must not be presented as an estimate of model accuracy when most cases never received a model result.

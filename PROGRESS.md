@@ -6,15 +6,15 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 | Checkpoint | Status | Acceptance gate |
 |---|---|---|
 | A — M0/M1 specification and contract language | 🟢 PASSED (offline scope) | Frozen specifications and authority invariants retained |
-| A — M2/M3 intent intelligence and abstention | 🔴 LATEST FULL LIVE GATE FAILED — NOT PASSED | One real full run must satisfy every frozen A threshold together |
+| A — M2/M3 intent intelligence and abstention | 🟠 RESUMABLE LIVE EVALUATION 14/80 RETAINED; ATTEMPT 6 RUNNING — NOT PASSED | Complete all 80 frozen cases, then satisfy every frozen A threshold together |
 | B — deterministic economic safety | 🟡 B1–B7 LOCALLY VALIDATED — BLOCKED / NOT PASSED | A pass, real A-to-B evidence, durability/security work, and Razorpay Test Mode evidence |
-| C — comparative benchmark | 🟡 LOCALLY VERIFIED HARNESS — NOT PASSED | Frozen real suite/plan, valid integrated candidate, and separately gated final held-out run |
+| C — comparative benchmark | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Frozen real suite/plan, TEL weights and quantitative decision rule, real comparator outputs, validated A+B candidate, and separately gated final held-out run |
 | D — product/API/UI/operations | 🟡 LOCALLY VERIFIED SCAFFOLD — NOT PASSED | Upstream gates, integrated product/security/operational evidence, and no default-deny bypass |
 | E — architecture/reproducibility | 🟡 DOCUMENTATION SCAFFOLD — NOT PASSED | Reproduced end-to-end demo and complete retained evidence bundle |
 
 ## Checkpoint A
 
-**Status: 🔴 LATEST FULL FROZEN LIVE GATE FAILED — NOT PASSED**
+**Status: 🟠 RESUMABLE FROZEN LIVE EVALUATION INCOMPLETE — NOT PASSED**
 
 Frozen Checkpoint A gate (all required in the same real-model full run):
 
@@ -25,24 +25,55 @@ Frozen Checkpoint A gate (all required in the same real-model full run):
 
 The thresholds are unchanged.
 
-### Latest full run
+### Current per-case resumable run
+
+GitHub Actions run `33493409547`, head
+`6485d3b24f4967c178cce9b1a9b67cdf0230840c`, uses the frozen current Groq
+configuration `qwen/qwen3.6-27b`, reasoning effort `none`, JSON object mode, and
+the unchanged 80-case dataset, prompt semantics, and thresholds. Each frozen
+case is one independently resumable job; only failed provider-deferred jobs are
+eligible for a later attempt.
+
+Attempt 5 completed with conclusion `failure` at 2026-09-01T13:06:59Z and
+produced aggregate artifact `checkpoint-a-results`, artifact ID `9801782811`,
+at 2026-09-01T13:06:55Z. Verified archive SHA-256:
+`360afe759656329b88eb4cb6a7356adad4d7690e7899e86ea80d24815f1fe3d7`;
+downloaded JSON SHA-256:
+`89d2669ee971a948a6eb478cd4f1d23bf7977094a975710a7d499563b766ca4a`.
+
+Its truthful partial state is:
+
+- retained terminal case rows: 14 / 80;
+- retained semantic passes: 9;
+- retained terminal local contract-validation failures: 5;
+- provider-deferred/missing cases: 66;
+- full frozen run: false;
+- Checkpoint A gate: false / not passed.
+
+The aggregate's four gate metrics are not interpreted from this partial set.
+Checkpoint A cannot pass until all 80 immutable cases have terminal rows and the
+complete aggregate satisfies all four frozen thresholds together.
+
+Attempt 6 was started through GitHub's failed-jobs-only rerun operation after
+attempt 5. It targets only the 66 provider-deferred case jobs. Previously
+successful or terminal case jobs were not rescheduled, and their artifacts remain
+immutable inputs to later aggregation.
+
+### Latest completed 80-case run
 
 GitHub Actions run `33477953132`, head
 `c37da4fe1b1741de6d8e6a4bab53da56e5413b7e`, completed on 2026-09-01 with
-conclusion `failure`.
+conclusion `failure`. Its authenticated aggregate artifact is structurally
+complete (80/80 IDs, no missing cases), but every row is a non-transient Groq
+HTTP 400 `json_validate_failed` response and none contains a valid candidate
+contract. All four frozen metrics are therefore 0.00% and the gate failed.
 
-Verified public job evidence:
-
-- the offline regression job succeeded;
-- all 16 live benchmark shards covering cases 0–79 succeeded;
-- aggregation, compact diagnostics, and final artifact upload succeeded;
-- the `Enforce frozen gate` step failed with exit code 2;
-- retained artifact: `checkpoint-a-results`, artifact ID `9789328621`.
-
-This establishes a genuine failed full gate rather than a provider/setup abort.
-The aggregate artifact requires authenticated download and was not available in
-this local checkout, so no new aggregate metric values are copied or inferred
-here. The run remains failed evidence and Checkpoint A remains unpassed.
+Retained artifact `checkpoint-a-results`, artifact ID `9789328621`, has archive
+SHA-256 `beae38159f081c597cf9d021470712709ff13a63fb0985f460f65d8d10136527`;
+the downloaded JSON SHA-256 is
+`8237240e520ed76b7e192c2e3bcff2490480027dce35be9bacf520c6f59ab64b`.
+This is retained failed operational/schema evidence, not semantic performance
+evidence and not a Checkpoint A pass.
 
 The earlier run `33431828865`, which this file previously described as running,
 was cancelled and did not produce a passing gate.
@@ -90,7 +121,7 @@ provider workflows, model configuration, or frozen thresholds.
 
 ## Parallel local implementation evidence
 
-The full deterministic regression suite passes **147/147 tests** in an isolated
+The full deterministic regression suite passes **167/167 tests** in an isolated
 local environment. This is local engineering evidence only; it does not substitute
 for any live or final checkpoint gate.
 
@@ -130,26 +161,37 @@ path correctly remains locked. The registries/ledgers are process-local, the HMA
 key is a local-test boundary rather than a KMS claim, and no Razorpay adapter,
 credentialed Test Mode run, webhook evidence, or provider result exists.
 
-### Checkpoint C — 21 focused tests
+### Checkpoint C — 41 focused tests
 
-Implemented and locally verified:
+Implemented and locally validated:
 
-- pre-registered-style plan, suite, scenario, evidence, cost, result, metric, and
-  artifact schemas;
-- static-rule, dynamic policy/risk/evidence-aware, and conservative-abstain
-  deterministic baselines;
-- seeded deterministic ordering;
-- Total Economic Loss, incorrect irreversible amount, selective reliability,
-  coverage, legitimate completion, and nearest-rank p95 latency accounting;
-- artifact integrity checks for plan/suite hashes and exact baseline×case result
-  coverage;
+- versioned plan, suite, scenario, evidence, cost, result, metric, TEL-weight,
+  provenance, and artifact schemas with frozen instruction and suite digests;
+- synthetic-fixture replay adapters for the naive-agent and prompt-guardrail
+  comparator roles, plus static deterministic, fail-closed dynamic
+  policy/risk/evidence workflow, and conservative-abstain controls;
+- seeded deterministic ordering and a checked-in synthetic one-case plan/suite
+  pinned to literal suite, plan, prompt, guardrail, and dynamic-config digests;
+- preregistered integer Total Economic Loss weights and round-half-up accounting
+  for unsafe execution, false abort, abstention review, and compensation cost;
+- incorrect irreversible amount, selective reliability, coverage, legitimate
+  completion, false-abort count/rate, compensation-event/outcome/cost,
+  total/p95 latency, and missing-latency accounting;
+- exact baseline×case coverage, retained error rows, mixed-latency provenance,
+  repository/dependency provenance, and semantic recomputation of every result
+  and summary so internally consistent tampering is rejected;
 - compulsory `PRELIMINARY_NOT_FINAL`/not-passed labeling;
-- rejection of live Checkpoint A outputs and all `FINAL_HELD_OUT` cases by the
-  preliminary runner.
+- explicit A and B final-pass prerequisites, plus rejection of live Checkpoint A
+  outputs and all `FINAL_HELD_OUT` cases by the preliminary runner.
 
-No final comparison numbers were generated or published. Checkpoint C is not
-passed; the real suite/plan and final candidate evaluation remain unfrozen and
-unrun.
+The checked-in suite, costs, TEL weights, agent outputs, evidence, and latency are
+explicitly synthetic fixtures for harness validation only. No final comparison
+numbers were generated or published. Checkpoint C is **blocked / not passed**:
+the real suite and final TEL weights are not frozen; real naive-agent and
+prompt-guardrail outputs are not retained; the strongest dynamic comparator has
+not been selected by a preregistered study; no quantitative/statistical C
+acceptance rule is frozen; A and B are not both validated; and the integrated
+candidate and separately gated final held-out evaluation remain unrun.
 
 ### Checkpoint D — 19 focused tests
 

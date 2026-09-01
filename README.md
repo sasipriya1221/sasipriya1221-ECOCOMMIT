@@ -13,7 +13,7 @@ passed before its prerequisites and final integration evidence genuinely pass.
 - A: intent intelligence and fidelity/abstention live gate — **not passed**
 - B: deterministic policy, evidence, exposure, commitment, and certificates —
   **B1–B7 locally validated; blocked/not passed**
-- C: deterministic benchmark/baseline harness — **preliminary only**
+- C: deterministic benchmark/baseline harness — **locally validated; blocked/not passed**
 - D: fail-closed API/UI/audit/observability — **local scaffold only**
 - E: architecture, threat model, and reproducibility — **documentation scaffold**
 
@@ -37,3 +37,6 @@ Architecture and reproducibility scaffolding are in `docs/ARCHITECTURE.md`,
 
 The detailed local Checkpoint B gate matrix and remaining blockers are in
 `CHECKPOINT_B_VALIDATION.md`.
+
+The detailed local Checkpoint C gate matrix, synthetic-fixture boundary, and
+remaining blockers are in `CHECKPOINT_C_VALIDATION.md`.
