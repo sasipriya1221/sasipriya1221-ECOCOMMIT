@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from ecocommit.exposure import TransactionBinding
+from ecocommit.github_actions import GitHubRunVerificationError, load_preflight_receipt
 from ecocommit.razorpay import (
     RazorpayAPIError,
     RazorpayConfigurationError,
@@ -70,6 +71,7 @@ def _base_evidence() -> dict[str, Any]:
             "credential_preflight_run_reference_present": bool(
                 os.environ.get("B8_PREFLIGHT_RUN_ID")
             ),
+            "credential_preflight_run_verified": False,
             "preflight_response_body_retained": False,
             "credentialed_order_api_succeeded": False,
         },
@@ -91,6 +93,7 @@ def _base_evidence() -> dict[str, Any]:
 def run(
     output: Path,
     *,
+    preflight_receipt: Path | None = None,
     checkout_handoff: Path | None = None,
     checkout_html: Path | None = None,
 ) -> int:
@@ -106,6 +109,29 @@ def run(
             raise PreflightReferenceError(
                 "a numeric successful credential-preflight run id is required"
             )
+        repository = os.environ.get("GITHUB_REPOSITORY", "")
+        source_sha = os.environ.get("GITHUB_SHA", "")
+        if preflight_receipt is None:
+            raise PreflightReferenceError("a verified preflight receipt is required")
+        try:
+            verified_preflight = load_preflight_receipt(
+                preflight_receipt,
+                repository=repository,
+                run_id=int(preflight_run_id),
+                expected_sha=source_sha,
+            )
+        except GitHubRunVerificationError as exc:
+            raise PreflightReferenceError("preflight receipt verification failed") from exc
+        evidence["authentication"]["credential_preflight_run_verified"] = True
+        evidence["authentication"]["preflight_verification_source"] = (
+            verified_preflight["verification_source"]
+        )
+        evidence["authentication"]["preflight_reference_receipt_sha256"] = (
+            verified_preflight["receipt_sha256"]
+        )
+        evidence["authentication"]["preflight_source_revision"] = (
+            verified_preflight["head_sha"]
+        )
         credentials = RazorpayTestCredentials.from_environment()
         evidence["credentials"]["injected_from_environment"] = True
         evidence["credentials"]["test_prefix_validated"] = True
@@ -315,11 +341,13 @@ def main() -> int:
         type=Path,
         default=Path("artifacts/checkpoint-b8-razorpay-test.json"),
     )
+    parser.add_argument("--preflight-receipt", type=Path, required=True)
     parser.add_argument("--checkout-handoff", type=Path)
     parser.add_argument("--checkout-html", type=Path)
     args = parser.parse_args()
     return run(
         args.output,
+        preflight_receipt=args.preflight_receipt,
         checkout_handoff=args.checkout_handoff,
         checkout_html=args.checkout_html,
     )

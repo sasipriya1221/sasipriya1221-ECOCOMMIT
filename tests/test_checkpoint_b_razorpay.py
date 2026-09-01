@@ -179,6 +179,12 @@ def test_live_workflows_are_manual_and_keep_credentials_in_secret_environment():
         assert "print(key_secret" not in workflow
     assert "credential_preflight_run_id" in lifecycle
     assert "RUN_TEST_MODE_ORDER" in lifecycle
+    assert "name: Razorpay Test Order Boundary Validation" in lifecycle
+    assert "name: Razorpay Test Lifecycle Validation" not in lifecycle
+    assert "actions: read" in lifecycle
+    assert "checkpoint_b8_verify_preflight.py" in lifecycle
+    assert "checkpoint-b8-preflight-reference.json" in lifecycle
+    assert lifecycle.count("GITHUB_TOKEN: ${{ github.token }}") == 1
     assert lifecycle.count("${{ secrets.RAZORPAY_KEY_ID }}") == 1
     assert lifecycle.count("${{ secrets.RAZORPAY_KEY_SECRET }}") == 1
 
