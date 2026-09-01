@@ -5,7 +5,7 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 BUILT + LOCALLY VALIDATED, NOT EVALUATED** | Commit/push authorization, fresh 80-case provider run, and all four unchanged thresholds passing together |
+| A — frozen semantic gate | **Candidate 1 FAILED; remote score-recovery experiment CANCELLED; Candidate 2 BUILT + LOCALLY VALIDATED, NOT EVALUATED** | Commit/push authorization, fresh 80-case Candidate 2 provider run, and all four unchanged thresholds passing together |
 | B — deterministic economic safety | **B1–B7 + durable single-host runtime LOCALLY VALIDATED; B8 order subgates live-validated; NOT PASSED** | Passing A receipt, genuine Test Checkout/capture/refund/webhook evidence, and an independently verified signing-key boundary |
 | C — comparative benchmark | **Framework + final preregistration contract LOCALLY VALIDATED; NOT PASSED** | Real frozen suite/costs/outputs, pre-outcome rule choices, passing A+B receipts, and one-shot held-out run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST EXECUTION PATH LOCALLY VALIDATED; NOT PASSED** | Real pinned A/B/C receipts, current credentials/human callback/webhooks, hosted security/operations, and final integrated evidence |
@@ -59,6 +59,39 @@ Retained evidence:
 - result JSON SHA-256: `1cb8eb4ae722ea77b02a2a2b10891b86f3b2b5c40b3df753b93e8bb0f8c1f4a7`; and
 - tracked failure manifest: `evidence/checkpoint-a-candidate-1-failure.json`.
 
+### Remote score-recovery experiment — cancelled and not promotable
+
+After Candidate 2 had been built locally, `origin/main` independently advanced to
+`1cc9fd199781de3974adbcb6099b77d89aec2206` and launched run `33556907712`.
+That source was not Candidate 2. It used the earlier runner and added a contract
+pre-validator that filled omitted `materiality` and `confidence` with `1.0` when
+a clause self-labelled as grounded and explicit.
+
+The public run metadata proves a partial operational result only:
+
+- offline regression succeeded;
+- one case job completed successfully, but its row is not claimed as a semantic
+  pass because the artifact content could not be downloaded without an
+  authenticated GitHub session;
+- cases 0, 2, 3, 4, 5, 6, and 7 exited with code 75, which that exact runner emits
+  only for `transient_provider_error` deferrals;
+- the other 72 case jobs were cancelled; and
+- aggregation failed and the run conclusion was `cancelled`.
+
+No newer same-workflow run was visible, while the public API does not expose the
+cancellation actor or reason. The 11 published artifacts and their GitHub-published
+archive digests are recorded without claiming that their contents were locally
+re-hashed or inspected in
+`evidence/checkpoint-a-run-33556907712-cancelled.json`.
+
+The score-filling change was rejected during reconciliation. Exact text grounding
+does not prove maximum materiality or extraction confidence, and those values
+affect downstream validation. The reconciled contract therefore still requires
+both fields, the provider still requests one bounded model correction for an
+incomplete candidate, and regressions now explicitly cover both omitted scores.
+The remote history and cancelled evidence remain preserved; they do not pass A
+and do not evaluate Candidate 2.
+
 ### Candidate 2 — corrected but not launched
 
 The corrected candidate is explicitly versioned `A-CANDIDATE-2` and starts a
@@ -91,6 +124,8 @@ emits a typed passing receipt only after a complete aggregate passes. It is
 commit-pinned and scopes the provider secret only to the validation steps.
 
 Candidate 2 has not been pushed, dispatched, or represented as live evidence.
+Run `33556907712` is explicitly excluded because it used a different, earlier
+protocol and ended cancelled.
 Remote launch requires an intentional push/dispatch boundary and the configured
 provider secret.
 
@@ -236,6 +271,8 @@ five-minute video.
 ## Non-claims
 
 - Candidate 1 did not pass and will not be retried into a pass.
+- Cancelled run `33556907712` is neither an A pass nor a Candidate 2 run; its
+  provider deferrals and cancelled jobs are not relabelled as semantic outcomes.
 - Candidate 2 has not run remotely.
 - Provider deferrals are not semantic failures; contract failures are not
   provider deferrals.

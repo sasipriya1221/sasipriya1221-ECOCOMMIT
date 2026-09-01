@@ -19,6 +19,12 @@ no live-money path. A digest-bound Test Checkout handoff and capture/refund
 continuation are implemented locally but have not been exercised against the
 provider.
 
+Checkpoint A remains not passed. Candidate 1 is mathematically failed. A later
+remote score-recovery experiment at run `33556907712` ended cancelled after
+seven transient provider deferrals and is not the locally frozen Candidate 2;
+its automatic maximum-score filling was rejected rather than promoted. Candidate
+2 remains locally validated and unevaluated.
+
 ## Why ECOCOMMIT
 
 LLMs are useful interpreters but unsafe sources of financial authority. A fluent
@@ -69,7 +75,7 @@ matrix is in [Threat Model](docs/THREAT_MODEL.md).
 | Checkpoint | Engineering state | Acceptance state |
 |---|---|---|
 | A — offline specification/contracts | **BUILT + PASSED (offline scope)** | Frozen invariants retained |
-| A — live intent/fidelity gate | **Candidate 1 failed; Candidate 2 built + locally validated, not evaluated** | **NOT PASSED** |
+| A — live intent/fidelity gate | **Candidate 1 failed; intervening remote experiment cancelled; Candidate 2 built + locally validated, not evaluated** | **NOT PASSED** |
 | B — deterministic economic safety | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | C — comparative benchmark harness | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | D — API/UI/audit/operations | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |

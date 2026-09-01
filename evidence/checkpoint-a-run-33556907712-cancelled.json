@@ -1,0 +1,86 @@
+{
+  "schema_version": "A.EXTERNAL_RUN_OBSERVATION.1",
+  "observed_at_utc": "2026-09-01T21:18:05Z",
+  "status": "CANCELLED_PARTIAL_RUN",
+  "promotion_eligible": false,
+  "github": {
+    "repository": "sasipriya1221/sasipriya1221-ECOCOMMIT",
+    "run_id": "33556907712",
+    "run_number": 10,
+    "run_attempt": 1,
+    "event": "push",
+    "head_sha": "1cc9fd199781de3974adbcb6099b77d89aec2206",
+    "created_at": "2026-09-01T20:42:41Z",
+    "updated_at": "2026-09-01T20:46:07Z",
+    "conclusion": "cancelled",
+    "run_url": "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33556907712"
+  },
+  "job_observation": {
+    "total_jobs": 82,
+    "regression": {
+      "conclusion": "success"
+    },
+    "case_matrix": {
+      "total": 80,
+      "completed_job_success": 1,
+      "transient_provider_deferred_exit_75": 7,
+      "cancelled": 72,
+      "deferred_case_indices": [0, 2, 3, 4, 5, 6, 7]
+    },
+    "aggregate": {
+      "conclusion": "failure"
+    },
+    "classification_basis": {
+      "public_check_annotations": "Each of the seven failed case jobs reports process exit code 75.",
+      "source_behavior": "At this source revision checkpoint_a_shard.py returns 75 only after writing a transient_provider_error deferral.",
+      "semantic_classification": "PROVIDER_DEFERRAL_NOT_SEMANTIC_FAILURE"
+    },
+    "cancellation_initiator": "NOT_EXPOSED_BY_PUBLIC_METADATA",
+    "newer_same_workflow_run_observed": false
+  },
+  "candidate_identity": {
+    "label": "REMOTE_GROUNDED_SCORE_RECOVERY_EXPERIMENT",
+    "candidate_2": false,
+    "candidate_2_reason": "The run predates the locally frozen A-CANDIDATE-2 protocol, manifest binding, strict candidate-shape validation, correction chronology, and immutable per-attempt artifact design.",
+    "experimental_change_commits": [
+      "0a95277ea18d090ea112f6a2942eae30baabbc11",
+      "e2e44fc66270430cab0698b6ae31a46446d984ec",
+      "1cc9fd199781de3974adbcb6099b77d89aec2206"
+    ],
+    "rejected_change": {
+      "behavior": "Missing materiality and confidence were filled with 1.0 for clauses self-labelled EXPLICIT_USER with a non-empty source span.",
+      "reason": "A source span proves text grounding, not maximum materiality or extraction confidence. Filling both values invents evaluator-relevant semantic metadata instead of requiring a complete candidate or a bounded model correction."
+    }
+  },
+  "artifacts": {
+    "published_count": 11,
+    "content_download": "AUTHENTICATION_REQUIRED_NOT_AVAILABLE",
+    "contents_independently_inspected": false,
+    "digest_scope": "GitHub API-published archive digests; not locally re-hashed",
+    "items": [
+      {"id": "9819701925", "name": "checkpoint-a-case-0", "size_in_bytes": 585, "archive_sha256": "b6cb030f772f5f9e93489e92ff2424049becbdcea1f2d4579f6c3f37a1adf8bc"},
+      {"id": "9819693948", "name": "checkpoint-a-case-1", "size_in_bytes": 997, "archive_sha256": "bb97e5fbcee3120f7a0ba5604e4ab7eac269a7630249edd8845f41c542a2b6af"},
+      {"id": "9819715241", "name": "checkpoint-a-case-2", "size_in_bytes": 585, "archive_sha256": "6d0059472336bd9fb29de11561dcf6a8af16750583f55afcd224befefcb302ce"},
+      {"id": "9819720385", "name": "checkpoint-a-case-3", "size_in_bytes": 586, "archive_sha256": "027bded3690fcd857f61d7b24698ac2265f51fefe29569d430766887eec995a1"},
+      {"id": "9819735648", "name": "checkpoint-a-case-4", "size_in_bytes": 586, "archive_sha256": "5d26e37a9b3c8765162726aa1d7a99b23fe81982f3867ab58f46eee54021264f"},
+      {"id": "9819744085", "name": "checkpoint-a-case-5", "size_in_bytes": 587, "archive_sha256": "14981ee7ca62d2fefa2546337c704f4b0fffef7553858a573606d8b818a34715"},
+      {"id": "9819753500", "name": "checkpoint-a-case-6", "size_in_bytes": 585, "archive_sha256": "f53d1b00a43d63194ecaa348bf09354c7c4f1334a5a894a560f0e7224ca62ac2"},
+      {"id": "9819762311", "name": "checkpoint-a-case-7", "size_in_bytes": 586, "archive_sha256": "bab9eecbdcc0459e36c1c49e6aa9a5ab38473d0a3da6ff92a8a349aab257e5ba"},
+      {"id": "9819772625", "name": "checkpoint-a-case-8", "size_in_bytes": 586, "archive_sha256": "6ffb251ede472782f71fbefd187188d2a7a863c9a69235a7fee9167f86b1132c"},
+      {"id": "9819781141", "name": "checkpoint-a-case-9", "size_in_bytes": 588, "archive_sha256": "ab0f074ee89a154440ca8f1f73c0d15964bde0db1f241f579cbf55e0545fd2a2"},
+      {"id": "9819795862", "name": "checkpoint-a-results", "size_in_bytes": 1391, "archive_sha256": "eaf3d36a77dcd46f52fec0580024fdcbf7f6bc0383dbf13500fbc43ecb008cea"}
+    ],
+    "expires_at": "2026-11-30T20:42:41Z"
+  },
+  "non_claims": {
+    "complete_80_case_evaluation": false,
+    "checkpoint_a_pass": false,
+    "candidate_2_evaluation": false,
+    "successful_case_job_is_a_semantic_pass": false,
+    "cancelled_cases_are_semantic_failures": false,
+    "aggregate_payload_verified": false,
+    "cancellation_actor_or_reason_known": false,
+    "thresholds_changed": false,
+    "frozen_cases_changed": false
+  }
+}

@@ -139,6 +139,11 @@ gate requires all 80 immutable cases and all four frozen thresholds passing
 together. Provider deferrals, smoke runs, fixtures, partial aggregates, and
 schema failures cannot become a pass.
 
+Cancelled run `33556907712` is a retained remote experiment, not Candidate 2.
+Its seven exit-75 rows are provider deferrals, its other 72 case jobs were
+cancelled, and its failed partial aggregate is not reusable. Reproduction must
+start Candidate 2 fresh and must not copy artifacts from that run.
+
 Candidate 2 retains a redacted record for every provider attempt, including a
 transient HTTP or transport retry that later succeeds. This preserves the actual
 attempt chronology without retaining provider bodies or credentials.

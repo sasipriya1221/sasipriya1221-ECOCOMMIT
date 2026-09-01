@@ -35,6 +35,12 @@ Candidate 2 is a fresh 80-case evaluation. Never place a Candidate 1 artifact in
 its resume directory. Candidate 1's attempt-15 failure is retained in
 `evidence/checkpoint-a-candidate-1-failure.json`.
 
+Remote run `33556907712` is also not a Candidate 2 attempt. It used an earlier
+runner plus a rejected score-filling experiment, produced only partial provider
+deferrals before cancellation, and failed aggregation. Its public metadata is
+retained separately in `evidence/checkpoint-a-run-33556907712-cancelled.json`;
+none of its rows or artifacts may enter a Candidate 2 resume directory.
+
 ## Preflight
 
 The repository's current **Groq Provider Preflight** workflow still targets the

@@ -899,6 +899,57 @@ This prevents tracked workflow triggers from turning a push into a provider call
 It does not attest repository/Actions permissions, secret governance, a future
 manual operator's intent, or any remote run. Nothing was pushed or dispatched.
 
+## 2026-09-02 — cancelled remote A experiment invented missing scores
+
+### What broke or remained unsafe
+
+While the hardened Candidate 2 branch remained local, `origin/main` advanced by
+three commits and launched run `33556907712` from
+`1cc9fd199781de3974adbcb6099b77d89aec2206`. The experiment added a Pydantic
+pre-validator that treated a self-declared explicit provenance plus any non-empty
+source span as sufficient to fill omitted `materiality` and `confidence` with
+`1.0`. Text grounding does not establish either maximum score, and both values
+influence downstream validation. The change therefore converted an incomplete
+provider candidate into apparently complete evaluator input by invention.
+
+The run did not produce acceptance evidence. Public metadata shows successful
+offline regression, one successful case job, seven case jobs with exit code 75,
+72 cancelled case jobs, and failed aggregation. At that exact source, exit 75 is
+emitted only for a written `transient_provider_error` deferral. The run ended
+cancelled; public metadata exposes neither the cancellation actor nor reason.
+Artifact download required an authenticated GitHub session that was unavailable,
+so no artifact content or semantic outcome is claimed.
+
+### How it was fixed
+
+- Fetched and merged the three remote commits so the divergence and cancelled
+  run remain in reachable history.
+- Removed the automatic score recovery and kept both fields required at the
+  typed contract boundary.
+- Extended the provider's explicit-field regression to cover both scores, so an
+  incomplete candidate receives the existing single bounded model-correction
+  opportunity instead of local semantic invention.
+- Replaced the remote recovery tests with direct contract regressions proving
+  grounded clauses still reject either omitted score and preserve supplied
+  values exactly.
+- Retained public run/job/artifact metadata and GitHub-published archive digests
+  in `evidence/checkpoint-a-run-33556907712-cancelled.json`, with explicit
+  non-claims for the inaccessible payloads, cancelled cases, and Candidate 2.
+
+### Regression evidence and limitation
+
+The score/provider scope passes **36/36** and the reconciled full working-tree
+suite passes **375/375**. The run manifest validates as strict JSON and repository
+diff checks pass. A separate no-hardlink clone of the committed snapshot also
+passes **375/375**, bytecode compilation, dependency consistency, JavaScript
+syntax, 8/8 local structural readiness, diff, integrity, and clean-status checks;
+strict final readiness exits nonzero on the eight genuine retained blockers.
+
+This establishes the local contract behavior and a truthful public-metadata
+record. It does not recover the inaccessible artifact payloads, determine who
+cancelled the remote run, turn its one successful case job into a semantic pass,
+evaluate Candidate 2, or authorize any push or provider dispatch.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.
