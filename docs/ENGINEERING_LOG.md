@@ -950,6 +950,12 @@ record. It does not recover the inaccessible artifact payloads, determine who
 cancelled the remote run, turn its one successful case job into a semantic pass,
 evaluate Candidate 2, or authorize any push or provider dispatch.
 
+A final public-state check also found the already-failed Candidate 1 run
+`33493409547` queued as attempt 27. That timestamped state is retained separately
+in `evidence/checkpoint-a-candidate-1-obsolete-queued.json`. Cancelling it requires
+GitHub account authority unavailable to the local work; it must not be resumed or
+allowed to redefine Candidate 1's immutable attempt-15 failure.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

@@ -35,6 +35,11 @@ Candidate 2 is a fresh 80-case evaluation. Never place a Candidate 1 artifact in
 its resume directory. Candidate 1's attempt-15 failure is retained in
 `evidence/checkpoint-a-candidate-1-failure.json`.
 
+Before dispatching Candidate 2, confirm obsolete run `33493409547` is cancelled.
+It was observed queued as Candidate 1 attempt 27 after Candidate 1 had already
+become mathematically incapable of passing. Do not rerun it and do not use any
+later artifact from it to replace the retained attempt-15 failure.
+
 Remote run `33556907712` is also not a Candidate 2 attempt. It used an earlier
 runner plus a rejected score-filling experiment, produced only partial provider
 deferrals before cancellation, and failed aggregation. Its public metadata is

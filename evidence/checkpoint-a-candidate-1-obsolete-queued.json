@@ -1,0 +1,34 @@
+{
+  "schema_version": "A.EXTERNAL_RUN_OBSERVATION.1",
+  "observed_at_utc": "2026-09-01T21:25:25Z",
+  "status": "OBSOLETE_CANDIDATE_1_ATTEMPT_QUEUED",
+  "candidate_version": "A-CANDIDATE-1",
+  "promotion_eligible": false,
+  "github": {
+    "repository": "sasipriya1221/sasipriya1221-ECOCOMMIT",
+    "run_id": "33493409547",
+    "run_number": 9,
+    "run_attempt": 27,
+    "status": "queued",
+    "conclusion": null,
+    "head_sha": "6485d3b24f4967c178cce9b1a9b67cdf0230840c",
+    "updated_at": "2026-09-01T21:23:17Z",
+    "run_url": "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33493409547"
+  },
+  "relationship_to_frozen_failure": {
+    "retained_failure_attempt": 15,
+    "failure_manifest": "evidence/checkpoint-a-candidate-1-failure.json",
+    "mathematical_failure_remains_final": true,
+    "queued_attempt_can_change_candidate_1_status": false,
+    "reason": "Attempt 15 already limited Candidate 1 to a maximum 69/80, below the unchanged 90 percent case-pass threshold. Later reruns cannot turn the frozen failed candidate into a pass."
+  },
+  "required_operator_action": "Cancel the obsolete queued attempt in GitHub Actions and do not rerun Candidate 1.",
+  "non_claims": {
+    "queue_actor_known": false,
+    "attempt_27_started": false,
+    "attempt_27_made_provider_calls": false,
+    "attempt_27_produced_evidence": false,
+    "candidate_1_resumable": false,
+    "candidate_2_evaluation": false
+  }
+}

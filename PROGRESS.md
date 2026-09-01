@@ -59,6 +59,16 @@ Retained evidence:
 - result JSON SHA-256: `1cb8eb4ae722ea77b02a2a2b10891b86f3b2b5c40b3df753b93e8bb0f8c1f4a7`; and
 - tracked failure manifest: `evidence/checkpoint-a-candidate-1-failure.json`.
 
+Operational warning observed at `2026-09-01T21:25:25Z`: the obsolete Candidate
+1 run `33493409547` was still `queued` as attempt 27 at frozen source
+`6485d3b24f4967c178cce9b1a9b67cdf0230840c`. Candidate 1 is already
+mathematically failed, so this attempt cannot alter its acceptance state and
+must not be allowed to consume provider capacity or produce replacement rows.
+The account operator must cancel it in GitHub Actions and stop rerunning Candidate
+1. The timestamped observation is retained in
+`evidence/checkpoint-a-candidate-1-obsolete-queued.json`; no queue actor or future
+state is inferred.
+
 ### Remote score-recovery experiment — cancelled and not promotable
 
 After Candidate 2 had been built locally, `origin/main` independently advanced to
@@ -271,6 +281,8 @@ five-minute video.
 ## Non-claims
 
 - Candidate 1 did not pass and will not be retried into a pass.
+- Candidate 1 run `33493409547` was observed queued at attempt 27 and must be
+  cancelled by an authorized GitHub operator; it is not resumable evidence.
 - Cancelled run `33556907712` is neither an A pass nor a Candidate 2 run; its
   provider deferrals and cancelled jobs are not relabelled as semantic outcomes.
 - Candidate 2 has not run remotely.
