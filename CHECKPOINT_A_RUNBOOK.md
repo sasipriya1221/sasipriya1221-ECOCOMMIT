@@ -45,7 +45,10 @@ operational evidence only and does not count toward Checkpoint A metrics.
 
 ## Run
 
-GitHub → Actions → **Checkpoint A - Live Intent Evaluation** → Run workflow, or update the committed trigger file when an audited rerun is required.
+After the workflow exists on the pushed default branch, use GitHub → Actions →
+**Checkpoint A - Live Intent Evaluation** → Run workflow. All secret-bearing
+workflows are manual-only; pushing source or editing a legacy sentinel must not
+start a provider request.
 
 The full workflow performs, in order:
 

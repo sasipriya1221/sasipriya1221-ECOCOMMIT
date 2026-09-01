@@ -1,9 +1,6 @@
 name: Checkpoint A - Development Smoke
 
 on:
-  push:
-    paths:
-      - '.github/checkpoint-a-smoke-trigger'
   workflow_dispatch:
 
 concurrency:

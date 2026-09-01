@@ -1,9 +1,6 @@
 name: Checkpoint A - Qwen Development Smoke
 
 on:
-  push:
-    paths:
-      - '.github/checkpoint-a-qwen-smoke-trigger'
   workflow_dispatch:
 
 concurrency:

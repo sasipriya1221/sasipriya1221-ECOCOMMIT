@@ -1,9 +1,6 @@
 name: Groq Provider Preflight
 
 on:
-  push:
-    paths:
-      - '.github/groq-preflight-trigger'
   workflow_dispatch:
 
 concurrency:

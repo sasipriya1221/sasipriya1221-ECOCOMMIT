@@ -57,6 +57,28 @@ def test_inline_credentialed_http_preflights_do_not_forward_auth_on_redirects():
     assert credentialed == ["provider-preflight.yml", "razorpay-test-preflight.yml"]
 
 
+def test_secret_bearing_workflows_require_explicit_manual_dispatch():
+    credentialed = []
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        if "secrets." not in text:
+            continue
+        credentialed.append(path.name)
+        trigger_block = text.split("\njobs:", 1)[0]
+        assert re.search(r"(?m)^  workflow_dispatch:\s*$", trigger_block), path.name
+        assert not re.search(r"(?m)^  (?:push|pull_request(?:_target)?):", trigger_block), path.name
+
+    assert credentialed == [
+        "checkpoint-a-live.yml",
+        "checkpoint-a-qwen-smoke.yml",
+        "checkpoint-a-smoke.yml",
+        "groq-preflight.yml",
+        "provider-preflight.yml",
+        "razorpay-test-lifecycle.yml",
+        "razorpay-test-preflight.yml",
+    ]
+
+
 def test_offline_regression_covers_runtime_ui_workflows_and_static_checks():
     workflow = (WORKFLOWS / "offline-regression.yml").read_text(encoding="utf-8")
 

@@ -1,10 +1,7 @@
 name: Provider Preflight
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/provider-preflight-trigger'
+  workflow_dispatch:
 
 jobs:
   preflight:

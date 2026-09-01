@@ -2,10 +2,6 @@ name: Checkpoint A - Live Intent Evaluation
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/checkpoint-a-trigger'
 
 concurrency:
   group: checkpoint-a-live-gate
