@@ -1,0 +1,112 @@
+# Submission Evidence Framework
+
+This file is the judge-facing evidence manifest template. It prevents a demo,
+fixture, partial run, or locally passing test suite from being presented as final
+ECOCOMMIT evidence.
+
+## Current verdict
+
+**Framework built; final evidence bundle BLOCKED; Checkpoint E NOT PASSED.**
+
+No final ECOCOMMIT-versus-baseline numbers are available. No final screenshot is
+retained. No final video is recorded. No Razorpay request was made.
+
+## Evidence slots
+
+### Checkpoint A final semantic gate
+
+<!-- EVIDENCE:CHECKPOINT_A_FINAL_METRICS status=BLOCKED -->
+
+- Status: **BLOCKED**
+- Required: one complete frozen 80/80 real-model run satisfying all four frozen
+  thresholds together.
+- Do not insert: smoke results, partial aggregates, provider-deferred rows,
+  synthetic fixtures, or metrics calculated from an incomplete set.
+- Final artifact reference: **BLOCKED — not available**
+- Artifact SHA-256: **BLOCKED — not available**
+
+### Checkpoint B Razorpay Test Mode integration
+
+<!-- EVIDENCE:CHECKPOINT_B_RAZORPAY_TEST status=BLOCKED -->
+
+- Status: **BLOCKED**
+- Required: accepted A evidence, the real A-to-B path, a dedicated Razorpay Test
+  Mode adapter, verified test context, retained provider identifiers, webhook and
+  reconciliation results, idempotency, and compensation evidence.
+- Do not insert: `SIMULATED_LOCAL`, mocked provider replies, credential presence,
+  or a certificate-only unit test.
+- Provider evidence reference: **BLOCKED — not available**
+- Redacted provider artifact SHA-256: **BLOCKED — not available**
+
+### Checkpoint C final economic comparison
+
+<!-- EVIDENCE:CHECKPOINT_C_FINAL_COMPARISON status=BLOCKED -->
+
+- Status: **BLOCKED**
+- Required: frozen real scenario manifests, final TEL weights and decision rule,
+  authentic comparator outputs, validated A+B candidate, and the separately
+  gated one-shot held-out run.
+- Do not insert: the checked-in synthetic one-case fixture or preliminary harness
+  output.
+- Final comparison table: **BLOCKED — deliberately absent**
+- Final benchmark artifact SHA-256: **BLOCKED — not available**
+
+### Checkpoint D final integrated product run
+
+<!-- EVIDENCE:CHECKPOINT_D_FINAL_INTEGRATION status=BLOCKED -->
+
+- Status: **BLOCKED**
+- Required: authoritative upstream evidence loading, integrated real A/B/C
+  product flow, provider Test Mode execution, durable operational state, hosted
+  API/UI evidence, and final security/operational review.
+- Do not insert: the synthetic D happy path, localhost status, or a static render.
+- Hosted application/API reference: **BLOCKED — not available**
+- Integrated trace/artifact SHA-256: **BLOCKED — not available**
+
+### Final screenshots
+
+<!-- EVIDENCE:FINAL_SCREENSHOTS status=BLOCKED -->
+
+- Status: **BLOCKED**
+- Required: capture only after the integrated system and displayed data are
+  frozen; include source revision and capture context.
+- Current placeholder: **No screenshot**. Development visual checks are not
+  promoted into this slot.
+
+### Final demo video
+
+<!-- EVIDENCE:FINAL_VIDEO status=BLOCKED -->
+
+- Status: **BLOCKED**
+- Required: record only after A/B/C/D integration, final evidence freeze, and a
+  truthful run-through of the final demo.
+- Current placeholder: **No video URL and no video claim**.
+
+## Evidence-bundle manifest
+
+When the blockers are cleared, retain one machine-readable manifest with these
+fields. Empty fields stay blocked; they are never filled with examples.
+
+| Field | Required content | Current state |
+|---|---|---|
+| `source_revision` | Immutable full Git commit SHA | Await final integrated commit |
+| `working_tree_clean` | `true`, measured before each retained run | Await final run |
+| `checkpoint_statuses` | A–E state plus evidence references | A–E not all passed |
+| `execution_mode` | Exact mode; Test Mode distinguished from simulation | `SIMULATED_LOCAL` development only |
+| `environment` | OS, Python, resolved dependencies, lock digest | Local manifest exists; independent reproduction pending |
+| `commands` | Exact invocations with secrets removed | Framework available |
+| `raw_artifacts` | Complete outputs, including failures/error rows | Final artifacts blocked |
+| `artifact_sha256` | Digest for every retained file | Final artifacts blocked |
+| `provider_evidence` | Redacted provider IDs, events, reconciliation | Blocked |
+| `metric_definitions` | Frozen definitions/weights/decision rules | C final freeze blocked |
+| `screenshots` | Final integrated UI captures and provenance | Blocked |
+| `video` | Final demo URL and source revision | Blocked |
+| `limitations` | Known residual risks and non-claims | Must remain present |
+
+## Promotion rule
+
+An evidence slot may change from `BLOCKED` only when its prerequisite gate has
+actually completed and the referenced artifact is retained and checksummed. The
+same change must update `PROGRESS.md`, the relevant checkpoint report, and this
+manifest. A URL, screenshot, metric, or provider ID without its source revision
+and evidence chain is not accepted.

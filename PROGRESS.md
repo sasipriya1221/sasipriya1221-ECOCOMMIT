@@ -12,6 +12,12 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 | D — product/API/UI/operations | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Authoritative upstream evidence, real A/B/C integration, provider Test Mode boundary, durable operations, and final security/operational evidence |
 | E — architecture/reproducibility | 🟡 DOCUMENTATION SCAFFOLD — NOT PASSED | Reproduced end-to-end demo and complete retained evidence bundle |
 
+Status vocabulary is strict: **BUILT** means the implementation or artifact
+exists; **LOCALLY VALIDATED** means deterministic local checks passed;
+**BLOCKED** means a required upstream, external, legal, or final-run input is
+absent; **PASSED** means the complete frozen acceptance gate passed with retained
+evidence. One label never implies the next.
+
 ## Checkpoint A
 
 **Status: 🟠 RESUMABLE FROZEN LIVE EVALUATION INCOMPLETE — NOT PASSED**

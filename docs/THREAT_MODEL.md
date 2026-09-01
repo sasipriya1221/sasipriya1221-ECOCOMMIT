@@ -1,61 +1,117 @@
-# ECOCOMMIT Threat Model (Checkpoint E Scaffold)
+# ECOCOMMIT Threat Model
 
-This threat model covers the parallel B/C/D/E scaffolding. It records required
-controls and test targets; unchecked items are not claims of completion.
+This threat model covers the implemented local A–D components and the E evidence
+framework. It is an engineering threat analysis, not a formal security audit or a
+production-readiness claim.
 
 ## Assets
 
-- User mandate and its provenance-preserving contract.
-- Policy definitions and version identifiers.
-- Evidence source registry, observations, freshness, and digests.
+- Natural-language mandate and provenance-preserving contract.
+- Frozen evaluation cases, metrics, thresholds, plans, and comparator artifacts.
+- Policy definitions, versions, evidence authority registry, observations, and
+  digests.
 - Exposure decisions and progressive commitment state.
-- Commit certificates, signing keys, and idempotency records.
-- Payment-provider identifiers and compensation outcomes.
-- Audit chain and benchmark artifacts.
+- Commit certificates, signing keys, idempotency records, and payment state.
+- Provider identifiers, webhooks, and compensation results when later integrated.
+- Audit chain, structured events, retained evidence, screenshots, and video.
+- Repository history, CI configuration, dependency manifest, and secret boundary.
 
 ## Adversaries and failure sources
 
-- Malicious or ambiguous user/supplier text.
-- Hallucinated, malformed, or prompt-injected model output.
-- Compromised, unregistered, stale, or conflicting evidence.
-- A caller attempting amount, merchant, currency, or transaction substitution.
-- Replay, duplicate delivery, concurrency, and crash recovery.
-- An operator accidentally confusing simulation with provider Test Mode.
-- Log deletion/modification or selective benchmark reporting.
-- Provider outages, throttling, partial failures, and ambiguous timeouts.
+- Ambiguous, malicious, or prompt-injected user/supplier text.
+- Hallucinated, incomplete, malformed, or schema-incompatible model output.
+- Caller fields that claim approval, checkpoint passage, readiness, or a larger
+  exposure cap.
+- Compromised, unregistered, stale, revoked, conflicting, or wrong-subject
+  evidence.
+- Transaction, merchant, amount, currency, contract, or certificate substitution.
+- Replay, duplicate delivery, concurrency, race, restart, and crash windows.
+- Provider throttling, outage, ambiguous timeout, webhook reordering, or partial
+  side effect.
+- Operator confusion between local simulation, provider Test Mode, and live money.
+- Audit deletion/modification, benchmark cherry-picking, or fabricated final
+  screenshots/metrics/video.
+- Committed secrets, dependency compromise, over-privileged CI, or unsafe public
+  repository metadata.
 
-## Required controls and regression targets
+## Trust zones
 
-| Threat | Required control | Adversarial test target |
+| Zone | Trust level | Examples |
 |---|---|---|
-| Model invents authority | Closed policy mapping; provenance and fidelity gate; deterministic exposure | Inferred/free-form amount never increases allowed exposure |
-| Unknown evidence source | Registry allowlist and purpose/scope checks | Unregistered source denies |
-| Stale evidence | Retrieval/expiry checks at authorization and capture boundary | Expired observation cannot advance state |
-| Evidence replacement | Digest/version binding in certificate | Same source ID with changed content denies |
-| TOCTOU transaction mutation | Bind merchant, transaction, amount, currency, contract, evidence, policy, expiry | Any one-field mutation invalidates certificate |
-| Certificate forgery | Keyed signature/MAC with constant-time verification and key identifier | Modified payload or signature denies |
-| Certificate replay | Transaction binding, expiry, idempotency record, terminal-state check | Replay cannot duplicate side effect |
-| Idempotency-key collision | Store request digest with result | Same key plus different request is rejected |
-| Illegal state jump | Explicit transition table and preconditions | `PROPOSED -> CAPTURED` and backward jumps deny |
-| Partial side effect | Durable outcome/attempt record and explicit compensation workflow | Retry reconciles rather than blindly repeats |
-| Audit tampering | Append-only hash chain with verification | Edit, deletion, or reorder is detected |
-| Mode confusion | Mode in API, UI, audit, and artifact; live disabled | Simulated response cannot be labeled real/test |
-| Provider ambiguity | Default-deny timeout handling and reconciliation | Unknown provider outcome cannot be reported as success |
-| Benchmark cherry-picking | Frozen scenario IDs, seed, config/spec hashes, failed-case retention | Artifact records every scheduled case |
+| Untrusted input | None | Natural language, HTTP JSON, model candidate, caller status claims |
+| Validated structure | Limited | Grounded contract and fidelity report; still no payment authority |
+| Trusted configuration | High, local | Policy classes, exposure tiers, evidence authorities, verification keys |
+| Deterministic authority | Transaction-scoped | Current evidence snapshot, exposure decision, commit certificate |
+| Side-effect boundary | Highest | Exact progressive state plus certificate plus idempotency/payment adapter |
+| Evidence/reporting | Non-authoritative | Audit, metrics, UI, reports; may describe but never authorize |
 
-## Key handling boundary
+## Threat/control matrix
 
-Local certificate tests may use ephemeral test keys. Test keys and fixtures are
-never production authority. Secrets must come from a secret store or CI secret,
-must not enter artifacts/logs, and must be rotatable through explicit key IDs.
+| Threat | Implemented local control | Local validation | Residual blocker |
+|---|---|---|---|
+| Model invents authority | Closed mapping, provenance/fidelity gate, trusted exposure config | Adversarial A/B tests | Real A gate incomplete |
+| Material ambiguity guessed | Clarification/rejection based on material risk | Ambiguity and live-failure regressions | Real full semantic gate incomplete |
+| Caller forges pass/readiness | Caller claims ignored; status supplied out of band; real commit adapter absent | D API tests | Authoritative status loader absent |
+| Unknown evidence source | Registered authority/issuer/kind/scope and subject checks | B evidence tests | Durable authority service absent |
+| Stale/revoked evidence | Freshness, expiry, revocation, version and observation-time checks | B tests | External evidence retrieval absent |
+| Negative approval interpreted positive | Exact claim value/digest predicates | B regression | External schema governance absent |
+| Evidence/transaction TOCTOU | Certificate binding and registry lock through simulated capture | Repeated race tests | Multi-process/distributed transaction absent |
+| Certificate forgery/substitution | HMAC, constant-time verification, full payload/id binding | Mutation tests | KMS, rotation, access control absent |
+| Illegal state jump | Explicit transition table and reconstructed-history validation | State-machine tests | Durable state store absent |
+| Replay/idempotency collision | Scope/key/full-request fingerprint and stored outcome | Concurrency/collision tests | Process-local ledger only |
+| Capture/refund crash window | Reconciliation and explicit compensation states | B recovery tests | Durable provider/event ledger absent |
+| Audit row tampering | Strict JSON row schema and SHA-256 chain verification | Edit/reorder/malformed tests | Trusted remote head/immutable store absent |
+| Concurrent local audit writers | Shared resolved-path in-process lock | 80-event concurrent test | Cross-process/distributed lock absent |
+| Non-finite observability data | Finite value and aggregate-overflow rejection | D metric regressions | External telemetry pipeline absent |
+| HTTP parser abuse | 64 KiB bound, JSON object/media checks, WSGI length/stream checks | D negative tests | Production server/rate limits/auth absent |
+| Mode confusion | Explicit simulation labels and permanently disabled real-money field | API/UI/browser checks | Real Test Mode proof absent |
+| Provider ambiguity | No real provider adapter; default deny | Real endpoint tests | Test Mode timeout/webhook reconciliation unbuilt |
+| Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation | C artifact tests | Real preregistration/final run absent |
+| Fabricated submission media | Blocked evidence markers and promotion rule | E readiness checks | Human review/final evidence still required |
+| Secret committed | CI secret references, ignored artifacts, current-tree/history pattern scan | E local scan | Dedicated secret-scanner service/history audit not retained |
+| Supply-chain drift | Resolved Python validation manifest and read-only CI permissions | Install/check commands | No hash-complete/offline build lock or provenance attestation |
 
-## Residual risks before later gates
+## Key and credential boundary
 
-- Unit tests cannot prove real provider behavior, webhook ordering, or Razorpay
-  Test Mode semantics.
-- An in-memory idempotency or audit implementation is process-local and is not a
-  durability claim.
-- Hash-chain tamper evidence detects modification when a trusted head/checkpoint
-  exists; it is not by itself immutable storage.
-- Policy correctness still requires review and frozen evaluation against economic
-  loss, legitimate completion, and latency metrics.
+Local certificate tests and D synthetic workflows use named test keys embedded in
+test/local code. They are not provider credentials or production authority. A
+future provider/signing boundary must use an approved secret store or CI secret,
+prove Test Mode before sending requests, use explicit key IDs/rotation, restrict
+access, and keep secrets out of logs, artifacts, screenshots, and command lines.
+
+The repository references secret names in GitHub workflows; secret values are not
+part of the tracked tree. A pattern scan is helpful but cannot prove that all
+historical or encoded secrets are absent.
+
+## Audit limitations
+
+A self-contained hash chain detects many edits but does not prevent an attacker
+who can rewrite the file and unanchored head from recomputing the chain. It also
+does not detect tail deletion without an independently trusted head. Production
+claims require immutable/append-only storage, external head anchoring, retention,
+access controls, clock discipline, backup, and recovery evidence.
+
+## Public-repository risks
+
+- The remote is public; local unpushed validation commits are not public evidence.
+- No license has been selected, so open-source reuse rights are not asserted.
+- Generated artifacts, audit logs, virtual environments, and test temporary
+  directories are ignored and must be reviewed before intentional retention.
+- CI actions are version-tag pinned and jobs use read-only `contents` permission,
+  but commit-SHA action pinning and supply-chain attestations are not implemented.
+- Provider workflows require named secrets and must remain guarded/manual; pull
+  requests must not receive provider credentials.
+
+## Remaining high-priority review
+
+Before D/E or any payment integration passes:
+
+1. complete a formal API/authentication/authorization and abuse-rate review;
+2. implement authoritative status/evidence loading and durable state/audit stores;
+3. implement and adversarially test Razorpay Test Mode, webhooks, ambiguous
+   outcomes, idempotency, and reconciliation;
+4. replace local HMAC signing with an appropriate managed-key boundary;
+5. add dependency hashes/provenance and a dedicated secret/dependency scan;
+6. perform accessibility, cross-browser, hosted operational, backup/recovery, and
+   incident-response validation; and
+7. retain an independent security review and all findings/fixes.

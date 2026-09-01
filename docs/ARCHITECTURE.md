@@ -1,142 +1,220 @@
-# ECOCOMMIT Architecture (Checkpoint E Scaffold)
+# ECOCOMMIT Architecture
 
-This document describes the intended trust boundaries while Checkpoint A is still
-under evaluation. It is architecture evidence, not evidence that any later
-checkpoint has passed.
+This document describes the implemented local architecture and the boundaries
+still required for final integration. It is not evidence that A, B, C, D, or E
+passed.
 
 ## Safety thesis
 
 ECOCOMMIT separates interpretation from authority:
 
 > A probabilistic model may propose a contract. Only deterministic policy, fresh
-> authoritative evidence, and a transaction-bound authorization may increase
+> authoritative evidence, and transaction-bound authorization may increase
 > irreversible economic exposure.
 
-The system fails closed. Missing, ambiguous, stale, conflicting, unregistered, or
-unverifiable inputs result in clarification, rejection, or no-op behavior. They do
-not result in a smaller set of checks or a guessed payment amount.
+Missing, ambiguous, stale, conflicting, unregistered, or unverifiable inputs fail
+closed. They lead to clarification, rejection, or no-op behavior; they do not
+remove checks or guess a payment amount.
 
-## Trust boundaries
+## Trust-boundary flow
 
 ```text
-Natural-language mandate
-        |
-        v
-[Untrusted intent provider] --candidate--> [Contract + fidelity gate]
-                                                |
-                                                | validated candidate only
-                                                v
-                                     [Deterministic policy mapper]
-                                                |
-Registered authoritative evidence ------------>|
-                                                v
-                                      [Exposure calculation]
-                                                |
-                                                v
-                                   [Progressive commitment state]
-                                                |
-                                                v
-                             [Transaction-bound commit certificate]
-                                                |
-                              verified certificate + idempotency key
-                                                v
-                         [Payment adapter: simulated or test-mode only]
+Natural-language procurement mandate
+                  |
+                  v
+       [Untrusted intent provider]
+                  |
+       candidate contract + spans
+                  v
+      [Fidelity / ambiguity validator]
+                  |
+       validated candidate only
+                  v
+       [Closed policy-class mapper]
+                  |
+                  +-------------------------------+
+                  |                               |
+                  v                               v
+       [Trusted exposure policy] <--- [Registered evidence registry]
+                  |                    issuer / kind / subject /
+                  |                    version / freshness / claims
+                  v
+       [Deterministic exposure decision]
+                  |
+                  v
+       [Progressive commitment state]
+                  |
+                  v
+       [Transaction-bound certificate]
+                  |
+       final verification + idempotency
+                  v
+    [SIMULATED_LOCAL now | Test Mode adapter later]
 
-Every boundary emits a correlated, tamper-evident audit event. Observability may
-describe decisions, but it never grants authority.
+Audit and observability describe the D API boundary and outcomes.
+They never grant authority.
 ```
 
-## Components and responsibilities
+## Components and authority
 
 | Component | May do | Must never do |
 |---|---|---|
-| Intent provider | Propose structured economic meaning | Grant payment authority |
-| Fidelity gate | Validate structure, grounding, and abstention requirements | Repair material authority by guessing |
-| Policy mapper | Map validated clauses to a closed policy-class vocabulary | Execute free-form model instructions |
-| Evidence registry | Resolve registered sources, versions, freshness, and scope | Treat arbitrary payloads as authoritative |
-| Exposure policy | Compute permitted exposure from policy and evidence | Accept a model-selected exposure ceiling |
-| Commitment engine | Enforce legal state transitions | Skip stages or move backward implicitly |
-| Commit certificate | Bind contract, evidence, merchant, amount, currency, transaction, and expiry | Authorize a changed or replayed transaction |
-| Payment adapter | Simulate locally or call an explicitly configured test-mode provider | Present simulation as real or use live money by default |
-| Audit/observability | Record correlation, decisions, denials, and operational signals | Change decisions or hide gate status |
-| Benchmark harness | Compare frozen scenarios and deterministic baselines | Publish preliminary runs as final evidence |
+| Intent provider | Propose structured clauses and source spans | Grant payment authority or choose an exposure cap |
+| Fidelity validator | Check structure, grounding, risk, ambiguity, and abstention | Repair material meaning by guessing |
+| A-to-B bridge | Recompute fidelity and release closed policy obligations after accepted A evidence | Trust a caller-supplied `VALIDATED` or `checkpoint_a_passed` flag |
+| Policy mapper | Map each current clause type to one fixed policy class | Execute model-generated free-form rules |
+| Evidence registry | Enforce registered authority/issuer/kind/subject, monotonic versions/time, freshness, revocation, and exact claims | Treat arbitrary request payloads as evidence |
+| Exposure policy | Compute a cap from trusted configuration and verified evidence | Accept a model- or evidence-supplied monetary ceiling |
+| Commitment engine | Enforce explicit legal state transitions | Skip stages or silently move backward |
+| Certificate signer/verifier | Bind policy, evidence, contract, merchant, amount, currency, transaction, time, and nonce | Authorize a changed/replayed transaction |
+| Payment adapter | Simulate locally; later call an explicitly verified Test Mode provider | Present simulation as provider evidence or enable live money by default |
+| Reconciliation/compensation | Detect divergence and record cleanup/reversal | Erase the original attempt |
+| D API/UI | Report gate truth, run fixed synthetic scenarios, deny real commits | Infer acceptance from health or caller claims |
+| Audit/observability | Record D boundary requests, denials, workflow summaries, correlations, and metrics | Change decisions or suppress blockers |
+| Benchmark harness | Execute frozen roles/scenarios and validate complete artifacts | Promote preliminary/synthetic results to final |
 
-## Repository map
+## Current implemented paths
 
-| Area | Current implementation |
-|---|---|
-| A contract boundary | `contracts.py`, `interpreter.py`, `validator.py`, `evaluation.py` |
-| A-to-B admission | `checkpoint_b_integration.py` recomputes the current A fidelity report and keeps B locked unless the A gate is accepted |
-| B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `payments.py`, `reconciliation.py` |
-| C preliminary evaluation | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py` |
-| D product/operations boundary | `checkpoint_status.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, `checkpoint_d_workflow.py`, `demo_server.py`, and `ui/` |
-| E evidence discipline | This document, `THREAT_MODEL.md`, and `REPRODUCIBILITY.md` |
+### Live Checkpoint A path
 
-The A-to-B authorization boundary is wired and adversarially tested locally, but
-the actual incomplete A gate releases no obligations or certificate. Checkpoint D
-now exercises that boundary through fixed synthetic local scenarios only. D's
-real commit endpoint still always denies, and the only payment adapter is the
-explicit `SIMULATED_LOCAL` adapter. Synthetic fixture success is never loaded as
-authoritative checkpoint evidence.
+The live runner calls an OpenAI-compatible provider, parses a candidate contract,
+revalidates it locally, scores frozen cases, and writes retained artifacts. The
+guarded GitHub workflow runs immutable cases independently and retries only
+provider-deferred jobs after an active attempt finishes.
+
+This path remains incomplete and has not passed the four frozen live thresholds.
+
+### Deterministic B path
+
+The B integration boundary accepts a complete current contract plus an explicit
+Checkpoint A gate report. It recomputes fidelity, maps obligations, evaluates
+registered evidence and exposure, and may issue a transaction-bound certificate.
+The commitment engine and `SIMULATED_LOCAL` adapter then enforce reserve/capture
+ordering, idempotency, freshness, reconciliation, and compensation.
+
+A synthetic passed-A fixture proves interface compatibility only. The actual A
+gate releases no B authority until it passes.
+
+### Preliminary C path
+
+The benchmark runner accepts an explicitly frozen plan and suite, exact code
+revision and tree state, and required comparator roles. It retains every scheduled
+row, including errors, computes deterministic loss/latency metrics, and validates
+the artifact by semantic recomputation.
+
+The checked-in fixture is synthetic and `PRELIMINARY_NOT_FINAL`. The runner rejects
+final-held-out scenarios and requires final A/B prerequisites that are unavailable.
+
+### D local product path
+
+The real endpoint `/v1/commit` has no execution adapter and always denies. The
+simulation endpoint accepts only a named scenario selector; all other request
+fields are ignored for authority. Its fixed fixture exercises the current local
+A-to-B, exposure, certificate, commitment, and `SIMULATED_LOCAL` components.
+
+```text
+GET  /healthz             -> process liveness only
+GET  /readyz              -> 503 while irreversible path is blocked
+GET  /v1/status           -> A–E gate/provider/blocker snapshot
+GET  /v1/metrics          -> finite in-process metric snapshot
+POST /v1/commit/simulate  -> fixed synthetic scenario only
+POST /v1/commit           -> always denied; no execution adapter
+```
+
+The loopback demo server loads every gate as blocked because it has no
+authoritative evidence source. Browser health, a green synthetic trace, or an
+operator-supplied field cannot change this.
+
+## Progressive economic state
+
+The implemented normal sequence is:
+
+```text
+PROPOSED -> AUTHORIZED -> RESERVED -> CAPTURE_ALLOWED -> CAPTURED
+```
+
+Explicit terminal/recovery states include `CANCELLED`, `FAILED`,
+`COMPENSATION_PENDING`, and `COMPENSATED`. Capture requires the exact current
+transaction, certificate, `CAPTURE_ALLOWED` state, and real local reservation
+reference. Certificate verification holds the evidence version lock through the
+simulated capture mutation.
 
 ## Invariants
 
-1. **No probabilistic financial authority.** Model output is data. It cannot set
-   exposure, waive evidence, select a payment mode, or advance a commitment.
-2. **Evidence is scoped and fresh.** Source identity, subject, version, monotonic
-   observation time, expiry, exact claim predicates, and content digest are
-   checked at the decision boundary.
-3. **Authorization is transaction-specific.** Certificates bind contract hash,
-   evidence digests, policy version, merchant, transaction ID, amount, currency,
-   allowed state, issue time, and expiry.
-4. **TOCTOU changes deny.** Any bound-field change after authorization requires a
-   new decision and certificate. The local capture boundary holds the evidence
-   version lock from final verification through the simulated side effect.
-5. **Transitions are explicit.** The implemented lifecycle is `PROPOSED ->
-   AUTHORIZED -> RESERVED -> CAPTURE_ALLOWED -> CAPTURED`, with explicit
-   `CANCELLED`, `FAILED`, `COMPENSATION_PENDING`, and `COMPENSATED` outcomes.
-   Certificate expiry blocks capture; reversible-hold cleanup is recorded by the
-   payment and reconciliation layers.
-6. **At-most-once side effects.** Repeating the same idempotency key and identical
-   request returns the recorded result. Reusing a key for a different request is
-   rejected.
-7. **Compensation is not erasure.** A reversal or release is a new auditable event;
-   it never rewrites the original attempt. Capture-before-journal and
-   refund-before-journal windows are reconciled into explicit transitions.
-8. **Simulation is unmistakable.** Local runs and fixtures carry an explicit
-   simulated mode marker in results, UI, audit records, and artifacts.
-9. **Acceptance is gated.** Independent construction may proceed in parallel, but
-   B, C, D, and E remain unpassed until their prerequisites and final integration
-   gates pass.
+1. Model output is always untrusted data.
+2. A contract that requires clarification or is rejected releases no B
+   obligations.
+3. Policy classes and exposure ceilings come from trusted configuration.
+4. Evidence is registered, scoped, versioned, fresh, unrevoked, and exact-claim
+   checked.
+5. Certificates bind all economically relevant transaction and evidence fields.
+6. Any bound-field or evidence change requires a new decision and certificate.
+7. Capture cannot bypass the progressive state machine or reversible hold.
+8. Idempotency includes the complete signed request; collisions do not replay
+   success.
+9. Compensation appends a new state/event; it does not rewrite history.
+10. Simulation is labeled in API, UI, payment results, traces, and artifacts.
+11. Health is liveness only; it never proves acceptance or readiness.
+12. Final checkpoint claims require retained evidence, not component existence.
 
-## Modes
+## Audit and observability boundary
 
-| Mode | External money movement | Intended use |
-|---|---:|---|
-| `SIMULATED` | None | Local development, adversarial tests, demo scaffolding |
-| `REAL_PROVIDER_TEST` with provider status `RAZORPAY_TEST_MODE` | Test Mode only | Credentialed end-to-end integration evidence |
-| `LIVE` | Disabled and out of current scope | No current code path should enable this |
+The D API uses a local JSONL SHA-256 chain with strict row validation, fsync, and
+shared in-process locks. It detects modification/reordering when verified against
+the retained chain, but it is not immutable storage: deletion of an unanchored
+tail, multi-process races, host compromise, and disaster recovery remain outside
+the claim.
 
-A configuration string alone is not proof of provider mode. A future Razorpay
-adapter must validate test credentials/account context, record provider response
-identifiers, and fail closed when mode cannot be proven.
+D records parser denials and service workflow summaries. The B components do not
+yet emit a durable per-boundary D event stream during a real integrated run. That
+integration, external collection, retention, alerts, and SLO evidence remain D
+blockers.
+
+## Runtime modes
+
+| Mode | External provider | Real money | Current availability |
+|---|---:|---:|---|
+| `SIMULATED` / `SIMULATED_LOCAL` | No | No | Implemented for local tests/demo |
+| `REAL_PROVIDER_TEST` + verified `RAZORPAY_TEST_MODE` | Test provider only | No real money | Model exists; adapter/evidence absent |
+| Live/production | Disabled and out of current scope | Not allowed | No code path |
+
+A configuration string or credential presence is not provider-mode proof. A
+future Test Mode adapter must verify context, retain provider IDs and webhook/
+reconciliation evidence, and deny ambiguous outcomes.
+
+## Repository map
+
+| Area | Implementation |
+|---|---|
+| A contracts/interpretation | `contracts.py`, `interpreter.py`, `validator.py`, `evaluation.py` |
+| A-to-B admission | `checkpoint_b_integration.py` |
+| B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `payments.py`, `reconciliation.py` |
+| C benchmark | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py` |
+| D product/operations | `checkpoint_status.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, `checkpoint_d_workflow.py`, `demo_server.py`, `ui/` |
+| E evidence discipline | `REPRODUCIBILITY.md`, `ENGINEERING_LOG.md`, `SUBMISSION_EVIDENCE.md`, `DEMO_RUNBOOK.md`, `PITCH_OUTLINE.md`, readiness checker |
 
 ## Checkpoint dependencies
 
-Implementation work is allowed before its prerequisite passes only when it can be
-tested without trusting the prerequisite output.
+Independent construction is allowed when it does not trust an unmet prerequisite.
+Acceptance stays sequential:
 
-| Checkpoint | Independent work allowed now | Acceptance still requires |
-|---|---|---|
-| B | Policy/evidence/exposure kernel, state machine, certificates, local adversarial tests | Checkpoint A pass, full A-to-B integration, credentialed Razorpay Test Mode tests when applicable |
-| C | Harness, loss accounting, deterministic baselines, seeded preliminary runs | Frozen evaluation set/protocol and valid integrated system results |
-| D | Locally validated API/UI/audit/observability and synthetic end-to-end workflow in default-deny simulated mode | Authoritative upstream evidence, real integrated product/provider tests, durable operations, and security/operational review |
-| E | Architecture, threat model, runbooks, reproducibility scaffold | Reproduced end-to-end demo and complete evidence bundle |
+```text
+A PASS
+  -> B real A-to-B + provider Test Mode PASS
+      -> C frozen integrated final comparison PASS
+          -> D final integrated product/operations PASS
+              -> E retained submission bundle PASS
+```
 
-## Current non-goals
+Local B/C/D/E work can pass its own engineering checks while remaining blocked.
+No later checkpoint is inferred from an earlier implementation or test result.
 
-- Production payment execution or live Razorpay credentials.
-- Autonomous selection of evidence authorities.
-- Treating the current benchmark scaffold as the final held-out benchmark.
-- Declaring any checkpoint passed from unit tests alone.
-- Weakening Checkpoint A's frozen thresholds to unblock later work.
+## Non-goals and missing production boundaries
+
+- Production or live-money execution.
+- Autonomous selection of evidence authorities or policy caps.
+- Durable database/queue/ledger, multi-process locking, KMS, or key rotation.
+- Hosted authentication/authorization, rate limiting, deployment, SLOs, or
+  disaster recovery.
+- Treating the synthetic C fixture or D demo as final evidence.
+- Lowering A thresholds or tuning C after final held-out outcomes.

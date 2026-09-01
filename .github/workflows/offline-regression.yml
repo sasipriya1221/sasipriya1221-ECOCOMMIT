@@ -7,14 +7,24 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'scripts/**'
+      - 'docs/**'
+      - 'CHECKPOINT_*_VALIDATION.md'
+      - 'PROGRESS.md'
+      - 'README.md'
       - 'pyproject.toml'
+      - 'requirements-dev.lock'
       - '.github/workflows/offline-regression.yml'
   pull_request:
     paths:
       - 'src/**'
       - 'tests/**'
       - 'scripts/**'
+      - 'docs/**'
+      - 'CHECKPOINT_*_VALIDATION.md'
+      - 'PROGRESS.md'
+      - 'README.md'
       - 'pyproject.toml'
+      - 'requirements-dev.lock'
 
 concurrency:
   group: offline-regression-${{ github.ref }}
@@ -33,6 +43,11 @@ jobs:
           python-version: '3.11'
           cache: pip
       - name: Install project
-        run: python -m pip install -e '.[dev]'
+        run: |
+          python -m pip install -r requirements-dev.lock
+          python -m pip install --no-deps -e .
+          python -m pip check
       - name: Run regression suite
-        run: pytest
+        run: python -m pytest -p no:cacheprovider --basetemp .test-tmp-ci
+      - name: Validate public-repository structure
+        run: python scripts/checkpoint_e_readiness.py
