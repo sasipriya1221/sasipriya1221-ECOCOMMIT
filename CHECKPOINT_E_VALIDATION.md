@@ -24,6 +24,14 @@ state, validates a revision-bound independent-reproduction receipt, and supports
 `--mode final`. It still reports false today because the real slots, license,
 push, independent reproduction, and media are absent.
 
+A subsequent fresh-virtual-environment run exposed an unrecorded build bootstrap:
+the hash lock installed runtime/test packages but not setuptools/wheel, so the
+local package could not be installed and ten tests correctly failed on missing
+distribution/import provenance. Exact build-backend wheels and hashes are now in
+the lock, and a regression requires both entries. Installing the project from
+that corrected lock in the same no-hardlink clone produced a 270/270 pass before
+the new lock guard was added; the completed tree passes 271/271.
+
 ## Frozen-boundary check
 
 The historical E snapshot left A on its guarded retry process. Subsequent
@@ -59,7 +67,7 @@ No competing provider run was started.
 | README | Problem, architecture, checkpoint truth, quick start, demo, evidence, limitations, and license status are explicit | **LOCAL PASS** | Final metrics and media remain absent |
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
-| Reproducibility | Exact distributions and published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Build bootstrap is still environment-provided and independent reproduction is absent |
+| Reproducibility | Exact runtime, test, and build-backend distributions plus published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Published wheels must still be obtained; independent reproduction is absent |
 | Clean clone | Separate clone at the validated SHA passed 197/197 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
 | Engineering log | Real provider, semantic, schema, harness, product, documentation, and portability failures remain recorded with fixes and limitations | **LOCAL PASS** | Log is repository evidence, not external attestation |
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
@@ -73,6 +81,10 @@ No competing provider run was started.
 - Checkpoint E focused regression: **5/5 passed**.
 - Full deterministic regression in the working repository: **197/197 passed**.
 - Full deterministic regression from a separate clean clone: **197/197 passed**.
+- Current Candidate 2/release-hardening regression in the working repository:
+  **271/271 passed**.
+- Current no-hardlink clone with a new virtual environment, hash-locked runtime,
+  test, and build-backend wheels, plus editable local install: **271/271 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.
 - Browser JavaScript syntax: **PASS**.
@@ -121,6 +133,12 @@ These are local engineering results. They are not final checkpoint evidence.
    printing were replaced with commit-pinned actions, step-scoped secrets,
    hash-required wheels, expanded triggers/static checks, and redacted preflight
    output.
+10. **The documented fresh-environment install depended on an unrecorded build
+    bootstrap.** A standard new virtual environment had no setuptools/wheel. The
+    first Candidate 2 clean-clone run therefore reached 260 passes and ten
+    failures caused by the deliberately missing `ecocommit` distribution/import,
+    rather than hiding the provenance gap. Exact build-backend wheels are now
+    hash-locked and a workflow-security regression enforces their presence.
 
 The failed clean-clone run is retained here as failure evidence; it was not
 discarded or described as a passing run.

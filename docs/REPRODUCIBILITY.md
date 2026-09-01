@@ -60,8 +60,11 @@ python3 -m venv .venv
 SHA-256 artifact hashes for CPython 3.11 Linux x86_64 and CPython 3.11/3.14
 Windows x86_64. Binary-only installation and `--require-hashes` reject an
 unlisted wheel. The editable project install disables dependency resolution and
-build isolation; the already installed setuptools/wheel bootstrap is still an
-environment prerequisite, so this is not a fully offline build attestation.
+build isolation. The exact setuptools and wheel build-backend distributions are
+included in the same hash lock, so a newly created standard virtual environment
+does not depend on an unrecorded bootstrap package. Downloading the published
+wheels is still required unless an independently verified local wheel cache is
+available, so this is not a fully offline build attestation.
 
 If validating the broad supported dependency ranges instead, use
 `python -m pip install -e ".[dev]"` and retain the complete resolved distribution

@@ -172,7 +172,9 @@ Offline CI watches source, scripts, tests, docs, UI, workflows, protocol files,
 and the lock, then runs tests, compilation, JavaScript syntax, dependency
 consistency, readiness structure, and diff checks. The lock authorizes exact
 published artifact hashes for the supported Linux CI and Windows validation
-wheels; editable project installation uses `--no-deps --no-build-isolation`.
+wheels, including the exact setuptools/wheel build backend required by a fresh
+virtual environment; editable project installation uses
+`--no-deps --no-build-isolation`.
 
 Final E blockers are unchanged in substance: A–D final evidence, license choice,
 intentional push/public CI, independent reproduction, final screenshots, and the

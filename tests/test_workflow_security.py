@@ -51,3 +51,19 @@ def test_offline_regression_covers_runtime_ui_workflows_and_static_checks():
     assert "python -m compileall -q src scripts tests" in workflow
     assert "node --check ui/app.js" in workflow
     assert "git diff --check" in workflow
+
+
+def test_hash_lock_includes_build_backend_for_a_fresh_venv():
+    lock = (ROOT / "requirements-dev.lock").read_text(encoding="utf-8")
+    lines = lock.splitlines()
+
+    for distribution in ("setuptools", "wheel"):
+        matches = [
+            index
+            for index, line in enumerate(lines)
+            if line.startswith(f"{distribution}==")
+        ]
+        assert len(matches) == 1, distribution
+        index = matches[0]
+        assert lines[index].endswith(" \\")
+        assert re.fullmatch(r"  --hash=sha256:[0-9a-f]{64}", lines[index + 1])

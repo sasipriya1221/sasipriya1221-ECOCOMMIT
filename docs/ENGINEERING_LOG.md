@@ -390,6 +390,36 @@ No final C plan values or results were invented. E remains blocked on real A–D
 evidence, license, push, independent reproduction, screenshots, and video. The
 hash lock is not a fully offline build bootstrap or provenance attestation.
 
+## 2026-09-02 — Fresh-environment build bootstrap failure
+
+### What broke
+
+The first Candidate 2 clean-clone validation created a standard new virtual
+environment and installed every entry in `requirements-dev.lock`, but the lock
+omitted the setuptools/wheel build backend named by `pyproject.toml`. Without an
+installed `ecocommit` distribution, 260 tests passed and ten failed: Checkpoint C
+correctly rejected an incomplete dependency manifest and the D CLI subprocess
+correctly failed its package import. Treating the earlier working-environment
+pass as sufficient would have hidden a real reproducibility gap.
+
+### How it was fixed
+
+- Downloaded the published pure-Python setuptools 84.0.0 and wheel 0.48.0 wheels,
+  verified their SHA-256 digests, and authorized exactly those artifacts in the
+  binary-only hash lock.
+- Added a workflow-security regression requiring one exact, hashed lock entry for
+  each build-backend distribution.
+- Updated the reproduction boundary to distinguish a complete fresh virtual
+  environment from independent-machine or fully offline attestation.
+
+### Retained evidence and limitation
+
+After installing from the corrected lock, the same no-hardlink clone built the
+editable local package without dependency resolution and passed all 270 tests
+that existed at that revision. The final tree adds the build-lock guard as test
+271. This remains same-host/operator evidence; published-wheel availability and
+independent reproduction are still external.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.
