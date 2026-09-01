@@ -98,8 +98,10 @@ and typed A-receipt code in addition to binding the source revision.
 
 Provider failures are evidence too. Groq's HTTP 429/5xx responses are retried
 with bounded backoff using the provider `Retry-After` window; transient transport
-failures are also retried. If one remains unavailable, that case records an
-infrastructure error without a semantic row and exits nonzero.
+failures are also retried. Every attempted provider turn, including a transient
+failure that later recovers, remains in the redacted per-attempt chronology; no
+provider body or credential is retained. If one remains unavailable, that case
+records an infrastructure error without a semantic row and exits nonzero.
 
 Resume Candidate 2 by re-running only failed jobs in the same workflow run.
 Every attempt uses a unique artifact name. The runner accepts only rows with the

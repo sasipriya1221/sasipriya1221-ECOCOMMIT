@@ -139,6 +139,10 @@ gate requires all 80 immutable cases and all four frozen thresholds passing
 together. Provider deferrals, smoke runs, fixtures, partial aggregates, and
 schema failures cannot become a pass.
 
+Candidate 2 retains a redacted record for every provider attempt, including a
+transient HTTP or transport retry that later succeeds. This preserves the actual
+attempt chronology without retaining provider bodies or credentials.
+
 Never print or pass a provider key in a shell command that will be retained. Use
 the approved CI secret boundary.
 

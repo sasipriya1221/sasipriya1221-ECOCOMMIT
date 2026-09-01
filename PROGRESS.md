@@ -68,7 +68,8 @@ fresh 80-case run. It does not reuse Candidate 1 rows. The local implementation:
 - never invents missing confidence, materiality, provenance, or graph edges;
 - performs at most one general schema-correction request;
 - retains bounded candidate hashes, finish reason, request ID, usage, validation
-  paths, and correction/provider chronology without retaining raw provider text;
+  paths, and complete correction/provider chronology—including transient retries
+  that later recover—without retaining raw provider text;
 - treats a provider failure after an invalid candidate as a terminal interrupted
   correction, not a resumable pure provider deferral;
 - restricts provider URLs to HTTPS allowlisted hosts and bounds response bodies;

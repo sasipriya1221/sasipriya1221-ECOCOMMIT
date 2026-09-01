@@ -633,6 +633,45 @@ Strict parsing protects interpretation of evidence; it does not authenticate an
 independent reproducer, supply real C inputs, make Candidate 2 run remotely, or
 turn any blocked checkpoint into a pass.
 
+## 2026-09-02 — Recovered provider retries missing from Candidate 2 chronology
+
+### What broke or remained unsafe
+
+Candidate 2 retried transient HTTP 429/5xx and transport failures, but provider
+errors were appended to `provider_trace` only on terminal failure branches. A
+retryable attempt was therefore omitted before each retry. Whether a later
+attempt succeeded or failed terminally, that earlier failure disappeared from
+retained metadata. A mixed schema-correction/provider-retry sequence could
+therefore show an incomplete chronology even though its final semantic result
+was correct.
+
+This was an evidence-completeness defect, not a benchmark failure or a change to
+the frozen evaluator. Candidate 2 has not run remotely, and Candidate 1's retained
+terminal evidence was not modified.
+
+### How it was fixed
+
+- Record each retryable HTTP or transport failure before sleeping and retrying.
+- Retain only the attempt number, redacted outcome/error class, and transient
+  flag; provider bodies, prompts, and credentials remain absent.
+- Preserve the subsequent accepted or terminal attempt in order, including a
+  schema-invalid candidate followed by a transient failure and successful
+  correction.
+- Added regressions for recovered HTTP 429, recovered transport failure, and the
+  mixed schema-invalid → HTTP 503 → accepted chronology.
+
+### Regression evidence and limitation
+
+The focused Candidate 2/provider suite passes **45/45**. The full suite passes
+**343/343** in both the working repository and a no-hardlink clone at
+`13fcdbf0e1b12595a146d5518cc0683899e12cbe`. The clone also passes compilation,
+dependency consistency, JavaScript syntax, readiness, diff, and clean-status
+checks.
+
+This is same-host deterministic evidence. It does not prove external provider
+behavior, run Candidate 2, fill any final evidence slot, or change any checkpoint
+to passed.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

@@ -95,8 +95,8 @@ live run.
 | Current-tree credential-value marker scan | **Passed** |
 | Fresh clone at `68d6798ecf1577529a07ef8585bea7d9999bd863` with a new virtual environment | **224 / 224 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 | Current Checkpoint B-focused suite after durability/webhook integration | **95 / 95 passed** |
-| Current full deterministic suite | **342 / 342 passed** |
-| Current no-hardlink clone at `3ea35a8a64e5f7eaa65f05c7c720b43d5658958b` using its hash-locked virtual environment | **342 / 342 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
+| Current full deterministic suite | **343 / 343 passed** |
+| Current no-hardlink clone at `13fcdbf0e1b12595a146d5518cc0683899e12cbe` using its hash-locked virtual environment | **343 / 343 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 

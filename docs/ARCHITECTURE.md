@@ -81,10 +81,11 @@ They never grant authority.
 
 The live runner calls an allowlisted HTTPS OpenAI-compatible provider, validates
 every model-supplied required field before defaults, permits one bounded schema
-correction, scores frozen cases, and writes redacted trace metadata. Candidate 2
-binds rows to dataset/case/prompt/schema/evaluator/runner/criteria/provider/source
-digests and recomputes semantic results during aggregation. Immutable attempt
-artifacts support resume of pure provider deferrals and reject conflicts.
+correction, scores frozen cases, and writes redacted per-attempt trace metadata,
+including transient retries that later recover. Candidate 2 binds rows to
+dataset/case/prompt/schema/evaluator/runner/criteria/provider/source digests and
+recomputes semantic results during aggregation. Immutable attempt artifacts
+support resume of pure provider deferrals and reject conflicts.
 
 Candidate 1 is mathematically failed. Candidate 2 is locally validated but has
 not run remotely, so A has not passed the frozen gate.
