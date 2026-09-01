@@ -60,12 +60,18 @@ before representing the authorization as `RESERVED`. The account must also use
 the default auto-capture setting would bypass ECOCOMMIT's delayed capture gate
 and is rejected by the adapter.
 
-The current local tree closes the earlier software handoff gap. The order
+The current local tree closes the earlier software handoff and single-host
+durability gaps. The order
 validator can emit a digest-bound Test Checkout JSON handoff and standalone HTML
 page. The page downloads a typed callback file after the human Test Checkout. A
 continuation command verifies the callback and exact provider entities, captures
 only behind ECOCOMMIT's certificate/TOCTOU boundary, issues an idempotent full
-refund through compensation, and reconciles the final state. This path has
+refund through compensation, and reconciles the final state. Payment,
+commitment, idempotency, and completed-operation results can be held in one
+SQLite WAL/FULL-sync database. A raw-body webhook endpoint verifies the separate
+webhook HMAC, binds `payment.captured` and `refund.processed` to the exact pinned
+operation, deduplicates `X-Razorpay-Event-Id`, accepts either arrival order, and
+exports a digest-bound two-event set without retaining raw bodies. This path has
 deterministic fake-transport regression evidence only; it has not been exercised
 against the provider and is not added to the live evidence table above.
 
@@ -88,6 +94,8 @@ live run.
 | Installed dependency consistency | **Passed** |
 | Current-tree credential-value marker scan | **Passed** |
 | Fresh clone at `68d6798ecf1577529a07ef8585bea7d9999bd863` with a new virtual environment | **224 / 224 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
+| Current Checkpoint B-focused suite after durability/webhook integration | **95 / 95 passed** |
+| Current full deterministic suite | **325 / 325 passed** |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 
@@ -117,7 +125,7 @@ never count as live provider evidence.
 | B4 — Progressive Commitment | Illegal transitions and capture without the exact reservation/certificate/state are denied | **LOCAL PASS** |
 | B5 — Freshness / TOCTOU | Bound-field mutation and concurrent evidence changes fail closed | **LOCAL PASS** |
 | B6 — Commit Certificates | Transaction/evidence/policy/expiry/nonce binding and tamper tests pass | **LOCAL PASS — HMAC TEST BOUNDARY ONLY** |
-| B7 — Idempotency / Compensation | Execute-once, collision, crash-window, reconciliation, and compensation tests pass | **LOCAL PASS — PROCESS-LOCAL ONLY** |
+| B7 — Idempotency / Compensation | Execute-once, collision, cross-process concurrency, durable restart replay, crash-window reconstruction, reconciliation, and compensation tests pass | **LOCAL PASS — SQLITE SINGLE-HOST BOUNDARY** |
 | B8a — Test credentials/authentication | Two redacted Actions preflights authenticated successfully | **LIVE SUBGATE PASS** |
 | B8b — Order/binding/idempotency | Real Test Mode order creation, exact binding, fetch, and identical replay validated | **LIVE SUBGATE PASS** |
 | B8c — Authorization/capture/refund/webhook lifecycle | Checkout authorization and the downstream provider lifecycle were not executed | **BLOCKED / NOT PASSED** |
@@ -141,11 +149,20 @@ The Test Mode adapter:
   TOCTOU gate before an exact-amount provider capture;
 - uses the provider's refund idempotency header and distinguishes pending from
   processed refunds; the shared compensation boundary remains
-  `COMPENSATION_PENDING` until the provider confirms `processed`;
+  `COMPENSATION_PENDING` until the provider confirms `processed`; retries poll
+  the exact bound refund by ID instead of replaying a terminal pending result;
 - explicitly rejects immediate void because Razorpay exposes no immediate void
   API for an authorization; and
-- provides raw-body HMAC verification for a separately configured webhook
-  secret, without claiming that a live webhook was delivered.
+- provides a raw-body HMAC endpoint for a separately configured webhook secret,
+  durable official event-ID deduplication, exact order/payment/refund binding,
+  out-of-order capture/refund handling, and redacted evidence export, without
+  claiming that a live webhook was delivered;
+- persists payment, commitment, idempotency, and completed execution results in
+  SQLite WAL with `synchronous=FULL`, uses optimistic CAS, and resumes a fully
+  completed lifecycle without another provider call; and
+- keeps pending compensation retryable instead of caching it as a terminal
+  operation result, including after handoff expiry when exact durable capture or
+  prior capture-authority state proves that the lifecycle had already started.
 
 `SIMULATED_LOCAL` remains an explicit local/test backend and was not silently
 replaced by provider behavior.
@@ -158,9 +175,11 @@ replaced by provider behavior.
    validated against Razorpay. Manual capture must be configured first.
 3. **Webhook and asynchronous reconciliation evidence is absent.** The user
    supplied API credentials, not a webhook secret/endpoint or delivered events.
-4. **Durability is not proven.** Evidence, payment state, and the ECOCOMMIT
-   idempotency ledger remain process-local.
-5. **Key management is not production-grade.** The local certificate HMAC
+4. **Live durability/recovery evidence is absent.** The SQLite implementation is
+   locally cross-process/restart tested, but there is no retained provider-run
+   crash injection, backup/restore, disk-loss, multi-host, or high-availability
+   evidence. It is not a malicious-database-tamper boundary.
+5. **Key management is not production-grade.** The environment-only certificate HMAC
    boundary is not a KMS, rotation, or production access-control claim.
 
 Until every blocker is cleared and the complete gate is rerun, B8 and Checkpoint

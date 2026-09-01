@@ -2,6 +2,11 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from ecocommit.audit import AppendOnlyAuditLog
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -82,3 +87,71 @@ def test_local_demo_api_keeps_gates_blocked_and_runs_synthetic_workflow(tmp_path
     assert real_response["status"] == "423 Locked"
     assert real["money_moved"] is False
     assert real["provider_called"] is False
+
+
+def test_partial_prepared_server_configuration_fails_before_startup(tmp_path):
+    module = load_server_module()
+
+    with pytest.raises(ValueError, match="inseparable"):
+        module.serve(
+            8765,
+            tmp_path / "audit.ndjson",
+            prepared_operation_path=tmp_path / "prepared.json",
+        )
+
+
+def test_runtime_validates_webhook_secret_before_provider_preflight(tmp_path, monkeypatch):
+    module = load_server_module()
+    operation = SimpleNamespace(
+        handoff=SimpleNamespace(public_key_id="rzp_test_x"),
+    )
+    monkeypatch.setattr(module, "load_prepared_test_operation", lambda *args, **kwargs: operation)
+    monkeypatch.setenv("RAZORPAY_KEY_ID", "rzp_test_x")
+    monkeypatch.setenv("RAZORPAY_KEY_SECRET", "provider-secret")
+    monkeypatch.setenv("ECOCOMMIT_D_SIGNING_SECRET", "s" * 32)
+    monkeypatch.delenv("RAZORPAY_WEBHOOK_SECRET", raising=False)
+    preflight_called = []
+    monkeypatch.setattr(
+        module.RazorpayTestPaymentAdapter,
+        "verify_credentials",
+        lambda self: preflight_called.append(True),
+    )
+
+    with pytest.raises(ValueError, match="webhook secret"):
+        module.build_prepared_execution_runtime(
+            tmp_path / "prepared.json",
+            "0" * 64,
+            tmp_path / "state.sqlite3",
+            audit_log=AppendOnlyAuditLog(tmp_path / "audit.ndjson"),
+        )
+
+    assert preflight_called == []
+
+
+def test_authoritative_evidence_is_validated_before_runtime_preflight(tmp_path, monkeypatch):
+    module = load_server_module()
+    runtime_called = []
+
+    def invalid_evidence(*args, **kwargs):
+        raise ValueError("invalid pinned evidence")
+
+    monkeypatch.setattr(module, "load_authoritative_evidence", invalid_evidence)
+    monkeypatch.setattr(
+        module,
+        "build_prepared_execution_runtime",
+        lambda *args, **kwargs: runtime_called.append(True),
+    )
+
+    with pytest.raises(ValueError, match="invalid pinned evidence"):
+        module.serve(
+            8765,
+            tmp_path / "audit.ndjson",
+            evidence_root=tmp_path,
+            pins_path=tmp_path / "pins.json",
+            pins_sha256="0" * 64,
+            prepared_operation_path=tmp_path / "prepared.json",
+            prepared_operation_sha256="1" * 64,
+            state_db_path=tmp_path / "state.sqlite3",
+        )
+
+    assert runtime_called == []

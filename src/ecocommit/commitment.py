@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
+from threading import RLock
+from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .certificates import CertificateVerifier, CommitCertificate
+from .durable import DurableStateConflict, SQLiteJSONStateStore
 from .evidence import EvidenceRegistry
 from .exposure import TransactionBinding
 
@@ -44,7 +48,7 @@ def _aware(value: datetime, field_name: str) -> datetime:
 
 
 class TransitionRecord(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     event_id: str = Field(min_length=1)
     event: CommitmentEvent
@@ -60,7 +64,7 @@ class TransitionRecord(BaseModel):
 
 
 class CommitmentState(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     transaction: TransactionBinding
     stage: CommitmentStage = CommitmentStage.PROPOSED
@@ -184,6 +188,101 @@ class CommitmentState(BaseModel):
         return False
 
 
+class CommitmentStateStore(Protocol):
+    def get(self, transaction_id: str) -> CommitmentState | None: ...
+
+    def compare_and_set(
+        self,
+        transaction_id: str,
+        *,
+        expected: CommitmentState | None,
+        updated: CommitmentState,
+    ) -> None: ...
+
+
+class InMemoryCommitmentStateStore:
+    def __init__(self) -> None:
+        self._values: dict[str, CommitmentState] = {}
+        self._lock = RLock()
+
+    def get(self, transaction_id: str) -> CommitmentState | None:
+        with self._lock:
+            value = self._values.get(transaction_id)
+            return None if value is None else value.model_copy(deep=True)
+
+    def compare_and_set(
+        self,
+        transaction_id: str,
+        *,
+        expected: CommitmentState | None,
+        updated: CommitmentState,
+    ) -> None:
+        if updated.transaction.transaction_id != transaction_id:
+            raise CommitmentTransitionError("commitment transaction id does not match")
+        with self._lock:
+            current = self._values.get(transaction_id)
+            if current != expected:
+                raise CommitmentTransitionError("commitment state changed concurrently")
+            self._values[transaction_id] = updated.model_copy(deep=True)
+
+
+class SQLiteCommitmentStateStore:
+    """Durable CommitmentState storage with optimistic cross-process updates."""
+
+    _NAMESPACE = "commitment-states-v1"
+
+    def __init__(self, path_or_store: str | Path | SQLiteJSONStateStore) -> None:
+        self._store = (
+            path_or_store
+            if isinstance(path_or_store, SQLiteJSONStateStore)
+            else SQLiteJSONStateStore(path_or_store)
+        )
+
+    def get(self, transaction_id: str) -> CommitmentState | None:
+        document = self._store.load(self._NAMESPACE, transaction_id)
+        if document is None:
+            return None
+        try:
+            return CommitmentState.model_validate(document.value)
+        except ValueError as exc:
+            raise CommitmentTransitionError("durable commitment state is invalid") from exc
+
+    def compare_and_set(
+        self,
+        transaction_id: str,
+        *,
+        expected: CommitmentState | None,
+        updated: CommitmentState,
+    ) -> None:
+        if updated.transaction.transaction_id != transaction_id:
+            raise CommitmentTransitionError("commitment transaction id does not match")
+        document = self._store.load(self._NAMESPACE, transaction_id)
+        try:
+            if expected is None:
+                if document is not None:
+                    raise CommitmentTransitionError("commitment state changed concurrently")
+                self._store.create(
+                    self._NAMESPACE,
+                    transaction_id,
+                    updated.model_dump(mode="json"),
+                )
+                return
+            if document is None:
+                raise CommitmentTransitionError("commitment state disappeared")
+            current = CommitmentState.model_validate(document.value)
+            if current != expected:
+                raise CommitmentTransitionError("commitment state changed concurrently")
+            self._store.compare_and_swap(
+                self._NAMESPACE,
+                transaction_id,
+                expected_version=document.version,
+                expected_sha256=document.payload_sha256,
+                value=updated.model_dump(mode="json"),
+            )
+        except DurableStateConflict as exc:
+            raise CommitmentTransitionError("commitment state changed concurrently") from exc
+
+
 class ProgressiveCommitmentEngine:
     """Explicit irreversible boundary with no generic skip-stage operation."""
 
@@ -193,8 +292,42 @@ class ProgressiveCommitmentEngine:
         CommitmentStage.FAILED,
     }
 
+    def __init__(self, *, state_store: CommitmentStateStore | None = None) -> None:
+        self._state_store = state_store
+
+    def _persist(
+        self,
+        previous: CommitmentState | None,
+        updated: CommitmentState,
+    ) -> CommitmentState:
+        if self._state_store is not None and previous != updated:
+            self._state_store.compare_and_set(
+                updated.transaction.transaction_id,
+                expected=previous,
+                updated=updated,
+            )
+        return updated
+
     def propose(self, transaction: TransactionBinding, *, at: datetime) -> CommitmentState:
-        return CommitmentState(transaction=transaction, proposed_at=_aware(at, "at"))
+        state = CommitmentState(transaction=transaction, proposed_at=_aware(at, "at"))
+        return self._persist(None, state)
+
+    def resume_or_propose(
+        self,
+        transaction: TransactionBinding,
+        *,
+        at: datetime,
+    ) -> CommitmentState:
+        if self._state_store is None:
+            return self.propose(transaction, at=at)
+        existing = self._state_store.get(transaction.transaction_id)
+        if existing is None:
+            return self.propose(transaction, at=at)
+        if existing.transaction != transaction:
+            raise CommitmentTransitionError(
+                "durable commitment transaction binding changed"
+            )
+        return existing
 
     def authorize(
         self,
@@ -248,6 +381,24 @@ class ProgressiveCommitmentEngine:
         at: datetime,
     ) -> CommitmentState:
         at = _aware(at, "at")
+        prior = next(
+            (item for item in state.transitions if item.event_id == event_id),
+            None,
+        )
+        if prior is not None:
+            # The first application verified certificate freshness and persisted
+            # the exact certificate id. Replaying that already-recorded event
+            # must not turn a later clock into a mutation or a false failure.
+            return self._transition(
+                state,
+                expected=CommitmentStage.RESERVED,
+                target=CommitmentStage.CAPTURE_ALLOWED,
+                event=CommitmentEvent.ALLOW_CAPTURE,
+                event_id=event_id,
+                reference=certificate.certificate_id,
+                at=at,
+                updates={"certificate_id": certificate.certificate_id},
+            )
         verified = verifier.verify(
             certificate,
             expected_transaction=state.transaction,
@@ -371,8 +522,8 @@ class ProgressiveCommitmentEngine:
             at=at,
         )
 
-    @staticmethod
     def _transition(
+        self,
         state: CommitmentState,
         *,
         expected: CommitmentStage,
@@ -411,4 +562,4 @@ class ProgressiveCommitmentEngine:
         values = state.model_dump(mode="python")
         values.update({"stage": target, "transitions": (*state.transitions, record)})
         values.update(updates or {})
-        return CommitmentState.model_validate(values)
+        return self._persist(state, CommitmentState.model_validate(values))

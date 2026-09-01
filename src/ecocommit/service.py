@@ -12,6 +12,7 @@ from .checkpoint_d_workflow import (
     SimulationInputError,
 )
 from .checkpoint_status import SafetyStatus
+from .execution import TestExecutionAdapter, TestExecutionError, TestExecutionResult
 from .observability import MetricsRegistry, StructuredLogger, resolve_correlation_id
 
 
@@ -90,11 +91,13 @@ def _request_summary(payload: Mapping[str, object]) -> dict[str, object]:
 
 
 class CheckpointDService:
-    """Safe orchestration facade for status, simulation, and denied commit attempts.
+    """Safe orchestration facade for status, simulation, and Test execution.
 
-    This scaffold has no execution adapter. It treats all request fields as
-    untrusted—including fields claiming validation or authorization—and cannot
-    call a payment provider or move money.
+    The default has no execution adapter and cannot call a provider. When an
+    operator installs a Test adapter, request fields still cannot provide
+    transactions, callbacks, checkpoint authority, credentials, or keys: the
+    caller may select only an opaque operation prepared at startup. Real money
+    remains disabled in every configuration.
     """
 
     def __init__(
@@ -105,6 +108,7 @@ class CheckpointDService:
         metrics: MetricsRegistry | None = None,
         logger: StructuredLogger | None = None,
         simulation_workflow: CheckpointDSimulatedWorkflow | None = None,
+        execution_adapter: TestExecutionAdapter | None = None,
         monotonic: Callable[[], float] = time.perf_counter,
     ) -> None:
         self._status_source = status if callable(status) else lambda: status
@@ -112,6 +116,7 @@ class CheckpointDService:
         self.metrics = metrics or MetricsRegistry()
         self.logger = logger or StructuredLogger()
         self.simulation_workflow = simulation_workflow or CheckpointDSimulatedWorkflow()
+        self._execution_adapter = execution_adapter
         self._monotonic = monotonic
 
     def _status(self) -> SafetyStatus:
@@ -120,17 +125,25 @@ class CheckpointDService:
             raise TypeError("status source must return SafetyStatus")
         return status
 
-    @staticmethod
-    def _service_snapshot(status: SafetyStatus) -> dict[str, object]:
+    def _service_snapshot(self, status: SafetyStatus) -> dict[str, object]:
         snapshot = status.snapshot()
-        prerequisites_ready = bool(snapshot["irreversible_commit_ready"])
+        prerequisites_ready = bool(snapshot["provider_test_execution_ready"])
+        adapter_configured = self._execution_adapter is not None
+        test_execution_ready = prerequisites_ready and adapter_configured
         blockers = list(snapshot["blockers"])
-        blockers.append("EXECUTION_ADAPTER_NOT_IMPLEMENTED")
+        provider_execution_blockers = list(snapshot["provider_execution_blockers"])
+        if not adapter_configured:
+            blockers.append("EXECUTION_ADAPTER_NOT_CONFIGURED")
+            provider_execution_blockers.append("EXECUTION_ADAPTER_NOT_CONFIGURED")
         return {
             **snapshot,
             "gate_and_provider_prerequisites_ready": prerequisites_ready,
-            "service_execution_adapter_configured": False,
-            "irreversible_commit_ready": False,
+            "service_execution_adapter_configured": adapter_configured,
+            "service_test_execution_ready": test_execution_ready,
+            "provider_execution_blockers": provider_execution_blockers,
+            "irreversible_commit_ready": bool(
+                snapshot["irreversible_commit_ready"] and adapter_configured
+            ),
             "blockers": blockers,
         }
 
@@ -168,8 +181,11 @@ class CheckpointDService:
             "health_scope": "PROCESS_LIVENESS_ONLY",
             "does_not_imply_checkpoint_acceptance": True,
             "checkpoint_gates": snapshot["checkpoint_gates"],
-            "irreversible_commit_ready": False,
-            "service_execution_adapter_configured": False,
+            "irreversible_commit_ready": snapshot["irreversible_commit_ready"],
+            "service_execution_adapter_configured": snapshot[
+                "service_execution_adapter_configured"
+            ],
+            "service_test_execution_ready": snapshot["service_test_execution_ready"],
             "safe_to_move_real_money": False,
         }
         self._finish(
@@ -186,12 +202,12 @@ class CheckpointDService:
         correlation = resolve_correlation_id(correlation_id)
         status = self._status()
         snapshot = self._service_snapshot(status)
-        ready = False
+        ready = bool(snapshot["service_test_execution_ready"])
         status_code = 200 if ready else 503
         body = {
             "correlation_id": correlation.correlation_id,
             "ready": ready,
-            "readiness_scope": "IRREVERSIBLE_COMMIT_PATH",
+            "readiness_scope": "RAZORPAY_TEST_EXECUTION_PATH",
             "does_not_imply_checkpoint_acceptance": True,
             **snapshot,
         }
@@ -532,29 +548,100 @@ class CheckpointDService:
 
         status = self._status()
         checkpoint_snapshot = self._service_snapshot(status)
-        blockers = list(checkpoint_snapshot["blockers"])
-        reason = blockers[0]
-        body = {
-            "correlation_id": correlation.correlation_id,
-            "outcome": "DENIED",
-            "reason": reason,
-            "blockers": blockers,
-            "default_deny": True,
-            "request_fields_are_untrusted": True,
-            "ignored_untrusted_authority_claims": summary[
-                "ignored_untrusted_authority_claims"
-            ],
-            "money_moved": False,
-            "provider_called": False,
-            "checkpoint_snapshot": checkpoint_snapshot,
-        }
+        provider_blockers = list(checkpoint_snapshot["provider_execution_blockers"])
+        if not checkpoint_snapshot["service_test_execution_ready"]:
+            reason = provider_blockers[0]
+            body = {
+                "correlation_id": correlation.correlation_id,
+                "outcome": "DENIED",
+                "reason": reason,
+                "blockers": provider_blockers,
+                "default_deny": True,
+                "request_fields_are_untrusted": True,
+                "ignored_untrusted_authority_claims": summary[
+                    "ignored_untrusted_authority_claims"
+                ],
+                "money_moved": False,
+                "provider_called": False,
+                "checkpoint_snapshot": checkpoint_snapshot,
+            }
+            try:
+                self.audit_log.append(
+                    "commit.denied",
+                    correlation.correlation_id,
+                    {
+                        "reason": reason,
+                        "blockers": provider_blockers,
+                        "money_moved": False,
+                        "provider_called": False,
+                    },
+                )
+            except (AuditIntegrityError, OSError):
+                return self._audit_failure(
+                    route="commit",
+                    started=started,
+                    correlation_id=correlation.correlation_id,
+                )
+            self.metrics.increment(
+                "ecocommit_commit_attempts_total",
+                labels={"outcome": "denied", "reason": reason},
+            )
+            self._finish(
+                route="commit",
+                outcome="denied",
+                started=started,
+                correlation_id=correlation.correlation_id,
+                status_code=423,
+            )
+            return ServiceReply(423, body)
+
+        if set(payload) != {"operation_id"} or not isinstance(
+            payload.get("operation_id"), str
+        ):
+            reason = "OPAQUE_PREPARED_OPERATION_ID_REQUIRED"
+            body = {
+                "correlation_id": correlation.correlation_id,
+                "outcome": "DENIED",
+                "reason": reason,
+                "default_deny": True,
+                "request_fields_are_untrusted": True,
+                "money_moved": False,
+                "provider_called": False,
+            }
+            try:
+                self.audit_log.append(
+                    "commit.denied",
+                    correlation.correlation_id,
+                    {
+                        "reason": reason,
+                        "money_moved": False,
+                        "provider_called": False,
+                    },
+                )
+            except (AuditIntegrityError, OSError):
+                return self._audit_failure(
+                    route="commit",
+                    started=started,
+                    correlation_id=correlation.correlation_id,
+                )
+            self._finish(
+                route="commit",
+                outcome="invalid_denied",
+                started=started,
+                correlation_id=correlation.correlation_id,
+                status_code=400,
+            )
+            return ServiceReply(400, body)
+
+        operation_id = str(payload["operation_id"])
+        operation_id_sha256 = sha256(operation_id.encode("utf-8")).hexdigest()
         try:
             self.audit_log.append(
-                "commit.denied",
+                "commit.test_execution.started",
                 correlation.correlation_id,
                 {
-                    "reason": reason,
-                    "blockers": blockers,
+                    "operation_id_sha256": operation_id_sha256,
+                    "provider_mode": "RAZORPAY_TEST_MODE",
                     "money_moved": False,
                     "provider_called": False,
                 },
@@ -565,18 +652,168 @@ class CheckpointDService:
                 started=started,
                 correlation_id=correlation.correlation_id,
             )
+
+        adapter = self._execution_adapter
+        if adapter is None:
+            raise RuntimeError("execution adapter disappeared after readiness evaluation")
+        try:
+            result = adapter.execute(
+                operation_id=operation_id,
+                correlation_id=correlation.correlation_id,
+            )
+            if not isinstance(result, TestExecutionResult):
+                raise TestExecutionError(
+                    "TEST_EXECUTION_RESULT_INVALID",
+                    provider_call_status="STARTED_OR_UNKNOWN",
+                )
+        except TestExecutionError as exc:
+            provider_called: bool | None = (
+                False if exc.provider_call_status == "NOT_STARTED" else None
+            )
+            try:
+                self.audit_log.append(
+                    "commit.test_execution.failed_closed",
+                    correlation.correlation_id,
+                    {
+                        "reason": exc.code,
+                        "operation_id_sha256": operation_id_sha256,
+                        "provider_call_status": exc.provider_call_status,
+                        "money_moved": False,
+                        "provider_called": provider_called,
+                        "reconciliation_required": provider_called is None,
+                    },
+                )
+            except (AuditIntegrityError, OSError):
+                pass
+            self.metrics.increment(
+                "ecocommit_commit_attempts_total",
+                labels={"outcome": "failed_closed", "reason": exc.code},
+            )
+            self._finish(
+                route="commit",
+                outcome="failed_closed",
+                started=started,
+                correlation_id=correlation.correlation_id,
+                status_code=503,
+            )
+            return ServiceReply(
+                503,
+                {
+                    "correlation_id": correlation.correlation_id,
+                    "outcome": "TEST_EXECUTION_FAILED_CLOSED",
+                    "reason": exc.code,
+                    "provider_call_status": exc.provider_call_status,
+                    "provider_called": provider_called,
+                    "reconciliation_required": provider_called is None,
+                    "money_moved": False,
+                    "real_money_moved": False,
+                    "provider_mode": "RAZORPAY_TEST_MODE",
+                },
+            )
+        except Exception:
+            # Once an adapter has been invoked, an unexpected failure cannot be
+            # truthfully represented as "no provider call".
+            try:
+                self.audit_log.append(
+                    "commit.test_execution.failed_closed",
+                    correlation.correlation_id,
+                    {
+                        "reason": "UNEXPECTED_EXECUTION_FAILURE",
+                        "operation_id_sha256": operation_id_sha256,
+                        "provider_call_status": "STARTED_OR_UNKNOWN",
+                        "money_moved": False,
+                        "provider_called": None,
+                        "reconciliation_required": True,
+                    },
+                )
+            except (AuditIntegrityError, OSError):
+                pass
+            self._finish(
+                route="commit",
+                outcome="failed_closed_unknown",
+                started=started,
+                correlation_id=correlation.correlation_id,
+                status_code=503,
+            )
+            return ServiceReply(
+                503,
+                {
+                    "correlation_id": correlation.correlation_id,
+                    "outcome": "TEST_EXECUTION_FAILED_CLOSED",
+                    "reason": "UNEXPECTED_EXECUTION_FAILURE",
+                    "provider_call_status": "STARTED_OR_UNKNOWN",
+                    "provider_called": None,
+                    "reconciliation_required": True,
+                    "money_moved": False,
+                    "real_money_moved": False,
+                    "provider_mode": "RAZORPAY_TEST_MODE",
+                },
+            )
+
+        completed = {
+            "operation_id_sha256": operation_id_sha256,
+            "result_sha256": result.result_sha256,
+            "outcome": result.outcome,
+            "provider_mode": result.provider_mode,
+            "provider_called": True,
+            "real_money_moved": False,
+        }
+        try:
+            self.audit_log.append(
+                "commit.test_execution.completed",
+                correlation.correlation_id,
+                completed,
+            )
+        except (AuditIntegrityError, OSError):
+            self._finish(
+                route="commit",
+                outcome="post_execution_audit_failure",
+                started=started,
+                correlation_id=correlation.correlation_id,
+                status_code=503,
+            )
+            return ServiceReply(
+                503,
+                {
+                    "correlation_id": correlation.correlation_id,
+                    "outcome": "EXECUTED_RECONCILIATION_REQUIRED",
+                    "reason": "POST_EXECUTION_AUDIT_FAILURE",
+                    "result_sha256": result.result_sha256,
+                    "provider_called": True,
+                    "reconciliation_required": True,
+                    "money_moved": False,
+                    "real_money_moved": False,
+                    "provider_mode": "RAZORPAY_TEST_MODE",
+                },
+            )
+
+        succeeded = result.lifecycle.checkpoint_b8_lifecycle_passed
+        status_code = 200 if succeeded else 202
         self.metrics.increment(
             "ecocommit_commit_attempts_total",
-            labels={"outcome": "denied", "reason": reason},
+            labels={"outcome": "completed" if succeeded else "compensation_pending"},
         )
         self._finish(
             route="commit",
-            outcome="denied",
+            outcome="completed" if succeeded else "compensation_pending",
             started=started,
             correlation_id=correlation.correlation_id,
-            status_code=423,
+            status_code=status_code,
         )
-        return ServiceReply(423, body)
+        return ServiceReply(
+            status_code,
+            {
+                "correlation_id": correlation.correlation_id,
+                "outcome": result.outcome,
+                "provider_mode": result.provider_mode,
+                "simulated": False,
+                "provider_called": True,
+                "money_moved": False,
+                "real_money_moved": False,
+                "counts_as_checkpoint_d_pass": False,
+                "result": result.model_dump(mode="json"),
+            },
+        )
 
     def _audit_failure(
         self,

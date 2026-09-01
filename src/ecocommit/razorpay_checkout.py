@@ -9,7 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from ._canonical import sha256_hex
 from .certificates import CertificateSigner, CertificateVerifier
-from .commitment import ProgressiveCommitmentEngine
+from .commitment import (
+    CommitmentStage,
+    CommitmentStateStore,
+    CommitmentTransitionError,
+    ProgressiveCommitmentEngine,
+)
 from .evidence import EvidenceAuthority, EvidenceKind, EvidenceRecord, EvidenceRegistry
 from .exposure import (
     EvidenceClaimRequirement,
@@ -85,7 +90,7 @@ class RazorpayCheckoutCallback(BaseModel):
 
 
 class RazorpayLifecycleEvidence(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: Literal["B8.LIFECYCLE.1"] = "B8.LIFECYCLE.1"
     provider_mode: Literal["RAZORPAY_TEST_MODE"] = "RAZORPAY_TEST_MODE"
@@ -105,6 +110,10 @@ class RazorpayLifecycleEvidence(BaseModel):
     checkout_signature_retained: Literal[False] = False
     certificate_signing_key_retained: Literal[False] = False
     webhook_verified: Literal[False] = False
+    durable_state_backend: Literal["PROCESS_LOCAL", "SQLITE_WAL_FULL_SYNC"] = (
+        "PROCESS_LOCAL"
+    )
+    full_crash_resume_proven: Literal[False] = False
 
     @model_validator(mode="after")
     def pass_requires_processed_refund_and_reconciliation(self):
@@ -164,6 +173,58 @@ document.getElementById("checkout").addEventListener("click", () => new Razorpay
 """
 
 
+def has_bound_lifecycle_state(
+    handoff: RazorpayCheckoutHandoff,
+    callback: RazorpayCheckoutCallback,
+    *,
+    adapter: RazorpayTestPaymentAdapter,
+    commitment_store: CommitmentStateStore | None = None,
+) -> bool:
+    """Whether exact durable payment state permits post-expiry reconciliation.
+
+    This is not new capture authority. ``complete_test_lifecycle`` still
+    verifies the callback signature and replays only the original bound state.
+    """
+
+    if callback.razorpay_order_id != handoff.order.order_id:
+        return False
+    payment = adapter.snapshot(handoff.transaction.transaction_id)
+    payment_is_bound = (
+        payment.state
+        in {
+            PaymentState.RESERVED,
+            PaymentState.CAPTURED,
+            PaymentState.REFUND_PENDING,
+            PaymentState.REFUNDED,
+        }
+        and payment.transaction_digest == handoff.transaction.digest()
+        and payment.amount_minor == handoff.transaction.amount_minor
+        and payment.currency == handoff.transaction.currency
+        and payment.order_id == callback.razorpay_order_id
+        and payment.payment_id == callback.razorpay_payment_id
+    )
+    if not payment_is_bound:
+        return False
+    if payment.state != PaymentState.RESERVED:
+        return True
+    if commitment_store is None:
+        return False
+    commitment = commitment_store.get(handoff.transaction.transaction_id)
+    return (
+        commitment is not None
+        and commitment.transaction == handoff.transaction
+        and commitment.stage
+        in {
+            CommitmentStage.CAPTURE_ALLOWED,
+            CommitmentStage.CAPTURED,
+            CommitmentStage.COMPENSATION_PENDING,
+            CommitmentStage.COMPENSATED,
+        }
+        and commitment.reservation_reference == callback.razorpay_payment_id
+        and commitment.certificate_id is not None
+    )
+
+
 def complete_test_lifecycle(
     handoff: RazorpayCheckoutHandoff,
     callback: RazorpayCheckoutCallback,
@@ -171,10 +232,16 @@ def complete_test_lifecycle(
     adapter: RazorpayTestPaymentAdapter,
     now: datetime,
     signing_secret: bytes | None = None,
+    commitment_store: CommitmentStateStore | None = None,
 ) -> RazorpayLifecycleEvidence:
     """Verify Checkout, capture behind a local B8 certificate, and compensate."""
     now = _aware(now, "now")
-    if now > handoff.expires_at:
+    if now > handoff.expires_at and not has_bound_lifecycle_state(
+        handoff,
+        callback,
+        adapter=adapter,
+        commitment_store=commitment_store,
+    ):
         raise ValueError("Checkout handoff expired")
     if callback.razorpay_order_id != handoff.order.order_id:
         raise ValueError("Checkout callback belongs to another order")
@@ -188,6 +255,10 @@ def complete_test_lifecycle(
         checkout_signature=callback.razorpay_signature,
         idempotency_key=f"b8-reserve-{token}",
     )
+
+    engine = ProgressiveCommitmentEngine(state_store=commitment_store)
+    state = engine.resume_or_propose(transaction, at=now)
+    execution_started_at = state.proposed_at
 
     authority_id = "b8-human-checkout"
     evidence_id = f"b8-checkout-{callback.razorpay_payment_id}"
@@ -206,10 +277,14 @@ def complete_test_lifecycle(
         kind=EvidenceKind.USER_AUTHORIZATION,
         subject=transaction.transaction_id,
         version=1,
-        observed_at=now,
+        observed_at=execution_started_at,
         claims={"approved": True},
-    ), now=now)
-    snapshot = registry.snapshot((evidence_id,), subject=transaction.transaction_id, now=now)
+    ), now=execution_started_at)
+    snapshot = registry.snapshot(
+        (evidence_id,),
+        subject=transaction.transaction_id,
+        now=execution_started_at,
+    )
     policy = ExposurePolicy(
         policy_id="b8-checkout-exact-amount",
         version=1,
@@ -224,7 +299,11 @@ def complete_test_lifecycle(
             max_irreversible_minor=transaction.amount_minor,
         ),),
     )
-    decision = ExposureCalculator(policy).calculate(transaction, snapshot, now=now)
+    decision = ExposureCalculator(policy).calculate(
+        transaction,
+        snapshot,
+        now=execution_started_at,
+    )
     secret = signing_secret or secrets.token_bytes(32)
     signer = CertificateSigner(
         key_id="b8-ephemeral-test-key",
@@ -236,12 +315,15 @@ def complete_test_lifecycle(
         snapshot=snapshot,
         decision=decision,
         registry=registry,
-        now=now,
+        now=execution_started_at,
         ttl_seconds=60,
+        nonce=sha256_hex({
+            "handoff_sha256": handoff.handoff_sha256,
+            "payment_id": callback.razorpay_payment_id,
+            "purpose": "B8_TEST_CAPTURE_CERTIFICATE",
+        })[:32],
     )
     verifier = CertificateVerifier({"b8-ephemeral-test-key": secret})
-    engine = ProgressiveCommitmentEngine()
-    state = engine.propose(transaction, at=now)
     state = engine.authorize(
         state,
         authorization_reference=callback.razorpay_payment_id,
@@ -263,31 +345,73 @@ def complete_test_lifecycle(
         event_id=f"b8:{token}:allow-capture",
         at=now,
     )
-    capture = adapter.capture(
-        transaction,
-        commitment=state,
-        certificate=certificate,
-        verifier=verifier,
-        registry=registry,
-        now=now,
-        idempotency_key=f"b8-capture-{token}",
-    )
+    payment_before_capture = adapter.snapshot(transaction.transaction_id)
+    if state.stage == CommitmentStage.CAPTURE_ALLOWED:
+        if payment_before_capture.state in {
+            PaymentState.CAPTURED,
+            PaymentState.REFUND_PENDING,
+            PaymentState.REFUNDED,
+        }:
+            if (
+                payment_before_capture.transaction_digest != transaction.digest()
+                or payment_before_capture.payment_id != callback.razorpay_payment_id
+                or not payment_before_capture.last_reference
+            ):
+                raise CommitmentTransitionError(
+                    "captured payment cannot be rebound during lifecycle recovery"
+                )
+            capture_reference = callback.razorpay_payment_id
+        else:
+            capture = adapter.capture(
+                transaction,
+                commitment=state,
+                certificate=certificate,
+                verifier=verifier,
+                registry=registry,
+                now=now,
+                idempotency_key=f"b8-capture-{token}",
+            )
+            capture_reference = capture.provider_reference
+    elif state.stage in {
+        CommitmentStage.CAPTURED,
+        CommitmentStage.COMPENSATION_PENDING,
+        CommitmentStage.COMPENSATED,
+    }:
+        if (
+            payment_before_capture.state
+            not in {
+                PaymentState.CAPTURED,
+                PaymentState.REFUND_PENDING,
+                PaymentState.REFUNDED,
+            }
+            or payment_before_capture.transaction_digest != transaction.digest()
+            or payment_before_capture.payment_id != callback.razorpay_payment_id
+        ):
+            raise CommitmentTransitionError(
+                "durable commitment and payment capture state disagree"
+            )
+        capture_reference = callback.razorpay_payment_id
+    else:
+        raise CommitmentTransitionError(
+            f"lifecycle cannot capture from {state.stage.value}"
+        )
     state = engine.record_capture(
         state,
-        payment_reference=capture.provider_reference,
+        payment_reference=capture_reference,
         event_id=f"b8:{token}:captured",
         at=now,
     )
-    compensation = CompensationCoordinator(engine=engine, payments=adapter).compensate(
-        state,
-        reason_reference="b8-test-lifecycle-cleanup",
-        idempotency_key=f"b8-refund-{token}",
-        at=now,
-    )
+    if state.stage != CommitmentStage.COMPENSATED:
+        compensation = CompensationCoordinator(engine=engine, payments=adapter).compensate(
+            state,
+            reason_reference="b8-test-lifecycle-cleanup",
+            idempotency_key=f"b8-refund-{token}",
+            at=now,
+        )
+        state = compensation.state
     payment = adapter.snapshot(transaction.transaction_id)
-    reconciliation = Reconciler().reconcile(compensation.state, payment, now=now)
-    refund = compensation.payment_result
-    if refund is None or refund.refund_id is None:
+    reconciliation = Reconciler().reconcile(state, payment, now=now)
+    if payment.refund_id is None:
         raise ValueError("B8 lifecycle did not return a bound refund")
 
     return RazorpayLifecycleEvidence(
@@ -295,15 +419,20 @@ def complete_test_lifecycle(
         transaction_digest=transaction.digest(),
         order_id=handoff.order.order_id,
         payment_id=callback.razorpay_payment_id,
-        refund_id=refund.refund_id,
+        refund_id=payment.refund_id,
         reserve_state=reservation.state.value,
-        capture_state=capture.state.value,
-        refund_state=refund.state.value,
-        commitment_stage=compensation.state.stage.value,
+        capture_state=PaymentState.CAPTURED.value,
+        refund_state=payment.state.value,
+        commitment_stage=state.stage.value,
         reconciliation_in_sync=reconciliation.in_sync,
         checkpoint_b8_lifecycle_passed=(
-            refund.state == PaymentState.REFUNDED
-            and compensation.succeeded
+            payment.state == PaymentState.REFUNDED
+            and state.stage == CommitmentStage.COMPENSATED
             and reconciliation.in_sync
+        ),
+        durable_state_backend=(
+            "SQLITE_WAL_FULL_SYNC"
+            if commitment_store is not None
+            else "PROCESS_LOCAL"
         ),
     )

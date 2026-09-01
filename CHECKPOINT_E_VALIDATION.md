@@ -32,6 +32,12 @@ the lock, and a regression requires both entries. Installing the project from
 that corrected lock in the same no-hardlink clone produced a 270/270 pass before
 the new lock guard was added; the completed tree passes 271/271.
 
+The current tree subsequently added the authoritative A/B/C[/D] evidence loader,
+single-host SQLite/OS-lock durability, prepared Razorpay Test API/UI boundary,
+and bound raw-webhook ingestion/export. The deterministic suite is now **325 / 325
+passed** in the working repository. These additions close implementation gaps;
+they do not fill any final evidence slot.
+
 ## Frozen-boundary check
 
 The historical E snapshot left A on its guarded retry process. Subsequent
@@ -85,6 +91,10 @@ No competing provider run was started.
   **271/271 passed**.
 - Current no-hardlink clone with a new virtual environment, hash-locked runtime,
   test, and build-backend wheels, plus editable local install: **271/271 passed**.
+- Current authoritative-evidence/durability/provider-Test integration tree:
+  **325/325 passed** in the working repository; fresh-clone rerun pending the
+  current commit.
+- Current Checkpoint E-focused readiness regression: **9/9 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.
 - Browser JavaScript syntax: **PASS**.
@@ -149,7 +159,8 @@ discarded or described as a passing run.
 - No Razorpay credential, request, Test Mode transaction, webhook, or provider
   result was used or fabricated.
 - No final screenshot or demo video was produced.
-- No hosted end-to-end product evidence exists.
+- No hosted end-to-end product evidence exists; the provider-Test route and
+  webhook receiver have fake-transport/local validation only.
 - No independent machine/operator reproduction was performed.
 - No license was selected on the owner's behalf.
 - No local commit was pushed.

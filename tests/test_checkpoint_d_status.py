@@ -45,13 +45,37 @@ def test_downstream_gate_cannot_pass_before_its_prerequisites():
 
 
 def test_provider_calls_cannot_be_enabled_by_mode_or_credentials_alone():
-    with pytest.raises(ValueError, match="every gate and final integration"):
+    with pytest.raises(ValueError, match="prerequisite checkpoints A-C"):
         SafetyStatus(
             mode=ExecutionMode.REAL_PROVIDER_TEST,
             provider_status=ProviderStatus.RAZORPAY_TEST_MODE,
             provider_credentials_verified=True,
             provider_calls_enabled=True,
         )
+
+
+def test_passing_a_through_c_can_authorize_test_execution_that_will_produce_d():
+    reports = {checkpoint: passed(checkpoint) for checkpoint in ("A", "B", "C")}
+    reports["D"] = GateReport(
+        "D",
+        GateState.IN_PROGRESS,
+        detail="hosted Test Mode integration run has not produced D evidence yet",
+    )
+    status = SafetyStatus(
+        gates=reports,
+        mode=ExecutionMode.REAL_PROVIDER_TEST,
+        provider_status=ProviderStatus.RAZORPAY_TEST_MODE,
+        provider_credentials_verified=True,
+        provider_calls_enabled=True,
+    )
+
+    snapshot = status.snapshot()
+    assert status.provider_prerequisite_gates_accepted is True
+    assert status.provider_test_execution_ready is True
+    assert status.execution_gates_accepted is False
+    assert status.irreversible_commit_ready is False
+    assert snapshot["provider_execution_blockers"] == []
+    assert snapshot["safe_to_move_real_money"] is False
 
 
 def test_fully_evidenced_test_mode_status_is_test_ready_but_never_real_money_ready():
@@ -67,6 +91,34 @@ def test_fully_evidenced_test_mode_status_is_test_ready_but_never_real_money_rea
 
     assert status.irreversible_commit_ready is True
     assert status.snapshot()["safe_to_move_real_money"] is False
+
+
+def test_checkpoint_e_packaging_does_not_deadlock_verified_a_through_d_execution():
+    reports = {
+        checkpoint: passed(checkpoint)
+        for checkpoint in ("A", "B", "C", "D")
+    }
+    reports["E"] = GateReport(
+        "E",
+        GateState.BLOCKED,
+        detail="submission bundle is assembled after D",
+    )
+    status = SafetyStatus(
+        gates=reports,
+        mode=ExecutionMode.REAL_PROVIDER_TEST,
+        provider_status=ProviderStatus.RAZORPAY_TEST_MODE,
+        provider_credentials_verified=True,
+        provider_calls_enabled=True,
+        final_integration_verified=True,
+    )
+
+    snapshot = status.snapshot()
+    assert status.execution_gates_accepted is True
+    assert status.all_gates_accepted is False
+    assert status.irreversible_commit_ready is True
+    assert snapshot["execution_checkpoint_gates_accepted"] is True
+    assert snapshot["submission_checkpoint_e_accepted"] is False
+    assert snapshot["safe_to_move_real_money"] is False
 
 
 def test_status_takes_an_immutable_snapshot_of_the_supplied_gate_mapping():

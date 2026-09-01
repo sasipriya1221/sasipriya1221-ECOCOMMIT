@@ -1,16 +1,51 @@
 from __future__ import annotations
 
+import hmac
 import json
+import time
+from collections import deque
 from dataclasses import dataclass, field
 from http import HTTPStatus
-from typing import Iterable, Mapping
+from threading import RLock
+from typing import Callable, Iterable, Mapping
 from urllib.parse import urlsplit
 
 from .observability import resolve_correlation_id
 from .service import CheckpointDService, ServiceReply
+from .webhook import BoundRazorpayWebhookProcessor, WebhookProcessingError
 
 
 MAX_JSON_BODY_BYTES = 64 * 1024
+
+
+class SlidingWindowRateLimiter:
+    """Single-process limiter for the loopback Test execution server."""
+
+    def __init__(
+        self,
+        *,
+        max_attempts: int,
+        window_seconds: float,
+        monotonic: Callable[[], float] = time.monotonic,
+    ) -> None:
+        if max_attempts <= 0 or window_seconds <= 0:
+            raise ValueError("rate limit bounds must be positive")
+        self.max_attempts = max_attempts
+        self.window_seconds = window_seconds
+        self._monotonic = monotonic
+        self._attempts: deque[float] = deque()
+        self._lock = RLock()
+
+    def allow(self) -> bool:
+        now = self._monotonic()
+        cutoff = now - self.window_seconds
+        with self._lock:
+            while self._attempts and self._attempts[0] <= cutoff:
+                self._attempts.popleft()
+            if len(self._attempts) >= self.max_attempts:
+                return False
+            self._attempts.append(now)
+            return True
 
 
 @dataclass(frozen=True)
@@ -42,6 +77,19 @@ def _header(headers: Mapping[str, str], name: str) -> str | None:
     return next((value for key, value in headers.items() if key.lower() == lowered), None)
 
 
+def _reject_constant(value: str):
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
+
+
+def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON keys are forbidden")
+        result[key] = value
+    return result
+
+
 class CheckpointDApi:
     """Dependency-light JSON API and WSGI adapter around CheckpointDService."""
 
@@ -55,9 +103,25 @@ class CheckpointDApi:
         "/v1/commit/simulate": "simulate",
         "/v1/commit": "request_commit",
     }
+    _WEBHOOK_ROUTE = "/v1/razorpay/webhook"
 
-    def __init__(self, service: CheckpointDService) -> None:
+    def __init__(
+        self,
+        service: CheckpointDService,
+        *,
+        commit_bearer_token: str | None = None,
+        commit_rate_limiter: SlidingWindowRateLimiter | None = None,
+        webhook_processor: BoundRazorpayWebhookProcessor | None = None,
+    ) -> None:
+        if commit_bearer_token is not None and (
+            len(commit_bearer_token.encode("utf-8")) < 32
+            or any(character.isspace() for character in commit_bearer_token)
+        ):
+            raise ValueError("commit bearer token must contain at least 32 non-space bytes")
         self.service = service
+        self._commit_bearer_token = commit_bearer_token
+        self._commit_rate_limiter = commit_rate_limiter
+        self._webhook_processor = webhook_processor
 
     @staticmethod
     def _response(reply: ServiceReply) -> ApiResponse:
@@ -122,6 +186,69 @@ class CheckpointDApi:
         path = urlsplit(request.path).path
 
         try:
+            if path == self._WEBHOOK_ROUTE:
+                if self._webhook_processor is None:
+                    return self._reject(
+                        404,
+                        "NOT_FOUND",
+                        correlation.correlation_id,
+                        method=method,
+                        path=path,
+                    )
+                if method != "POST":
+                    return self._reject(
+                        405,
+                        "METHOD_NOT_ALLOWED",
+                        correlation.correlation_id,
+                        method=method,
+                        path=path,
+                    )
+                if len(request.body) > MAX_JSON_BODY_BYTES:
+                    return self._reject(
+                        413,
+                        "REQUEST_BODY_TOO_LARGE",
+                        correlation.correlation_id,
+                        method=method,
+                        path=path,
+                    )
+                content_type = _header(request.headers, "Content-Type")
+                if (
+                    content_type is None
+                    or content_type.split(";", 1)[0].strip().lower()
+                    != "application/json"
+                ):
+                    return self._reject(
+                        415,
+                        "JSON_CONTENT_TYPE_REQUIRED",
+                        correlation.correlation_id,
+                        method=method,
+                        path=path,
+                    )
+                signature = _header(request.headers, "X-Razorpay-Signature") or ""
+                event_id = _header(request.headers, "X-Razorpay-Event-Id") or ""
+                try:
+                    result = self._webhook_processor.ingest(
+                        raw_body=request.body,
+                        signature=signature,
+                        event_id=event_id,
+                    )
+                except WebhookProcessingError as exc:
+                    return self._reject(
+                        exc.status_code,
+                        exc.code,
+                        correlation.correlation_id,
+                        method=method,
+                        path=path,
+                    )
+                return self._response(ServiceReply(
+                    200,
+                    {
+                        "correlation_id": correlation.correlation_id,
+                        "outcome": "WEBHOOK_ACCEPTED",
+                        **result.model_dump(mode="json"),
+                    },
+                ))
+
             if path in self._GET_ROUTES:
                 if method != "GET":
                     return self._reject(
@@ -143,6 +270,28 @@ class CheckpointDApi:
                         method=method,
                         path=path,
                     )
+                if path == "/v1/commit" and self._commit_bearer_token is not None:
+                    if (
+                        self._commit_rate_limiter is not None
+                        and not self._commit_rate_limiter.allow()
+                    ):
+                        return self._reject(
+                            429,
+                            "TEST_EXECUTION_RATE_LIMITED",
+                            correlation.correlation_id,
+                            method=method,
+                            path=path,
+                        )
+                    supplied = _header(request.headers, "Authorization") or ""
+                    expected = f"Bearer {self._commit_bearer_token}"
+                    if not hmac.compare_digest(supplied, expected):
+                        return self._reject(
+                            401,
+                            "TEST_EXECUTION_AUTHENTICATION_REQUIRED",
+                            correlation.correlation_id,
+                            method=method,
+                            path=path,
+                        )
                 if len(request.body) > MAX_JSON_BODY_BYTES:
                     return self._reject(
                         413,
@@ -164,8 +313,12 @@ class CheckpointDApi:
                         path=path,
                     )
                 try:
-                    payload = json.loads(request.body or b"{}")
-                except (json.JSONDecodeError, UnicodeDecodeError):
+                    payload = json.loads(
+                        request.body or b"{}",
+                        object_pairs_hook=_unique_object,
+                        parse_constant=_reject_constant,
+                    )
+                except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
                     return self._reject(
                         400,
                         "INVALID_JSON",
@@ -192,8 +345,9 @@ class CheckpointDApi:
                 path=path,
             )
         except Exception:
-            # No exception detail crosses this untrusted boundary. Since this
-            # scaffold has no execution adapter, the failure remains side-effect free.
+            # No exception detail crosses this untrusted boundary. Service-level
+            # execution failures are handled before this generic parser guard so
+            # provider-call uncertainty is represented truthfully.
             return self._reject(
                 500,
                 "INTERNAL_FAILURE_CLOSED",

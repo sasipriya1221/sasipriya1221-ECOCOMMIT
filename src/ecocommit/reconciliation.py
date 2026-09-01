@@ -288,12 +288,9 @@ class CompensationCoordinator:
                 raise CompensationError(
                     "pending refund cannot be reconciled to the pending transaction"
                 )
-            return CompensationOutcome(
-                simulated=payment.simulated,
-                succeeded=False,
-                pending=True,
-                state=pending,
-            )
+            # Re-enter the exact idempotent refund boundary so a provider
+            # adapter can poll the already-bound refund and advance from
+            # pending to processed. It must never submit a second refund.
 
         try:
             result = self.payments.refund(
@@ -304,6 +301,7 @@ class CompensationCoordinator:
             return CompensationOutcome(
                 simulated=payment.simulated,
                 succeeded=False,
+                pending=payment.state == PaymentState.REFUND_PENDING,
                 state=pending,
                 error=str(exc),
             )

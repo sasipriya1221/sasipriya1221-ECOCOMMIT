@@ -4,6 +4,7 @@ import json
 import os
 import re
 import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -57,6 +58,19 @@ def _normalized_mapping(value: Mapping[str, object]) -> dict[str, object]:
     return normalized
 
 
+def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise AuditIntegrityError(f"duplicate audit JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def _reject_constant(value: str):
+    raise AuditIntegrityError(f"non-finite audit JSON constant: {value}")
+
+
 def _shared_path_lock(path: Path) -> threading.RLock:
     key = str(path.resolve())
     with _PATH_LOCKS_GUARD:
@@ -96,7 +110,7 @@ class AuditVerification:
 
 
 class AppendOnlyAuditLog:
-    """Newline-delimited, append-only audit events protected by a SHA-256 chain."""
+    """Fsynced hash chain with in-process and OS-level cross-process locking."""
 
     def __init__(
         self,
@@ -104,7 +118,13 @@ class AppendOnlyAuditLog:
         *,
         clock: Callable[[], datetime] = _utc_now,
     ) -> None:
-        self.path = Path(path).resolve()
+        requested = Path(path)
+        if requested.exists() and requested.is_symlink():
+            raise AuditIntegrityError("symlinked audit log is forbidden")
+        self.path = requested.resolve()
+        self.lock_path = self.path.with_name(self.path.name + ".lock")
+        if self.lock_path.exists() and self.lock_path.is_symlink():
+            raise AuditIntegrityError("symlinked audit lock is forbidden")
         self._clock = clock
         # Multiple log objects in one process must serialize against the same
         # file; an instance-local lock permits lost updates and forked chains.
@@ -116,6 +136,36 @@ class AppendOnlyAuditLog:
         if not verification.valid:
             raise AuditIntegrityError(verification.error or "audit log integrity check failed")
 
+    @contextmanager
+    def _exclusive_lock(self):
+        """Serialize the read-verify-append transaction across local processes."""
+
+        with self._lock:
+            self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+            with self.lock_path.open("a+b") as stream:
+                if stream.seek(0, os.SEEK_END) == 0:
+                    stream.write(b"\0")
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                stream.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+                    try:
+                        yield
+                    finally:
+                        stream.seek(0)
+                        msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+                    try:
+                        yield
+                    finally:
+                        fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
     @staticmethod
     def _event_material(record: Mapping[str, object]) -> dict[str, object]:
         return {key: record[key] for key in _RECORD_KEYS if key != "event_hash"}
@@ -126,19 +176,31 @@ class AppendOnlyAuditLog:
 
     def _read_records(self) -> list[dict[str, object]]:
         records: list[dict[str, object]] = []
-        with self.path.open("r", encoding="utf-8") as stream:
+        with self.path.open("r", encoding="utf-8", newline="") as stream:
             for line_number, line in enumerate(stream, start=1):
                 if not line.strip():
                     raise AuditIntegrityError(f"blank audit record at line {line_number}")
+                if not line.endswith("\n"):
+                    raise AuditIntegrityError(
+                        f"incomplete audit record at line {line_number}"
+                    )
                 try:
-                    record = json.loads(line)
-                except json.JSONDecodeError as exc:
+                    record = json.loads(
+                        line,
+                        object_pairs_hook=_unique_object,
+                        parse_constant=_reject_constant,
+                    )
+                except (json.JSONDecodeError, AuditIntegrityError) as exc:
                     raise AuditIntegrityError(
                         f"invalid JSON audit record at line {line_number}"
                     ) from exc
                 if not isinstance(record, dict) or set(record) != _RECORD_KEYS:
                     raise AuditIntegrityError(
                         f"unexpected audit record shape at line {line_number}"
+                    )
+                if line[:-1] != _canonical_json(record):
+                    raise AuditIntegrityError(
+                        f"non-canonical audit record at line {line_number}"
                     )
                 records.append(record)
         return records
@@ -210,7 +272,7 @@ class AppendOnlyAuditLog:
         return None
 
     def verify(self) -> AuditVerification:
-        with self._lock:
+        with self._exclusive_lock():
             try:
                 records = self._read_records()
             except (AuditIntegrityError, OSError, UnicodeError) as exc:
@@ -233,7 +295,7 @@ class AppendOnlyAuditLog:
             raise ValueError("actor is required")
         normalized_payload = _normalized_mapping(payload)
 
-        with self._lock:
+        with self._exclusive_lock():
             try:
                 records = self._read_records()
             except (OSError, UnicodeError) as exc:
@@ -274,7 +336,7 @@ class AppendOnlyAuditLog:
                 event_hash=event_hash,
             )
     def events(self) -> tuple[AuditEvent, ...]:
-        with self._lock:
+        with self._exclusive_lock():
             records = self._read_records()
             verification = self._verify_records(records)
             if not verification.valid:

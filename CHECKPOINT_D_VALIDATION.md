@@ -11,6 +11,21 @@ This verdict applies to deterministic local engineering at implementation commit
 A, B, C, or D passed; it does not assert a Razorpay integration; and it does not
 authorize real provider calls or real-money movement.
 
+### Current-tree integration addendum
+
+The current tree extends that historical simulation snapshot with a strict,
+optional provider-Test execution boundary. It does not change the D verdict.
+The default loopback server still loads no authority and denies `/v1/commit`.
+When explicitly configured, the server can reload SHA-256-pinned, cross-linked
+A/B/C[/D] receipts; verify current Test credentials with one read-only request;
+load one separately pinned human Checkout operation; require an environment-only
+bearer token; rate-limit the route; execute through SQLite-backed payment,
+commitment, idempotency, and result state; and verify/deduplicate bound raw-body
+webhooks. Request JSON can select only the opaque operation ID. It cannot supply
+transaction data, evidence, callbacks, provider configuration, credentials, or
+signing keys. No real receipts, credentials, callback, provider execution,
+webhook delivery, hosted deployment, or D receipt exists today.
+
 ## Frozen-boundary check
 
 Checkpoint A was left on its existing guarded provider-deferred retry process.
@@ -40,12 +55,13 @@ remain:
 | Area | Validation performed | Result | Acceptance boundary |
 |---|---|---|---|
 | API and product workflow | Route/method/body/content-type limits, deterministic JSON, correlation propagation, WSGI length/stream failures, health/readiness separation | **LOCAL PASS** | No hosted or production deployment claim |
-| Gate truth | Evidence required for `PASSED`, prerequisite ordering, immutable status snapshot, caller authority claims ignored; production A→B now requires a typed digest-bound Candidate 2 receipt | **LOCAL PASS** | No authoritative full A/B/C runtime bundle loader installed |
-| Real commit route | Default-deny with missing adapter, including a synthetic all-gates-passed status; simulation runner cannot be reached from `/v1/commit` | **LOCAL PASS** | Real A/B/C evidence and execution adapter absent |
+| Gate truth | Strict, size-bounded receipt schemas; out-of-band pin-set hash; A→B→C→D digest/revision cross-links; fixture/failing evidence rejection; post-start revalidation | **LOCAL PASS** | Real A/B/C/D receipts do not exist |
+| Test execution route | Default deny; startup-pinned operation only; A–C/runtime readiness separated from the D evidence produced by the run; bearer auth, rate limit, request-authority rejection, redacted result/audit | **LOCAL PASS** | Human callback, current provider credentials, external webhook setup, and hosted run absent |
 | A-to-B boundary | Current fidelity validator, closed policy mapping, exposure decision, certificate, and commitment transitions composed from a fixed synthetic fixture | **LOCAL PASS** | Synthetic A-pass evidence is interface evidence only |
 | Simulated end-to-end flow | `PROPOSED -> AUTHORIZED -> RESERVED -> CAPTURE_ALLOWED -> CAPTURED` through `SIMULATED_LOCAL` | **LOCAL PASS** | No Razorpay call and no real money |
 | Negative workflow | Incomplete A fixture releases zero obligations; injected capture failure voids the reversible simulated hold and ends `FAILED` | **LOCAL PASS** | Provider timeout/webhook behavior remains untested |
-| Audit | Hash chaining, tamper detection, strict record types/timestamps/hashes, fsync, refusal after corruption, and 80 concurrent writes through two log instances | **LOCAL PASS** | Process-local file plus hash chain is not immutable or multi-process durable storage |
+| Audit | Hash chaining, tamper detection, strict record types/timestamps/hashes, fsync, refusal after corruption, OS-level companion locking, and multi-process concurrent append | **LOCAL PASS** | Single-host append file is not immutable remote/WORM storage |
+| Durable execution | SQLite WAL/FULL-sync JSON CAS, typed idempotent result replay, payment/commitment restart recovery, provider crash-window reconstruction, pending-compensation retry, webhook event index | **LOCAL PASS** | Single host only; no HA, backup/restore, disk-loss, malicious DB-writer, or live crash-injection evidence |
 | Observability | Finite counters/gauges/histograms, overflow rejection, structured events, route/outcome/correlation, audited HTTP-boundary denials | **LOCAL PASS** | No external collector, SLO, alert, or retention evidence |
 | Economic-state UI | Requested/authorized/simulated-captured values and progressive state trace rendered from API output | **LOCAL PASS** | Not final submission evidence |
 | Failure UX | Status loss resets every gate to unavailable; malformed backend responses, blocked-A, and capture failure remain visibly closed with correlation status | **LOCAL PASS** | No formal accessibility audit or user study |
@@ -84,6 +100,43 @@ remain:
 9. **A non-JSON backend response leaked a raw parser error and could omit the
    advertised correlation status.** The browser now emits bounded failure copy
    and explicitly says when a service correlation is unavailable.
+10. **Gate files could not become runtime authority.** Presence or caller claims
+    were unsafe, so the loader now requires an out-of-band hash for the pin file,
+    hashes every strict JSON receipt before parsing, rejects duplicates/nonfinite
+    values/unknown fields/symlinks, and verifies every upstream/revision link.
+11. **D and E created an execution cycle.** E is downstream packaging, while D
+    is evidence produced by the integrated run. The status contract now permits
+    an A–C-authorized compensated Test run, requires A–D for final integration,
+    and keeps E separate; real-money readiness remains permanently false.
+12. **Process memory could lose idempotency, payment, and commitment state.** A
+    SQLite WAL/FULL-sync store, optimistic CAS, typed result allowlist, stale
+    lease recovery, provider-side idempotency binding, and restart regressions
+    now cover the claimed single-host runtime.
+13. **A completed provider mutation could precede the local journal result.**
+    Payment operations reconstruct only an exact transaction/idempotency-bound
+    result from durable state. A completed lifecycle replays after restart with
+    no new provider call; pending compensation remains retryable.
+14. **The API had no safe provider adapter authority boundary.** Only an
+    immutable startup-pinned operation can execute. Authentication, a global
+    single-process rate limit, strict JSON duplicate/nonfinite rejection,
+    before/after audit, and explicit unknown-provider-call reconciliation states
+    protect the HTTP boundary.
+15. **Webhook verification was a detached helper.** The raw endpoint now uses
+    Razorpay's documented signature and event-ID headers, binds capture/refund
+    entities to the prepared order/payment/amount/currency, tolerates event
+    ordering, rejects ID collisions, and exports a digest-bound redacted set.
+16. **A pending refund could remain pending forever locally.** The refund
+    operation no longer journals a pending response as completed; retries fetch
+    the exact refund by ID and advance only on a bound `processed` response.
+17. **Expiry recovery was too broad.** Post-expiry cleanup now requires exact
+    durable payment binding; a merely reserved payment also requires a persisted
+    capture-authorized commitment, so expiry cannot create fresh authority.
+18. **Late webhook redelivery could look like an ID collision.** Deduplication
+    now compares stable signed-event fields, retains the first receipt timestamp
+    and digest, and still rejects a changed body under the same provider event ID.
+19. **Startup and HTTP hardening order was incomplete.** Evidence and all local
+    secrets are validated before credential preflight, failed authentication is
+    rate-limited, and audit input must be strict canonical JSON.
 
 ## Reproduction commands executed
 
@@ -102,6 +155,10 @@ Full regression:
 ```
 
 Result: **192 passed**.
+
+Current-tree focused D suite: **76 / 76 passed**. Current-tree full deterministic
+suite: **325 / 325 passed**. These additions are local fake-transport and
+same-host evidence, not provider or hosted evidence.
 
 Additional checks:
 
@@ -129,13 +186,20 @@ development validation is promoted as final submission evidence.
 - Candidate 1's frozen A gate is mathematically failed; corrected Candidate 2 has
   not been remotely evaluated.
 - Checkpoints B and C are locally validated but not passed.
-- The local server deliberately loads no authoritative checkpoint evidence.
-- `/v1/commit` has no execution adapter and always denies.
-- A Razorpay Test adapter plus credential/order evidence exists, and a local
-  Checkout/capture/refund continuation is implemented. No genuine Checkout,
-  capture, refund, webhook delivery, or integrated D provider run exists.
-- Audit, status, metrics, and idempotency boundaries remain local/process-level;
-  no production durability or high-availability claim is made.
+- The default local server deliberately loads no authoritative checkpoint
+  evidence and denies provider execution. The optional loader has no real A/B/C
+  receipts to load.
+- A startup-pinned Test adapter, durable state, raw webhook endpoint, and
+  operator-only UI control exist. No genuine Checkout, capture, refund, webhook
+  delivery, or integrated D provider run used them.
+- The webhook record proves a signature and binding to a Test-key operation; it
+  does not independently prove that the configured Dashboard webhook endpoint
+  was Test Mode. Final evidence must retain that external configuration fact.
+- The bundled WSGI server is loopback development software. Public TLS hosting,
+  reverse-proxy authentication review, IP/network controls, rate-limit load
+  evidence, backups, monitoring, alerts, and SLOs remain external/operational.
+- SQLite/audit are locally cross-process on one host; no production HA or
+  malicious-storage-tamper claim is made.
 - Hosted UI/API execution, independent security review, operational alerting/SLO
   evidence, and the final integrated product run remain undone.
 

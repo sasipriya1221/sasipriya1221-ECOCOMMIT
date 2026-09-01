@@ -51,21 +51,22 @@ production-readiness claim.
 |---|---|---|---|
 | Model invents authority | Closed mapping, explicit provider candidate fields, bounded model correction, provenance/fidelity gate, trusted exposure config | Adversarial A/B tests | Candidate 2 real gate not evaluated |
 | Material ambiguity guessed | Clarification/rejection based on material risk | Ambiguity and live-failure regressions | Candidate 1 failed; Candidate 2 real gate not evaluated |
-| Caller forges pass/readiness | Caller claims ignored; A→B requires a typed digest-bound Candidate 2 receipt; real commit adapter absent | A/B/D boundary tests | Authoritative full A/B/C runtime bundle loader absent |
+| Caller forges pass/readiness | Caller claims ignored; A→B and D require strict digest-bound receipts; D reloads an out-of-band-hash-pinned cross-linked bundle | A/B/D boundary and loader-tamper tests | Real passing A/B/C receipts and trusted operational pin distribution absent |
 | Unknown evidence source | Registered authority/issuer/kind/scope and subject checks | B evidence tests | Durable authority service absent |
 | Stale/revoked evidence | Freshness, expiry, revocation, version and observation-time checks | B tests | External evidence retrieval absent |
 | Negative approval interpreted positive | Exact claim value/digest predicates | B regression | External schema governance absent |
 | Evidence/transaction TOCTOU | Certificate binding and registry lock through simulated capture | Repeated race tests | Multi-process/distributed transaction absent |
 | Certificate forgery/substitution | HMAC, constant-time verification, full payload/id binding | Mutation tests | KMS, rotation, access control absent |
-| Illegal state jump | Explicit transition table and reconstructed-history validation | State-machine tests | Durable state store absent |
-| Replay/idempotency collision | Scope/key/full-request fingerprint and stored outcome | Concurrency/collision tests | Process-local ledger only |
-| Capture/refund crash window | Reconciliation and explicit compensation states | B recovery tests | Durable provider/event ledger absent |
-| Audit row tampering | Strict JSON row schema and SHA-256 chain verification | Edit/reorder/malformed tests | Trusted remote head/immutable store absent |
-| Concurrent local audit writers | Shared resolved-path in-process lock | 80-event concurrent test | Cross-process/distributed lock absent |
+| Illegal state jump | Explicit transition table, reconstructed-history validation, and SQLite optimistic CAS | State-machine/restart/stale-writer tests | Multi-host consensus/HA absent |
+| Replay/idempotency collision | Scope/key/full-request fingerprint, SQLite lease/typed result, provider idempotency, and exact replay | Thread/process concurrency, collision, restart tests | No distributed lease/queue or live crash-injection evidence |
+| Capture/refund crash window | Durable payment/commitment state, exact result reconstruction, provider-scoped full-refund ledger key, exact refund-ID polling, retryable pending compensation, and expiry-bounded reconciliation | B/D recovery and lifecycle-replay tests | Small unproven crash windows, backup/disk-loss, and live provider recovery remain |
+| Audit row tampering | Canonical duplicate/nonfinite-safe JSON row parsing and SHA-256 chain verification | Edit/reorder/malformed/noncanonical tests | Trusted remote head/immutable store absent |
+| Concurrent local audit writers | Resolved companion lock using OS file locking | Thread and multi-process append tests | Distributed writers/remote immutable head absent |
 | Non-finite observability data | Finite value and aggregate-overflow rejection | D metric regressions | External telemetry pipeline absent |
-| HTTP parser abuse | 64 KiB bound, JSON object/media checks, WSGI length/stream checks | D negative tests | Production server/rate limits/auth absent |
-| Mode confusion | Explicit simulation/Test labels, non-test credential refusal, and permanently disabled real-money field | API/UI/browser checks plus redacted Test authentication/order evidence | Authorization/capture evidence absent; D route remains simulation-only |
-| Provider ambiguity | Exact provider bindings, ECOCOMMIT idempotency, receipt recovery, and capture re-fetch | Adapter adversarial tests plus live order replay | Genuine authorization, asynchronous refund, and webhook reconciliation evidence absent |
+| HTTP parser/route abuse | 64 KiB bound, duplicate/nonfinite rejection, WSGI checks, optional environment-only bearer auth, exact opaque-operation body, and single-process rate limit including failed authentication | D negative/auth/rate tests | Production TLS/proxy, distributed limiter, network controls, and abuse load evidence absent |
+| Mode confusion | Explicit simulation/Test labels, non-test credential refusal, read-only current-credential preflight, and permanently disabled real-money field | API/UI/browser checks plus redacted Test authentication/order evidence | Authorization/capture evidence and external webhook Test-mode configuration absent |
+| Provider ambiguity | Exact provider bindings, provider/local idempotency, durable result recovery, capture re-fetch, exact refund-ID polling, and raw webhook HMAC/stable event-ID binding | Adapter/webhook adversarial tests plus live order replay | Genuine authorization, asynchronous refund, and webhook delivery evidence absent |
+| Malicious local DB writer | Payload digests, strict models, SQLite integrity check, CAS | Corruption/unknown-field/stale-write tests | Digests are unkeyed; a writer able to rewrite DB rows and hashes is outside the boundary |
 | Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation, and pre-outcome final registration/decision contract | C artifact/final-gate tests | Real registration/inputs/final run absent |
 | Fabricated submission media | Blocked evidence markers and promotion rule | E readiness checks | Human review/final evidence still required |
 | Secret committed | CI secret references, ignored artifacts, current-tree/history pattern scan | E local scan | Dedicated secret-scanner service/history audit not retained |
@@ -112,8 +113,10 @@ access controls, clock discipline, backup, and recovery evidence.
 
 Before D/E or any payment integration passes:
 
-1. complete a formal API/authentication/authorization and abuse-rate review;
-2. implement authoritative status/evidence loading and durable state/audit stores;
+1. complete a formal review of the implemented API authentication,
+   startup-operation authorization, webhook, and abuse-rate boundaries;
+2. validate the authoritative loader, SQLite state, and OS-locked audit against
+   real receipts/provider failure injection, backup/restore, and hosted storage;
 3. complete a genuine Razorpay Test Checkout authorization, manual capture,
    refund, webhook delivery, duplicate-event handling, and reconciliation run;
 4. replace local HMAC signing with an appropriate managed-key boundary;

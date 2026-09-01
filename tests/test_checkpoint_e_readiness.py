@@ -52,6 +52,22 @@ def test_readiness_cli_emits_machine_readable_blocked_report():
     assert isinstance(report["remote_url"], str) and report["remote_url"]
 
 
+def test_readiness_manifest_protects_authoritative_integration_components():
+    required = set(load_readiness_module().REQUIRED_FILES)
+
+    assert {
+        "scripts/checkpoint_b8_webhook_evidence.py",
+        "scripts/checkpoint_b8_webhook_server.py",
+        "scripts/checkpoint_d_evidence_status.py",
+        "scripts/checkpoint_d_prepare_operation.py",
+        "src/ecocommit/checkpoint_b_evidence.py",
+        "src/ecocommit/checkpoint_d_evidence.py",
+        "src/ecocommit/durable.py",
+        "src/ecocommit/execution.py",
+        "src/ecocommit/webhook.py",
+    } <= required
+
+
 def test_readiness_checker_detects_broken_relative_markdown_link(tmp_path):
     root = tmp_path.resolve()
     (root / "docs").mkdir()

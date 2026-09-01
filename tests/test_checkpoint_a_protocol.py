@@ -274,6 +274,13 @@ def test_typed_a_receipt_enforces_frozen_candidate_dataset_and_thresholds():
         })
     with pytest.raises(ValidationError, match="dataset digest is not frozen"):
         CheckpointAEvidenceReceipt(**{**values, "dataset_sha256": "d" * 64})
+    with pytest.raises(ValidationError, match="does not match passed cases"):
+        CheckpointAEvidenceReceipt(**{
+            **values,
+            "metrics": values["metrics"].model_copy(
+                update={"passed_cases": 73, "case_pass_rate": 0.90}
+            ),
+        })
 
 
 def test_candidate_1_failure_manifest_is_mathematically_closed_and_classified():

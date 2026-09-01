@@ -7,6 +7,8 @@ from typing import Mapping
 
 
 CHECKPOINTS = ("A", "B", "C", "D", "E")
+PROVIDER_PREREQUISITE_CHECKPOINTS = ("A", "B", "C")
+EXECUTION_CHECKPOINTS = ("A", "B", "C", "D")
 CHECKPOINT_PREREQUISITES: Mapping[str, tuple[str, ...]] = MappingProxyType({
     "A": (),
     "B": ("A",),
@@ -104,9 +106,17 @@ class SafetyStatus:
                     f"checkpoint {checkpoint} cannot pass before prerequisites {missing}"
                 )
 
-        all_accepted = all(report.accepted for report in normalized.values())
-        if self.final_integration_verified and not all_accepted:
-            raise ValueError("final integration cannot be verified before all checkpoint gates pass")
+        provider_prerequisites_accepted = all(
+            normalized[checkpoint].accepted
+            for checkpoint in PROVIDER_PREREQUISITE_CHECKPOINTS
+        )
+        execution_accepted = all(
+            normalized[checkpoint].accepted for checkpoint in EXECUTION_CHECKPOINTS
+        )
+        if self.final_integration_verified and not execution_accepted:
+            raise ValueError(
+                "final integration cannot be verified before execution checkpoints A-D pass"
+            )
 
         if self.provider_credentials_verified and self.provider_status != ProviderStatus.RAZORPAY_TEST_MODE:
             raise ValueError("provider credentials may only be verified for Razorpay Test Mode")
@@ -118,8 +128,10 @@ class SafetyStatus:
                 raise ValueError("provider calls require explicit Razorpay Test Mode status")
             if not self.provider_credentials_verified:
                 raise ValueError("provider calls require verified Test Mode credentials")
-            if not all_accepted or not self.final_integration_verified:
-                raise ValueError("provider calls require every gate and final integration to pass")
+            if not provider_prerequisites_accepted:
+                raise ValueError(
+                    "provider calls require prerequisite checkpoints A-C to pass"
+                )
 
         object.__setattr__(self, "gates", MappingProxyType(normalized))
 
@@ -128,15 +140,56 @@ class SafetyStatus:
         return all(report.accepted for report in self.gates.values())
 
     @property
-    def irreversible_commit_ready(self) -> bool:
+    def execution_gates_accepted(self) -> bool:
+        return all(self.gates[name].accepted for name in EXECUTION_CHECKPOINTS)
+
+    @property
+    def provider_prerequisite_gates_accepted(self) -> bool:
+        return all(
+            self.gates[name].accepted
+            for name in PROVIDER_PREREQUISITE_CHECKPOINTS
+        )
+
+    @property
+    def provider_test_execution_ready(self) -> bool:
+        """Whether a configured adapter may perform a compensated Test Mode run.
+
+        D is the evidence produced by that integrated run, so requiring D here
+        would make the D gate impossible to satisfy. This never authorizes real
+        money; the provider and mode checks remain Test Mode only.
+        """
+
         return (
-            self.all_gates_accepted
-            and self.final_integration_verified
+            self.provider_prerequisite_gates_accepted
             and self.mode == ExecutionMode.REAL_PROVIDER_TEST
             and self.provider_status == ProviderStatus.RAZORPAY_TEST_MODE
             and self.provider_credentials_verified
             and self.provider_calls_enabled
         )
+
+    @property
+    def irreversible_commit_ready(self) -> bool:
+        return (
+            self.execution_gates_accepted
+            and self.final_integration_verified
+            and self.provider_test_execution_ready
+        )
+
+    def provider_execution_blockers(self) -> list[str]:
+        blockers = [
+            f"CHECKPOINT_{name}_NOT_ACCEPTED"
+            for name in PROVIDER_PREREQUISITE_CHECKPOINTS
+            if not self.gates[name].accepted
+        ]
+        if self.mode != ExecutionMode.REAL_PROVIDER_TEST:
+            blockers.append("REAL_PROVIDER_TEST_MODE_NOT_SELECTED")
+        if self.provider_status != ProviderStatus.RAZORPAY_TEST_MODE:
+            blockers.append("RAZORPAY_TEST_MODE_NOT_CONFIGURED")
+        if not self.provider_credentials_verified:
+            blockers.append("TEST_MODE_CREDENTIALS_NOT_VERIFIED")
+        if not self.provider_calls_enabled:
+            blockers.append("PROVIDER_CALLS_DISABLED")
+        return blockers
 
     def blockers(self) -> list[str]:
         blockers = [
@@ -169,6 +222,13 @@ class SafetyStatus:
                 name: report.as_dict() for name, report in self.gates.items()
             },
             "all_checkpoint_gates_accepted": self.all_gates_accepted,
+            "provider_prerequisite_gates_accepted": (
+                self.provider_prerequisite_gates_accepted
+            ),
+            "execution_checkpoint_gates_accepted": self.execution_gates_accepted,
+            "submission_checkpoint_e_accepted": self.gates["E"].accepted,
+            "provider_test_execution_ready": self.provider_test_execution_ready,
+            "provider_execution_blockers": self.provider_execution_blockers(),
             "final_integration_verified": self.final_integration_verified,
             "irreversible_commit_ready": self.irreversible_commit_ready,
             "safe_to_move_real_money": False,

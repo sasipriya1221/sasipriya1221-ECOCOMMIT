@@ -1,7 +1,12 @@
 import io
 import json
 
-from ecocommit.api import ApiRequest, CheckpointDApi, MAX_JSON_BODY_BYTES
+from ecocommit.api import (
+    ApiRequest,
+    CheckpointDApi,
+    MAX_JSON_BODY_BYTES,
+    SlidingWindowRateLimiter,
+)
 from ecocommit.audit import AppendOnlyAuditLog
 from ecocommit.checkpoint_status import (
     CHECKPOINTS,
@@ -11,7 +16,9 @@ from ecocommit.checkpoint_status import (
     ProviderStatus,
     SafetyStatus,
 )
+from ecocommit.execution import TestExecutionError, TestExecutionResult
 from ecocommit.observability import InMemoryEventSink, StructuredLogger
+from ecocommit.razorpay_checkout import RazorpayLifecycleEvidence
 from ecocommit.service import CheckpointDService
 
 
@@ -24,6 +31,43 @@ def build_api(tmp_path):
         logger=StructuredLogger(sink),
     )
     return CheckpointDApi(service), audit, sink
+
+
+def execution_status():
+    return SafetyStatus(
+        gates={
+            checkpoint: GateReport(
+                checkpoint,
+                GateState.PASSED,
+                evidence=f"sha256:{checkpoint.lower() * 64}",
+            )
+            for checkpoint in ("A", "B", "C")
+        },
+        mode=ExecutionMode.REAL_PROVIDER_TEST,
+        provider_status=ProviderStatus.RAZORPAY_TEST_MODE,
+        provider_credentials_verified=True,
+        provider_calls_enabled=True,
+    )
+
+
+def successful_test_execution(operation_id: str) -> TestExecutionResult:
+    lifecycle = RazorpayLifecycleEvidence(
+        handoff_sha256="1" * 64,
+        transaction_digest="2" * 64,
+        order_id="order_TestExecution123",
+        payment_id="pay_TestExecution123",
+        refund_id="rfnd_TestExecution123",
+        reserve_state="RESERVED",
+        capture_state="CAPTURED",
+        refund_state="REFUNDED",
+        commitment_stage="COMPENSATED",
+        reconciliation_in_sync=True,
+        checkpoint_b8_lifecycle_passed=True,
+    )
+    return TestExecutionResult.create(
+        operation_id=operation_id,
+        lifecycle=lifecycle,
+    )
 
 
 def test_health_is_liveness_only_and_readiness_stays_blocked(tmp_path):
@@ -39,7 +83,7 @@ def test_health_is_liveness_only_and_readiness_stays_blocked(tmp_path):
     assert tuple(health.body["checkpoint_gates"]) == ("A", "B", "C", "D", "E")
     assert readiness.status_code == 503
     assert readiness.body["ready"] is False
-    assert readiness.body["readiness_scope"] == "IRREVERSIBLE_COMMIT_PATH"
+    assert readiness.body["readiness_scope"] == "RAZORPAY_TEST_EXECUTION_PATH"
 
 
 def test_scaffold_readiness_stays_blocked_even_if_external_prerequisites_claim_ready(tmp_path):
@@ -69,7 +113,7 @@ def test_scaffold_readiness_stays_blocked_even_if_external_prerequisites_claim_r
     assert readiness.body["gate_and_provider_prerequisites_ready"] is True
     assert readiness.body["service_execution_adapter_configured"] is False
     assert readiness.body["irreversible_commit_ready"] is False
-    assert "EXECUTION_ADAPTER_NOT_IMPLEMENTED" in readiness.body["blockers"]
+    assert "EXECUTION_ADAPTER_NOT_CONFIGURED" in readiness.body["blockers"]
 
 
 def test_real_commit_route_stays_locked_even_with_synthetic_all_passed_status(tmp_path):
@@ -106,10 +150,189 @@ def test_real_commit_route_stays_locked_even_with_synthetic_all_passed_status(tm
     ))
 
     assert response.status_code == 423
-    assert response.body["reason"] == "EXECUTION_ADAPTER_NOT_IMPLEMENTED"
+    assert response.body["reason"] == "EXECUTION_ADAPTER_NOT_CONFIGURED"
     assert response.body["checkpoint_snapshot"]["gate_and_provider_prerequisites_ready"] is True
     assert response.body["money_moved"] is False
     assert response.body["provider_called"] is False
+
+
+def test_prepared_test_adapter_makes_only_the_test_execution_path_ready(tmp_path):
+    operation_id = "prepared_op_123456"
+
+    class PreparedAdapter:
+        def __init__(self):
+            self.calls = []
+
+        def execute(self, *, operation_id, correlation_id):
+            self.calls.append((operation_id, correlation_id))
+            return successful_test_execution(operation_id)
+
+    adapter = PreparedAdapter()
+    audit = AppendOnlyAuditLog(tmp_path / "prepared-audit.ndjson")
+    api = CheckpointDApi(CheckpointDService(
+        execution_status(),
+        audit,
+        execution_adapter=adapter,
+    ))
+
+    readiness = api.handle(ApiRequest("GET", "/readyz"))
+    response = api.handle(ApiRequest(
+        "POST",
+        "/v1/commit",
+        {"Content-Type": "application/json", "X-Correlation-ID": "prepared-corr"},
+        json.dumps({"operation_id": operation_id}).encode("utf-8"),
+    ))
+
+    assert readiness.status_code == 200
+    assert readiness.body["ready"] is True
+    assert readiness.body["service_test_execution_ready"] is True
+    assert readiness.body["irreversible_commit_ready"] is False
+    assert readiness.body["safe_to_move_real_money"] is False
+    assert response.status_code == 200
+    assert response.body["outcome"] == "TEST_MODE_CAPTURED_AND_COMPENSATED"
+    assert response.body["provider_called"] is True
+    assert response.body["real_money_moved"] is False
+    assert response.body["counts_as_checkpoint_d_pass"] is False
+    assert adapter.calls == [(operation_id, "prepared-corr")]
+    assert [event.event_type for event in audit.events()] == [
+        "commit.requested",
+        "commit.test_execution.started",
+        "commit.test_execution.completed",
+    ]
+
+
+def test_ready_service_rejects_request_supplied_authority_before_adapter(tmp_path):
+    class MustNotRun:
+        def execute(self, **kwargs):
+            raise AssertionError("untrusted authority reached the prepared adapter")
+
+    audit = AppendOnlyAuditLog(tmp_path / "untrusted-ready-audit.ndjson")
+    api = CheckpointDApi(CheckpointDService(
+        execution_status(),
+        audit,
+        execution_adapter=MustNotRun(),
+    ))
+    response = api.handle(ApiRequest(
+        "POST",
+        "/v1/commit",
+        {"Content-Type": "application/json"},
+        b'{"operation_id":"prepared_op_123456","authorized":true}',
+    ))
+
+    assert response.status_code == 400
+    assert response.body["reason"] == "OPAQUE_PREPARED_OPERATION_ID_REQUIRED"
+    assert response.body["provider_called"] is False
+    assert [event.event_type for event in audit.events()] == [
+        "commit.requested",
+        "commit.denied",
+    ]
+
+
+def test_prepared_adapter_rejection_reports_known_no_provider_call(tmp_path):
+    class MissingOperation:
+        def execute(self, **kwargs):
+            raise TestExecutionError(
+                "PREPARED_OPERATION_NOT_FOUND",
+                provider_call_status="NOT_STARTED",
+            )
+
+    audit = AppendOnlyAuditLog(tmp_path / "missing-operation-audit.ndjson")
+    api = CheckpointDApi(CheckpointDService(
+        execution_status(),
+        audit,
+        execution_adapter=MissingOperation(),
+    ))
+    response = api.handle(ApiRequest(
+        "POST",
+        "/v1/commit",
+        {"Content-Type": "application/json"},
+        b'{"operation_id":"prepared_op_missing"}',
+    ))
+
+    assert response.status_code == 503
+    assert response.body["reason"] == "PREPARED_OPERATION_NOT_FOUND"
+    assert response.body["provider_call_status"] == "NOT_STARTED"
+    assert response.body["provider_called"] is False
+    assert response.body["reconciliation_required"] is False
+
+
+def test_execution_authentication_and_rate_limit_precede_adapter(tmp_path):
+    operation_id = "prepared_op_123456"
+    token = "test-api-token-with-at-least-32-bytes"
+
+    class PreparedAdapter:
+        def __init__(self):
+            self.calls = 0
+
+        def execute(self, *, operation_id, correlation_id):
+            self.calls += 1
+            return successful_test_execution(operation_id)
+
+    adapter = PreparedAdapter()
+    audit = AppendOnlyAuditLog(tmp_path / "authenticated-audit.ndjson")
+    api = CheckpointDApi(
+        CheckpointDService(
+            execution_status(),
+            audit,
+            execution_adapter=adapter,
+        ),
+        commit_bearer_token=token,
+        commit_rate_limiter=SlidingWindowRateLimiter(
+            # Invalid authentication attempts consume the same budget.
+            max_attempts=2,
+            window_seconds=60,
+            monotonic=lambda: 100.0,
+        ),
+    )
+    body = json.dumps({"operation_id": operation_id}).encode("utf-8")
+
+    unauthorized = api.handle(ApiRequest("POST", "/v1/commit", body=body))
+    authorized = api.handle(ApiRequest(
+        "POST",
+        "/v1/commit",
+        {"Authorization": f"Bearer {token}"},
+        body,
+    ))
+    limited = api.handle(ApiRequest(
+        "POST",
+        "/v1/commit",
+        {"Authorization": f"Bearer {token}"},
+        body,
+    ))
+
+    assert (unauthorized.status_code, unauthorized.body["reason"]) == (
+        401,
+        "TEST_EXECUTION_AUTHENTICATION_REQUIRED",
+    )
+    assert authorized.status_code == 200
+    assert (limited.status_code, limited.body["reason"]) == (
+        429,
+        "TEST_EXECUTION_RATE_LIMITED",
+    )
+    assert adapter.calls == 1
+    assert token not in audit.path.read_text(encoding="utf-8")
+
+
+def test_duplicate_keys_and_non_finite_json_are_rejected_at_parser_boundary(tmp_path):
+    api, audit, _ = build_api(tmp_path)
+
+    duplicate = api.handle(ApiRequest(
+        "POST",
+        "/v1/commit",
+        body=b'{"operation_id":"prepared_first_123","operation_id":"prepared_last_123"}',
+    ))
+    non_finite = api.handle(ApiRequest(
+        "POST",
+        "/v1/commit",
+        body=b'{"value":NaN}',
+    ))
+
+    assert (duplicate.status_code, duplicate.body["reason"]) == (400, "INVALID_JSON")
+    assert (non_finite.status_code, non_finite.body["reason"]) == (400, "INVALID_JSON")
+    assert [event.event_type for event in audit.events()] == [
+        "api.request.rejected",
+        "api.request.rejected",
+    ]
 
 
 def test_forged_authority_claims_cannot_trigger_a_provider_or_money_movement(tmp_path):

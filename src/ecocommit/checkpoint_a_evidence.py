@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -9,7 +10,7 @@ FROZEN_A_DATASET_SHA256 = "968be3ed3a438a3a28a3402fa65c90a45cb564ed1adad2e6e51d8
 
 
 class CheckpointAMetrics(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     passed_cases: int = Field(ge=0, le=80)
     case_pass_rate: float = Field(ge=0.0, le=1.0)
@@ -26,7 +27,7 @@ class CheckpointAEvidenceReceipt(BaseModel):
     is refused by the production A-to-B bridge.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: Literal["A.RECEIPT.1"] = "A.RECEIPT.1"
     verification_mode: Literal["FROZEN_AGGREGATE", "TEST_FIXTURE"]
@@ -52,6 +53,14 @@ class CheckpointAEvidenceReceipt(BaseModel):
             raise ValueError("A receipt requires a complete passing 80-case frozen run")
         if self.metrics.passed_cases < 72:
             raise ValueError("A receipt does not meet the frozen case-pass threshold")
+        expected_rate = self.metrics.passed_cases / self.total_cases
+        if not math.isclose(
+            self.metrics.case_pass_rate,
+            expected_rate,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        ):
+            raise ValueError("A receipt case-pass rate does not match passed cases")
         if self.metrics.case_pass_rate < 0.90:
             raise ValueError("A receipt does not meet the frozen case-pass rate")
         if self.metrics.selective_semantic_reliability < 0.95:

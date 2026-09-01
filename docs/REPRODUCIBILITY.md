@@ -167,26 +167,123 @@ the generated Checkout handoff, not in redacted server evidence.
 5. Before testing payment authorization/capture, set the Razorpay account to
    manual capture. Download and open the retained Test Checkout page, complete
    one genuine Test Checkout, and keep the downloaded callback JSON private.
-6. With the matching Test credentials in the environment, continue through the
-   signature/provider binding, capture, compensating refund, and reconciliation:
+6. Before capture, combine the handoff/callback into a pinned webhook binding,
+   configure the public HTTPS URL ending in `/v1/razorpay/webhook` in the
+   Razorpay Test Dashboard, and start the loopback receiver behind that reviewed
+   route. Set the separate `RAZORPAY_WEBHOOK_SECRET` only in the environment:
+
+   ```powershell
+   .venv\Scripts\python.exe scripts\checkpoint_d_prepare_operation.py `
+     --handoff artifacts\checkpoint-b8-checkout-handoff.json `
+     --callback ecocommit-razorpay-checkout-callback.json `
+     --output artifacts\private\checkpoint-b8-prepared-operation.json
+
+   .venv\Scripts\python.exe scripts\checkpoint_b8_webhook_server.py `
+     --port 8766 `
+     --prepared-operation artifacts\private\checkpoint-b8-prepared-operation.json `
+     --prepared-operation-sha256 <printed-file-sha256> `
+     --state-db artifacts\checkpoint-b8-state.sqlite3 `
+     --audit-path artifacts\checkpoint-b8-webhook-audit.ndjson
+   ```
+
+   The bundled receiver is loopback development software; do not expose it
+   directly. Public TLS/routing, Razorpay IP/network controls, and Dashboard Test
+   Mode configuration are externally retained evidence.
+7. With the matching Test credentials in the environment, continue through the
+   signature/provider binding, capture, compensating refund, and reconciliation.
+   Set `ECOCOMMIT_B8_SIGNING_SECRET` to an untracked environment-only value of at
+   least 32 bytes; never put it in the command or an artifact:
 
    ```powershell
    .venv\Scripts\python.exe scripts\checkpoint_b8_razorpay_continue.py `
      --handoff artifacts\checkpoint-b8-checkout-handoff.json `
      --callback ecocommit-razorpay-checkout-callback.json `
-     --output artifacts\checkpoint-b8-lifecycle.json
+     --output artifacts\checkpoint-b8-lifecycle.json `
+     --state-db artifacts\checkpoint-b8-state.sqlite3
    ```
 
    A local/fake test of this command is not provider evidence.
-7. Configure a separate `RAZORPAY_WEBHOOK_SECRET` and endpoint before claiming
-   webhook delivery/reconciliation. Retain signed raw-event evidence, duplicate
-   delivery behavior, asynchronous refund state, and reconciliation results.
-8. Retain application denials and provider/transport failures and checksum the
+8. After both events arrive, verify webhook delivery/reconciliation. The raw route is
+   `/v1/razorpay/webhook`; it verifies `X-Razorpay-Signature`, deduplicates
+   `X-Razorpay-Event-Id`, and accepts bound `payment.captured` and
+   `refund.processed` in either order. The bundled server listens only on
+   loopback, so externally reachable TLS/routing and Razorpay Dashboard Test
+   Mode configuration remain operator/hosting work. Export a complete verified
+   set only after both events arrive:
+
+   ```powershell
+   .venv\Scripts\python.exe scripts\checkpoint_b8_webhook_evidence.py `
+     --state-db artifacts\checkpoint-b8-state.sqlite3 `
+     --transaction-id <bound-transaction-id> `
+     --output artifacts\checkpoint-b8-webhooks.json
+   ```
+
+   The exporter retains verified event metadata and digests, not raw bodies or
+   the webhook secret. Its Test-key binding does not independently prove the
+   Dashboard endpoint was configured in Test Mode; retain that external fact.
+9. Retain application denials and provider/transport failures and checksum the
    complete redacted evidence bundle.
 
 The server-side Payments API cannot collect a payment, so step 5 requires an
 interactive Test Checkout. No simulation, mocked HTTP response, credential
 presence, or order-only run counts as complete B8 evidence.
+
+## Future Checkpoint D provider-Test run
+
+This path is implemented but cannot be run until genuine pinned A/B/C evidence
+exists. It requires a separately prepared Test Checkout operation for the D
+integration run; request JSON cannot construct one.
+
+1. Combine the second human Checkout handoff/callback into a sensitive prepared
+   operation and retain the printed file SHA-256 out of band:
+
+   ```powershell
+   .venv\Scripts\python.exe scripts\checkpoint_d_prepare_operation.py `
+     --handoff artifacts\checkpoint-d-checkout-handoff.json `
+     --callback ecocommit-checkpoint-d-callback.json `
+     --output artifacts\private\checkpoint-d-prepared-operation.json
+   ```
+
+2. Verify the A/B/C pin bundle without enabling a provider:
+
+   ```powershell
+   .venv\Scripts\python.exe scripts\checkpoint_d_evidence_status.py `
+     --evidence-root evidence\final `
+     --pins evidence\final\checkpoint-d-pins.json `
+     --pins-sha256 <out-of-band-pin-file-sha256>
+   ```
+
+3. Supply only through the environment: `RAZORPAY_KEY_ID`,
+   `RAZORPAY_KEY_SECRET`, the separate Test endpoint
+   `RAZORPAY_WEBHOOK_SECRET`, `ECOCOMMIT_D_SIGNING_SECRET` (at least 32 bytes),
+   and `ECOCOMMIT_D_API_TOKEN` (at least 32 non-space bytes). Start the
+   loopback worker with persistent paths:
+
+   ```powershell
+   .venv\Scripts\python.exe scripts\checkpoint_d_server.py `
+     --port 8765 `
+     --audit-path artifacts\checkpoint-d-audit.ndjson `
+     --evidence-root evidence\final `
+     --pins evidence\final\checkpoint-d-pins.json `
+     --pins-sha256 <out-of-band-pin-file-sha256> `
+     --prepared-operation artifacts\private\checkpoint-d-prepared-operation.json `
+     --prepared-operation-sha256 <out-of-band-operation-file-sha256> `
+     --state-db artifacts\checkpoint-d-state.sqlite3
+   ```
+
+   Startup validates the expected repository and complete pinned A/B/C chain,
+   prepared operation, signing/webhook/API secrets, and persistent local state
+   configuration before the read-only provider preflight. It fails closed unless
+   the current Test credentials then pass. The operator UI reveals the Test execution form only when
+   A–C/runtime prerequisites and the adapter are ready. It sends the bearer token
+   only in the Authorization header and clears the field after the request.
+
+4. A public run additionally needs an independently reviewed HTTPS reverse proxy
+   or host, authentication/network controls, the webhook route configured in the
+   Razorpay Test Dashboard, retained rate-limit/backup/monitoring/security tests,
+   and a digest-cross-linked D integration receipt. The local result always says
+   it does not by itself pass D. Never expose the bundled WSGI development server
+   directly to the internet.
 
 ## Clean-environment verification protocol
 

@@ -6,9 +6,9 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 | Checkpoint | Current state | What is still required |
 |---|---|---|
 | A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 BUILT + LOCALLY VALIDATED, NOT EVALUATED** | Commit/push authorization, fresh 80-case provider run, and all four unchanged thresholds passing together |
-| B — deterministic economic safety | **B1–B7 LOCALLY VALIDATED; B8 order subgates live-validated; NOT PASSED** | Passing A receipt, genuine Test Checkout/capture/refund/webhook evidence, durable state, and production-grade key boundary |
+| B — deterministic economic safety | **B1–B7 + durable single-host runtime LOCALLY VALIDATED; B8 order subgates live-validated; NOT PASSED** | Passing A receipt, genuine Test Checkout/capture/refund/webhook evidence, and an independently verified signing-key boundary |
 | C — comparative benchmark | **Framework + final preregistration contract LOCALLY VALIDATED; NOT PASSED** | Real frozen suite/costs/outputs, pre-outcome rule choices, passing A+B receipts, and one-shot held-out run |
-| D — product/API/UI/operations | **LOCAL SIMULATION LOCALLY VALIDATED; NOT PASSED** | Authoritative A/B/C loading, durable provider execution, hosted operations, and final integrated evidence |
+| D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST EXECUTION PATH LOCALLY VALIDATED; NOT PASSED** | Real pinned A/B/C receipts, current credentials/human callback/webhooks, hosted security/operations, and final integrated evidence |
 | E — repository/submission readiness | **LOCAL CHECKER LOCALLY VALIDATED; NOT PASSED** | A–D evidence, owner-selected license, push, independent reproduction, final screenshots, and video |
 
 Status vocabulary is strict: **BUILT** means an implementation exists;
@@ -116,8 +116,13 @@ This new lifecycle has only fake-transport regression evidence. No genuine
 Checkout, capture, refund, webhook, or reconciliation outcome is claimed. The
 remaining human/external actions are manual-capture account confirmation, one
 Test Checkout interaction, and webhook endpoint/secret configuration and event
-delivery. Process-local ledgers/registries and the local HMAC signer are not
-production durability/KMS claims.
+delivery. The local runtime now provides SQLite WAL/FULL-sync payment,
+commitment, idempotency, and webhook state plus cross-process audit locking and
+restart replay. Pending refunds remain retryable, poll only their exact provider
+refund ID, and can reach processed compensation after restart or handoff expiry;
+expiry never grants fresh capture authority to a merely reserved payment. That
+is a **single-host durability implementation**, not a
+high-availability, malicious-database-tamper, backup/restore, or KMS claim.
 
 ## Checkpoint C
 
@@ -144,14 +149,30 @@ inputs, preregistration decisions, A+B, and one-shot held-out execution.
 ## Checkpoint D
 
 The loopback API/UI, audit/observability, parser limits, status truth, and three
-synthetic workflows remain locally validated. `HAPPY_PATH` is still labelled
-`SIMULATED_LOCAL`; `/v1/commit` still denies because no authoritative execution
-adapter is installed.
+synthetic workflows remain locally validated. The default server still loads no
+authority and `/v1/commit` denies. A separate startup-only path now:
 
-D does not pass from component health, synthetic A evidence, or the existence of
-the Razorpay adapter. It still requires authoritative A/B/C receipt loading,
-durable multi-process state/audit/idempotency, a provider-backed product flow,
-hosted evidence, and final security/operational review.
+- reloads strict SHA-256-pinned A/B/C[/D] receipts on every status request and
+  verifies the expected repository plus every revision and upstream cross-link;
+- performs a read-only current-credential preflight before enabling any Test
+  provider call;
+- accepts only an opaque, digest-pinned operation ID at the HTTP boundary;
+- requires an environment-only bearer token, applies a single-process rate
+  limit to failed and successful authentication attempts, and never accepts
+  transaction/evidence/callback/key authority from a request;
+- executes capture/compensation with SQLite-backed cross-process idempotency,
+  payment, commitment, and result replay; and
+- verifies raw Razorpay webhook HMACs, deduplicates the official event-ID
+  header, handles capture/refund arrival order, and retains only bound redacted
+  event records.
+
+The UI exposes this operator Test path only when the server reports it ready;
+the bearer token is cleared after the request and is never stored or placed in
+JSON. A locally produced execution/webhook result explicitly does **not** pass D.
+D still requires real pinned A/B/C receipts, the human/provider events, a public
+TLS deployment/reverse proxy, independently verified authentication/rate-limit/
+webhook endpoint configuration, operations evidence, and a cross-linked D
+receipt. The bundled WSGI server remains loopback development software.
 
 ## Checkpoint E and release security
 

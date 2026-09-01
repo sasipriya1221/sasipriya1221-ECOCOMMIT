@@ -113,7 +113,7 @@ Start the loopback-only UI/API:
 ```
 
 Open `http://127.0.0.1:8765/`. The server deliberately loads no authoritative
-checkpoint evidence, so every gate remains blocked and the real commit endpoint
+checkpoint evidence, so every gate remains blocked and the provider endpoint
 always denies. The UI exposes three fixed synthetic scenarios:
 
 - `HAPPY_PATH` — composes the local A-to-B/B interfaces and records a simulated
@@ -130,6 +130,19 @@ The exact flow and expected screen states are in
 ```
 
 Neither path is Razorpay evidence or a checkpoint pass.
+
+The same server also contains a separately configured Razorpay **Test Mode**
+path, but it is unavailable by default. It becomes ready only when the operator
+supplies a SHA-256-pinned, cross-linked A/B/C evidence bundle; a separately
+pinned human Checkout operation; persistent audit/state paths; current Test
+credentials that pass a read-only preflight; an environment-only API bearer
+token, certificate signing secret, and webhook secret. HTTP callers can then
+select only the opaque prepared operation ID. They cannot submit contracts,
+payment data, callbacks, evidence claims, credentials, or keys. See
+[Reproducibility](docs/REPRODUCIBILITY.md) for the exact future-run procedure.
+Evidence and all local configuration are validated before provider preflight;
+pending refunds remain retryable through exact refund-ID polling. This
+implementation and its fake-transport regressions are not live evidence.
 
 ## Evidence and reports
 
@@ -162,7 +175,7 @@ The final evidence slots are deliberately empty and blocked:
 
 - complete Checkpoint A final metrics — **BLOCKED**;
 - complete Razorpay Test Mode payment lifecycle — **BLOCKED** (authentication
-  and order-level evidence retained; authorization/capture not run);
+  and order-level evidence retained; authorization/capture/webhooks not run);
 - final ECOCOMMIT-versus-baseline comparison — **BLOCKED**;
 - integrated hosted product evidence — **BLOCKED**;
 - final screenshots — **BLOCKED**; and
@@ -176,9 +189,9 @@ captures, mocked provider output, or preliminary benchmark numbers.
 
 | Path | Purpose |
 |---|---|
-| `src/ecocommit/` | Intent, fidelity, policy/evidence/exposure, commitment, benchmark, and D product boundaries |
+| `src/ecocommit/` | Intent, fidelity, policy/evidence/exposure, durable commitment/payment/webhook execution, benchmark, and D product boundaries |
 | `tests/` | Deterministic regressions and synthetic fixtures |
-| `scripts/` | Live A tooling, preliminary C runner, D demo, and E readiness checks |
+| `scripts/` | Live A/B tooling, webhook/evidence export, C runner, D demo/prepared Test server, and E readiness checks |
 | `spec/` | Frozen scope, hypothesis, metrics, and evaluation protocol |
 | `docs/` | Architecture, threat model, reproducibility, engineering log, demo, pitch, and evidence framework |
 | `.github/workflows/` | Offline CI plus manually/guardedly triggered live-provider workflows |
@@ -187,11 +200,15 @@ captures, mocked provider output, or preliminary benchmark numbers.
 
 - The actual Checkpoint A gate has not passed.
 - B/C/D local success does not clear their dependency or final integration gates.
-- `SIMULATED_LOCAL` is in-memory and moves no real money.
+- `SIMULATED_LOCAL` moves no real money. Durable SQLite-backed simulation/Test
+  state is available only when explicitly configured.
 - The Razorpay adapter is Test Mode only. Retained evidence covers authentication
   and order binding/idempotency, not payment authorization, capture, refund,
   webhook delivery, reconciliation, or settlement.
-- Registries, audit, idempotency, and payment state are not production-durable.
+- SQLite WAL/FULL-sync state, cross-process idempotency, and OS-locked audit
+  append are locally validated for one host. They are not high availability,
+  a malicious-storage integrity boundary, backup/restore evidence, or a managed
+  production database/queue claim.
 - Local HMAC keys are test boundaries, not KMS or production key management.
 - The checked-in C plan/suite is synthetic and preliminary, not a final economic
   comparison.

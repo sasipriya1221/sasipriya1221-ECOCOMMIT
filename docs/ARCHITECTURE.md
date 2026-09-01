@@ -69,8 +69,10 @@ They never grant authority.
 | Certificate signer/verifier | Bind policy, evidence, contract, merchant, amount, currency, transaction, time, and nonce | Authorize a changed/replayed transaction |
 | Payment adapter | Simulate locally or call the explicitly verified Razorpay Test Mode boundary | Present simulation/order-only evidence as a completed payment or enable live money |
 | Reconciliation/compensation | Detect divergence and record cleanup/reversal | Erase the original attempt |
-| D API/UI | Report gate truth, run fixed synthetic scenarios, deny real commits | Infer acceptance from health or caller claims |
-| Audit/observability | Record D boundary requests, denials, workflow summaries, correlations, and metrics | Change decisions or suppress blockers |
+| D evidence loader | Hash and strictly parse operator-pinned A/B/C[/D] receipts, then revalidate revision/upstream links on every status read | Treat file presence, a request claim, a fixture, or a self-authored pin as authority |
+| D API/UI | Report gate truth, run fixed synthetic scenarios, or select one startup-pinned Test operation after runtime authentication | Accept transaction/evidence/callback/key authority from HTTP or infer acceptance from health |
+| Durable state | Provide single-host SQLite WAL/FULL-sync CAS, typed replay, and payment/commitment/webhook recovery | Claim HA, KMS, malicious-storage integrity, backup, or hosted operations |
+| Audit/observability | Record D boundary requests, denials, Test execution/webhook summaries, correlations, and metrics | Change decisions or suppress blockers |
 | Benchmark harness | Execute frozen roles/scenarios and validate complete artifacts | Promote preliminary/synthetic results to final |
 
 ## Current implemented paths
@@ -96,13 +98,21 @@ The commitment engine and explicit `SIMULATED_LOCAL` adapter enforce the local
 reserve/capture sequence. A separate `RAZORPAY_TEST_MODE` adapter creates and
 validates bound orders, binds a genuine Checkout-authorized payment only after
 HMAC and provider checks, and preserves the same certificate/freshness gate before
-capture. It is not wired into the D endpoint.
+capture. It is wired into D only through the separately enabled, startup-pinned
+Test operation boundary; the default D server still has no provider authority.
 
 The Test-order validator can generate a digest-bound public Checkout handoff and
 standalone page. Its callback continuation verifies the Checkout signature and
 provider entities, captures behind the same certificate/freshness gate, performs
-an idempotent compensating refund, and reconciles the result. That continuation
-has local fake-transport evidence only and is not wired into D.
+an idempotent compensating refund, and reconciles the result. SQLite-backed
+payment, commitment, idempotency, and completed result state support restart
+replay. A pending refund is not retained as completed: retry fetches the exact
+refund by ID and advances only after `processed`. Post-expiry recovery requires
+exact durable lifecycle state and cannot turn a bare reservation into new
+capture authority. The raw webhook endpoint verifies and binds
+`payment.captured` and `refund.processed`, deduplicates stable provider event
+identity while retaining the first receipt, and handles either event order. All
+of this has local fake-transport evidence only.
 
 A synthetic passed-A fixture proves interface compatibility only. The actual A
 gate releases no B authority until it passes. Live evidence currently stops at
@@ -122,25 +132,40 @@ binds A/B receipts, suite/case/cost/metric hashes, comparator/candidate identity
 and quantitative acceptance rules before outcomes, and refuses fixtures or
 simulated final inputs. No real final registration or result exists.
 
-### D local product path
+### D local product and prepared Test path
 
-The real endpoint `/v1/commit` has no execution adapter and always denies. The
+The default endpoint `/v1/commit` has no execution adapter and always denies. The
 simulation endpoint accepts only a named scenario selector; all other request
 fields are ignored for authority. Its fixed fixture exercises the current local
 A-to-B, exposure, certificate, commitment, and `SIMULATED_LOCAL` components.
 
+An optional operator configuration may load an out-of-band-hash-pinned A/B/C
+bundle and one separately pinned human Checkout operation. A read-only
+credential preflight runs only after the expected repository/evidence chain and
+all local secret/configuration dependencies validate, and must succeed before
+provider calls are enabled. The commit
+route then requires an environment-only bearer token, is rate-limited, and
+accepts exactly `{ "operation_id": "..." }`. The corresponding transaction,
+callback, credentials, certificate key, provider origin, and evidence remain
+startup-only. A verified result still says `counts_as_checkpoint_d_pass=false`;
+the hosted/security/operations receipt is a later evidence boundary.
+
 ```text
 GET  /healthz             -> process liveness only
-GET  /readyz              -> 503 while irreversible path is blocked
+GET  /readyz              -> prepared Razorpay Test execution readiness only
 GET  /v1/status           -> A–E gate/provider/blocker snapshot
 GET  /v1/metrics          -> finite in-process metric snapshot
 POST /v1/commit/simulate  -> fixed synthetic scenario only
-POST /v1/commit           -> always denied; no execution adapter
+POST /v1/commit           -> default deny; one pinned Test operation when configured
+POST /v1/razorpay/webhook -> raw HMAC/event-ID boundary when configured
 ```
 
-The loopback demo server loads every gate as blocked because it has no
+The default loopback demo server loads every gate as blocked because it has no
 authoritative evidence source. Browser health, a green synthetic trace, or an
-operator-supplied field cannot change this.
+operator-supplied field cannot change this. The bundled WSGI server is not a
+public TLS/production host; the optional webhook route needs separately verified
+external routing and Test Dashboard configuration before it can receive genuine
+events.
 
 ## Progressive economic state
 
@@ -177,10 +202,11 @@ simulated capture mutation.
 ## Audit and observability boundary
 
 The D API uses a local JSONL SHA-256 chain with strict row validation, fsync, and
-shared in-process locks. It detects modification/reordering when verified against
-the retained chain, but it is not immutable storage: deletion of an unanchored
-tail, multi-process races, host compromise, and disaster recovery remain outside
-the claim.
+an OS-level companion lock shared across processes. It detects modification or
+reordering when verified against the retained chain, but it is not immutable
+storage: deletion of an unanchored tail, host compromise, malicious rewriting of
+both data and local anchors, remote retention, and disaster recovery remain
+outside the claim.
 
 D records parser denials and service workflow summaries. The B components do not
 yet emit a durable per-boundary D event stream during a real integrated run. That
@@ -192,7 +218,7 @@ blockers.
 | Mode | External provider | Real money | Current availability |
 |---|---:|---:|---|
 | `SIMULATED` / `SIMULATED_LOCAL` | No | No | Implemented for local tests/demo |
-| `REAL_PROVIDER_TEST` + verified `RAZORPAY_TEST_MODE` | Test provider only | No real money | Adapter implemented; authentication and order subgates have retained live evidence; payment lifecycle blocked |
+| `REAL_PROVIDER_TEST` + verified `RAZORPAY_TEST_MODE` | Test provider only | No real money | Startup-pinned API/UI/webhook path implemented; authentication and order subgates have retained live evidence; payment lifecycle blocked |
 | Live/production | Disabled and out of current scope | Not allowed | No code path |
 
 A configuration string or credential presence is not provider-mode proof. The
@@ -208,9 +234,9 @@ an exact provider-side binding match.
 |---|---|
 | A contracts/interpretation | `contracts.py`, `interpreter.py`, `validator.py`, `evaluation.py`, Candidate 2 protocol scripts |
 | A-to-B admission | `checkpoint_a_evidence.py`, `checkpoint_b_integration.py` |
-| B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `payments.py`, `razorpay.py`, `razorpay_checkout.py`, `reconciliation.py` |
+| B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `durable.py`, `payments.py`, `razorpay.py`, `razorpay_checkout.py`, `webhook.py`, `reconciliation.py` |
 | C benchmark | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py`, `checkpoint_c_final.py` |
-| D product/operations | `checkpoint_status.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, `checkpoint_d_workflow.py`, `demo_server.py`, `ui/` |
+| D product/operations | `checkpoint_status.py`, `checkpoint_d_evidence.py`, `execution.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, `checkpoint_d_workflow.py`, `demo_server.py`, `ui/` |
 | E evidence discipline | `REPRODUCIBILITY.md`, `ENGINEERING_LOG.md`, `SUBMISSION_EVIDENCE.md`, `DEMO_RUNBOOK.md`, `PITCH_OUTLINE.md`, readiness checker |
 
 ## Checkpoint dependencies
@@ -233,8 +259,11 @@ No later checkpoint is inferred from an earlier implementation or test result.
 
 - Production or live-money execution.
 - Autonomous selection of evidence authorities or policy caps.
-- Durable database/queue/ledger, multi-process locking, KMS, or key rotation.
-- Hosted authentication/authorization, rate limiting, deployment, SLOs, or
-  disaster recovery.
+- Multi-host/managed database or queue, HA, KMS, key rotation, backup/restore,
+  or malicious-local-storage integrity. The implemented SQLite/OS-lock boundary
+  is single-host only.
+- Hosted TLS/reverse-proxy validation, network allowlisting, distributed rate
+  limiting, deployment, SLOs, or disaster recovery. Local bearer auth and a
+  single-process limiter are implementation boundaries, not hosted evidence.
 - Treating the synthetic C fixture or D demo as final evidence.
 - Lowering A thresholds or tuning C after final held-out outcomes.

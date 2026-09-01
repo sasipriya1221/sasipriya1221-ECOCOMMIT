@@ -4,7 +4,7 @@ from pathlib import Path
 UI_DIR = Path(__file__).resolve().parents[1] / "ui"
 
 
-def test_ui_defaults_to_unverified_and_never_presents_a_real_commit_control():
+def test_ui_defaults_to_unverified_and_exposes_only_hidden_test_mode_execution():
     html = (UI_DIR / "index.html").read_text(encoding="utf-8")
     script = (UI_DIR / "app.js").read_text(encoding="utf-8")
 
@@ -12,8 +12,18 @@ def test_ui_defaults_to_unverified_and_never_presents_a_real_commit_control():
     assert "Real money movement" in html
     assert "Disabled" in html
     assert "SIMULATION ONLY" in html
+    assert 'id="test-execution-panel"' in html
+    assert "hidden" in html
+    assert "This is not a simulation" in html
+    assert "It cannot use Live credentials or move real money" in html
     assert "/v1/commit/simulate" in script
-    assert 'fetch("/v1/commit",' not in script
+    assert 'fetch("/v1/commit",' in script
+    assert '"Authorization": `Bearer ${bearerToken}`' in script
+    assert "localStorage" not in script
+    assert "sessionStorage" not in script
+    assert "innerHTML" not in script
+    assert "JSON.stringify({ operation_id: operationId })" in script
+    assert "JSON.stringify({ operation_id: operationId, bearerToken" not in script
 
 
 def test_ui_has_distinct_simulated_and_real_test_mode_labels():

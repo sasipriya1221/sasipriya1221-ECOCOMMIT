@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hmac
+import importlib.util
 import io
 import json
 from copy import deepcopy
@@ -35,6 +36,7 @@ from ecocommit.razorpay import (
     RazorpayUnsupportedOperation,
     RazorpayWebhookVerifier,
 )
+from ecocommit.razorpay_checkout import RazorpayCheckoutCallback
 
 
 NOW = datetime(2026, 9, 1, 16, 0, tzinfo=timezone.utc)
@@ -43,6 +45,15 @@ ORDER_ID = "order_ECOCOMMIT123"
 PAYMENT_ID = "pay_ECOCOMMIT123"
 REFUND_ID = "rfnd_ECOCOMMIT123"
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_continue_script():
+    path = REPOSITORY_ROOT / "scripts" / "checkpoint_b8_razorpay_continue.py"
+    spec = importlib.util.spec_from_file_location("checkpoint_b8_continue", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 class FakeTransport:
@@ -379,6 +390,29 @@ def test_http_transport_restricts_origin_and_never_exposes_credentials(monkeypat
         transport.request("GET", "https://example.invalid/orders")
     with pytest.raises(ValueError, match="cannot be overridden"):
         transport.request("GET", "/orders", headers={"Authorization": "Bearer attacker"})
+
+
+def test_adapter_credential_preflight_is_read_only_and_schema_checked():
+    valid = FakeTransport({"entity": "collection", "count": 0, "items": []})
+    adapter = RazorpayTestPaymentAdapter(
+        credentials=credentials(),
+        transport=valid,
+    )
+
+    assert adapter.verify_credentials() is True
+    assert valid.calls == [{
+        "method": "GET",
+        "path": "/orders?count=1",
+        "payload": None,
+        "headers": None,
+    }]
+
+    malformed = RazorpayTestPaymentAdapter(
+        credentials=credentials(),
+        transport=FakeTransport({"entity": "collection", "count": 0}),
+    )
+    with pytest.raises(RazorpayTransportError, match="invalid collection"):
+        malformed.verify_credentials()
 
 
 def test_http_error_retains_only_safe_status_and_provider_code(monkeypatch):
@@ -737,6 +771,9 @@ def test_refund_uses_provider_idempotency_and_completes_only_when_processed():
     call_count = len(transport.calls)
     assert payments.refund(tx, idempotency_key="refund-captured-payment") == result
     assert len(transport.calls) == call_count
+    with pytest.raises(IdempotencyConflict):
+        payments.refund(tx, idempotency_key="different-full-refund-key")
+    assert len(transport.calls) == call_count
 
 
 def test_pending_refund_is_not_misreported_as_completed():
@@ -755,6 +792,20 @@ def test_pending_refund_is_not_misreported_as_completed():
     result = payments.refund(tx, idempotency_key="pending-refund")
     assert result.state == PaymentState.REFUND_PENDING
     assert payments.snapshot(tx.transaction_id).state == PaymentState.REFUND_PENDING
+
+
+def test_b8_continuation_loader_rejects_duplicate_json_keys(tmp_path):
+    callback = tmp_path / "callback.json"
+    callback.write_text(
+        '{"razorpay_order_id":"order_First123",'
+        '"razorpay_order_id":"order_Second123",'
+        '"razorpay_payment_id":"pay_Test123",'
+        '"razorpay_signature":"' + ("0" * 64) + '"}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="duplicate JSON keys"):
+        _load_continue_script()._load(callback, RazorpayCheckoutCallback)
 
 
 def test_compensation_boundary_keeps_provider_pending_refund_incomplete():
@@ -785,6 +836,14 @@ def test_compensation_boundary_keeps_provider_pending_refund_incomplete():
     assert outcome.payment_result is not None
     assert outcome.payment_result.state == PaymentState.REFUND_PENDING
     call_count = len(transport.calls)
+    transport.enqueue({
+        "id": REFUND_ID,
+        "entity": "refund",
+        "amount": tx.amount_minor,
+        "currency": tx.currency,
+        "payment_id": PAYMENT_ID,
+        "status": "pending",
+    })
 
     replay = coordinator.compensate(
         outcome.state,
@@ -794,7 +853,8 @@ def test_compensation_boundary_keeps_provider_pending_refund_incomplete():
     )
     assert replay.pending is True
     assert replay.succeeded is False
-    assert len(transport.calls) == call_count
+    assert len(transport.calls) == call_count + 1
+    assert transport.calls[-1]["path"] == f"/refunds/{REFUND_ID}"
 
 
 def test_compensation_boundary_completes_only_processed_provider_refund():

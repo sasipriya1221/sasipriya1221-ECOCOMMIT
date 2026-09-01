@@ -28,6 +28,15 @@ REQUIRED_FILES = (
     "docs/REPRODUCIBILITY.md",
     "docs/SUBMISSION_EVIDENCE.md",
     "docs/THREAT_MODEL.md",
+    "scripts/checkpoint_b8_webhook_evidence.py",
+    "scripts/checkpoint_b8_webhook_server.py",
+    "scripts/checkpoint_d_evidence_status.py",
+    "scripts/checkpoint_d_prepare_operation.py",
+    "src/ecocommit/checkpoint_b_evidence.py",
+    "src/ecocommit/checkpoint_d_evidence.py",
+    "src/ecocommit/durable.py",
+    "src/ecocommit/execution.py",
+    "src/ecocommit/webhook.py",
 )
 README_HEADINGS = (
     "## Why ECOCOMMIT",

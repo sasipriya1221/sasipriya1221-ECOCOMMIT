@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 import json
+import subprocess
+import sys
 
 import pytest
 
@@ -43,6 +45,7 @@ def test_audit_log_detects_tampering_and_refuses_to_append(tmp_path):
     path.write_text(
         path.read_text(encoding="utf-8").replace("100", "900"),
         encoding="utf-8",
+        newline="\n",
     )
 
     verification = log.verify()
@@ -136,6 +139,46 @@ def test_multiple_audit_instances_share_a_process_lock(tmp_path):
     assert {event.payload["index"] for event in first.events()} == set(range(80))
 
 
+def test_audit_chain_serializes_independent_process_writers(tmp_path):
+    path = tmp_path / "multiprocess-audit.ndjson"
+    code = r'''
+import sys
+from ecocommit.audit import AppendOnlyAuditLog
+
+path, worker, count = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+log = AppendOnlyAuditLog(path)
+for index in range(count):
+    log.append(
+        "multiprocess.event",
+        f"worker-{worker}-{index}",
+        {"worker": worker, "index": index},
+    )
+'''
+    processes = [
+        subprocess.Popen(
+            [sys.executable, "-c", code, str(path), str(worker), "10"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        for worker in range(3)
+    ]
+    errors = []
+    for process in processes:
+        _, error = process.communicate(timeout=15)
+        if process.returncode:
+            errors.append(error)
+
+    assert errors == []
+    verification = AppendOnlyAuditLog(path).verify()
+    assert verification.valid is True
+    assert verification.entries == 30
+    assert {
+        (event.payload["worker"], event.payload["index"])
+        for event in AppendOnlyAuditLog(path).events()
+    } == {(worker, index) for worker in range(3) for index in range(10)}
+
+
 def test_audit_verifier_rejects_rehashed_but_malformed_record(tmp_path):
     path = tmp_path / "malformed-audit.ndjson"
     log = AppendOnlyAuditLog(path, clock=lambda: FIXED_TIME)
@@ -146,8 +189,33 @@ def test_audit_verifier_rejects_rehashed_but_malformed_record(tmp_path):
     path.write_text(
         json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
     verification = log.verify()
     assert verification.valid is False
     assert "non-timezone-aware timestamp" in verification.error
+
+
+def test_audit_verifier_rejects_duplicate_keys_and_noncanonical_encoding(tmp_path):
+    path = tmp_path / "strict-audit.ndjson"
+    log = AppendOnlyAuditLog(path, clock=lambda: FIXED_TIME)
+    log.append("request.received", "corr-1", {"amount_minor": 100})
+    canonical = path.read_text(encoding="utf-8")
+
+    path.write_text(
+        canonical.replace('{"actor":', '{"actor":"ecocommit.service","actor":', 1),
+        encoding="utf-8",
+        newline="\n",
+    )
+    assert log.verify().valid is False
+    assert "invalid JSON" in log.verify().error
+
+    record = json.loads(canonical)
+    path.write_text(
+        json.dumps(record, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    assert log.verify().valid is False
+    assert "non-canonical" in log.verify().error

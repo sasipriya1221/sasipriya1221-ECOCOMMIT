@@ -50,8 +50,9 @@ webhook delivery, reconciliation, or settlement was executed.
 - Exact blocker: `RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`; the Payments API
   cannot collect a payment, and no genuine Test Checkout callback/signature was
   available. A digest-bound Checkout page and capture/refund continuation now
-  exist locally, but have not run against Razorpay. Manual capture and webhook
-  configuration also remain unverified.
+  exist locally with single-host durable state and a bound raw-webhook receiver,
+  but have not run against Razorpay. Manual capture, external Test webhook
+  configuration/delivery, and managed signing-key evidence remain unverified.
 - Promotion state: **BLOCKED — partial order evidence is not final B8 evidence**.
 
 ### Checkpoint C final economic comparison
@@ -78,6 +79,10 @@ webhook delivery, reconciliation, or settlement was executed.
 - Required: authoritative upstream evidence loading, integrated real A/B/C
   product flow, provider Test Mode execution, durable operational state, hosted
   API/UI evidence, and final security/operational review.
+- Local implementation state: strict pinned receipt loading, SQLite/OS-lock
+  single-host durability, startup-pinned Test execution, bearer authentication,
+  local rate limiting, operator UI, and bound webhook ingestion are implemented
+  and regression-tested. No real receipt bundle or provider/hosted run used them.
 - Do not insert: the synthetic D happy path, localhost status, or a static render.
 - Hosted application/API reference: **BLOCKED — not available**
 - Integrated trace/artifact SHA-256: **BLOCKED — not available**

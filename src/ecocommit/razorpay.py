@@ -19,14 +19,16 @@ from .certificates import CertificateVerifier, CommitCertificate
 from .commitment import CommitmentState
 from .evidence import EvidenceRegistry
 from .exposure import TransactionBinding
-from .idempotency import IdempotencyLedger, request_fingerprint
+from .idempotency import IdempotencyBackend, IdempotencyLedger, request_fingerprint
 from .payments import (
+    InMemoryPaymentStateStore,
     PaymentOperation,
     PaymentProviderError,
     PaymentResult,
     PaymentSnapshot,
     PaymentState,
     PaymentStateError,
+    PaymentStateStore,
     SimulatedPaymentAdapter,
 )
 
@@ -36,6 +38,20 @@ _PAYMENT_ID = re.compile(r"^pay_[A-Za-z0-9]+$")
 _REFUND_ID = re.compile(r"^rfnd_[A-Za-z0-9]+$")
 _HEX_SIGNATURE = re.compile(r"^[0-9a-fA-F]{64}$")
 _API_BASE_URL = "https://api.razorpay.com/v1"
+_MAX_WEBHOOK_BODY_BYTES = 1024 * 1024
+
+
+def _reject_provider_constant(value: str):
+    raise ValueError(f"non-finite provider JSON constant is forbidden: {value}")
+
+
+def _unique_provider_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate provider JSON keys are forbidden")
+        value[key] = item
+    return value
 
 
 class RazorpayConfigurationError(ValueError):
@@ -183,8 +199,12 @@ class RazorpayHTTPTransport:
             raise RazorpayTransportError("Razorpay request did not return a usable response") from None
 
         try:
-            decoded = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
+            decoded = json.loads(
+                raw.decode("utf-8"),
+                object_pairs_hook=_unique_provider_object,
+                parse_constant=_reject_provider_constant,
+            )
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
             raise RazorpayTransportError("Razorpay returned invalid JSON") from None
         if not isinstance(decoded, dict):
             raise RazorpayTransportError("Razorpay returned a non-object response")
@@ -195,8 +215,12 @@ def _safe_provider_code(raw: bytes) -> str | None:
     if len(raw) > 65_536:
         return None
     try:
-        decoded = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
+        decoded = json.loads(
+            raw.decode("utf-8"),
+            object_pairs_hook=_unique_provider_object,
+            parse_constant=_reject_provider_constant,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
         return None
     if not isinstance(decoded, dict) or not isinstance(decoded.get("error"), dict):
         return None
@@ -207,7 +231,7 @@ def _safe_provider_code(raw: bytes) -> str | None:
 
 
 class RazorpayOrderResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     simulated: Literal[False] = False
     adapter_name: Literal["RAZORPAY_TEST_MODE"] = "RAZORPAY_TEST_MODE"
@@ -222,7 +246,7 @@ class RazorpayOrderResult(BaseModel):
 
 
 class RazorpayPaymentResult(PaymentResult):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     simulated: Literal[False] = False
     adapter_name: Literal["RAZORPAY_TEST_MODE"] = "RAZORPAY_TEST_MODE"
@@ -244,8 +268,16 @@ class RazorpayPaymentResult(PaymentResult):
         return self
 
 
+class _PendingRefund(RuntimeError):
+    """Return a non-terminal result without committing an idempotency record."""
+
+    def __init__(self, result: RazorpayPaymentResult) -> None:
+        super().__init__("RAZORPAY_REFUND_PENDING")
+        self.result = result
+
+
 class RazorpayObservedPayment(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     order_id: str = Field(pattern=r"^order_[A-Za-z0-9]+$")
     payment_id: str = Field(pattern=r"^pay_[A-Za-z0-9]+$")
@@ -273,13 +305,14 @@ class RazorpayTestPaymentAdapter:
         *,
         credentials: RazorpayTestCredentials,
         transport: RazorpayTransport | None = None,
-        idempotency: IdempotencyLedger | None = None,
+        idempotency: IdempotencyBackend | None = None,
+        state_store: PaymentStateStore | None = None,
     ):
         self._credentials = credentials
         self._transport = transport or RazorpayHTTPTransport(credentials)
         self._idempotency = idempotency or IdempotencyLedger()
         self._orders: dict[str, RazorpayOrderResult] = {}
-        self._payments: dict[str, PaymentSnapshot] = {}
+        self._state_store = state_store or InMemoryPaymentStateStore()
         self._lock = RLock()
 
     @classmethod
@@ -288,7 +321,8 @@ class RazorpayTestPaymentAdapter:
         *,
         environ: Mapping[str, str] | None = None,
         timeout_seconds: float = 30.0,
-        idempotency: IdempotencyLedger | None = None,
+        idempotency: IdempotencyBackend | None = None,
+        state_store: PaymentStateStore | None = None,
     ) -> RazorpayTestPaymentAdapter:
         credentials = RazorpayTestCredentials.from_environment(environ)
         return cls(
@@ -298,10 +332,32 @@ class RazorpayTestPaymentAdapter:
                 timeout_seconds=timeout_seconds,
             ),
             idempotency=idempotency,
+            state_store=state_store,
         )
 
     def __repr__(self) -> str:
         return "RazorpayTestPaymentAdapter(mode='test', credentials=<redacted>)"
+
+    def verify_credentials(self) -> bool:
+        """Perform a read-only authenticated Test Mode preflight.
+
+        The response body is validated in memory and never returned, logged, or
+        retained as evidence by this method. Callers must separately audit only
+        the boolean outcome and Test Mode boundary.
+        """
+
+        response = self._transport.request("GET", "/orders?count=1")
+        if (
+            response.get("entity") != "collection"
+            or not isinstance(response.get("items"), list)
+            or not isinstance(response.get("count"), int)
+            or isinstance(response.get("count"), bool)
+            or response["count"] < 0
+        ):
+            raise RazorpayTransportError(
+                "Razorpay credential preflight returned an invalid collection"
+            )
+        return True
 
     def create_order(
         self,
@@ -473,9 +529,30 @@ class RazorpayTestPaymentAdapter:
                 checkout_signature=checkout_signature,
             )
             with self._lock:
-                current = self._payments.get(transaction.transaction_id)
+                current = self._state_store.get(transaction.transaction_id)
                 if current is not None and current.state != PaymentState.NONE:
                     SimulatedPaymentAdapter._assert_transaction_unchanged(current, transaction)
+                    if (
+                        current.order_id == order_id
+                        and current.payment_id == payment_id
+                        and current.state
+                        in {
+                            PaymentState.RESERVED,
+                            PaymentState.CAPTURED,
+                            PaymentState.REFUND_PENDING,
+                            PaymentState.REFUNDED,
+                        }
+                    ):
+                        return self._payment_result(
+                            transaction,
+                            operation=PaymentOperation.RESERVE,
+                            state=PaymentState.RESERVED,
+                            provider_reference=payment_id,
+                            provider_status="authorized",
+                            order_id=order_id,
+                            payment_id=payment_id,
+                            recovered=True,
+                        )
                     raise PaymentStateError("transaction already has bound payment activity")
 
                 order = self._transport.request("GET", f"/orders/{order_id}")
@@ -505,7 +582,11 @@ class RazorpayTestPaymentAdapter:
                     order_id=order_id,
                     payment_id=payment_id,
                 )
-                self._payments[transaction.transaction_id] = snapshot
+                self._state_store.compare_and_set(
+                    transaction.transaction_id,
+                    expected=current,
+                    updated=snapshot,
+                )
                 return self._payment_result(
                     transaction,
                     operation=PaymentOperation.RESERVE,
@@ -537,7 +618,7 @@ class RazorpayTestPaymentAdapter:
         idempotency_key: str,
     ) -> RazorpayPaymentResult:
         with self._lock:
-            current = self._payments.get(transaction.transaction_id)
+            current = self._state_store.get(transaction.transaction_id)
             if current is None or current.order_id is None or current.payment_id is None:
                 raise PaymentStateError("Razorpay capture requires a bound authorized payment")
             order_id = current.order_id
@@ -556,8 +637,47 @@ class RazorpayTestPaymentAdapter:
         def perform() -> RazorpayPaymentResult:
             with registry.hold_snapshot_current(certificate.evidence_snapshot, now=now):
                 with self._lock:
-                    current = self._payments[transaction.transaction_id]
+                    current = self._state_store.get(transaction.transaction_id)
+                    if current is None:
+                        raise PaymentStateError(
+                            "Razorpay capture lost its bound authorized payment state"
+                        )
                     SimulatedPaymentAdapter._assert_transaction_unchanged(current, transaction)
+                    if (
+                        current.order_id == order_id
+                        and current.payment_id == payment_id
+                        and current.state
+                        in {
+                            PaymentState.CAPTURED,
+                            PaymentState.REFUND_PENDING,
+                            PaymentState.REFUNDED,
+                        }
+                    ):
+                        if (
+                            commitment.transaction != transaction
+                            or commitment.certificate_id != certificate.certificate_id
+                            or commitment.reservation_reference != payment_id
+                        ):
+                            raise PaymentStateError(
+                                "recovered capture authority does not match durable payment state"
+                            )
+                        verifier.verify(
+                            certificate,
+                            expected_transaction=transaction,
+                            expected_contract_hash=transaction.contract_hash,
+                            registry=registry,
+                            now=now,
+                        )
+                        return self._payment_result(
+                            transaction,
+                            operation=PaymentOperation.CAPTURE,
+                            state=PaymentState.CAPTURED,
+                            provider_reference=payment_id,
+                            provider_status="captured",
+                            order_id=order_id,
+                            payment_id=payment_id,
+                            recovered=True,
+                        )
                     SimulatedPaymentAdapter._assert_capture_authority(
                         commitment,
                         transaction=transaction,
@@ -602,11 +722,16 @@ class RazorpayTestPaymentAdapter:
                         allowed_statuses={"captured"},
                         require_full_capture=True,
                     )
-                    self._payments[transaction.transaction_id] = current.model_copy(
+                    updated = current.model_copy(
                         update={
                             "state": PaymentState.CAPTURED,
                             "last_reference": payment_id,
                         }
+                    )
+                    self._state_store.compare_and_set(
+                        transaction.transaction_id,
+                        expected=current,
+                        updated=updated,
                     )
                     return self._payment_result(
                         transaction,
@@ -645,7 +770,7 @@ class RazorpayTestPaymentAdapter:
         idempotency_key: str,
     ) -> RazorpayPaymentResult:
         with self._lock:
-            current = self._payments.get(transaction.transaction_id)
+            current = self._state_store.get(transaction.transaction_id)
             if current is None or current.order_id is None or current.payment_id is None:
                 raise PaymentStateError("Razorpay refund requires a captured bound payment")
             order_id = current.order_id
@@ -668,8 +793,71 @@ class RazorpayTestPaymentAdapter:
 
         def perform() -> RazorpayPaymentResult:
             with self._lock:
-                current = self._payments[transaction.transaction_id]
+                current = self._state_store.get(transaction.transaction_id)
+                if current is None:
+                    raise PaymentStateError("Razorpay refund lost its captured payment state")
                 SimulatedPaymentAdapter._assert_transaction_unchanged(current, transaction)
+                if (
+                    current.order_id == order_id
+                    and current.payment_id == payment_id
+                    and current.state == PaymentState.REFUNDED
+                    and current.refund_id is not None
+                ):
+                    return self._payment_result(
+                        transaction,
+                        operation=PaymentOperation.REFUND,
+                        state=PaymentState.REFUNDED,
+                        provider_reference=current.refund_id,
+                        provider_status="processed",
+                        order_id=order_id,
+                        payment_id=payment_id,
+                        refund_id=current.refund_id,
+                        recovered=True,
+                    )
+                if (
+                    current.order_id == order_id
+                    and current.payment_id == payment_id
+                    and current.state == PaymentState.REFUND_PENDING
+                    and current.refund_id is not None
+                ):
+                    refund = self._transport.request(
+                        "GET",
+                        f"/refunds/{current.refund_id}",
+                    )
+                    refund_id, provider_status, state = self._validate_refund(
+                        refund,
+                        transaction=transaction,
+                        payment_id=payment_id,
+                    )
+                    if refund_id != current.refund_id:
+                        raise PaymentStateError(
+                            "Razorpay refund lookup returned another refund"
+                        )
+                    result = self._payment_result(
+                        transaction,
+                        operation=PaymentOperation.REFUND,
+                        state=state,
+                        provider_reference=refund_id,
+                        provider_status=provider_status,
+                        order_id=order_id,
+                        payment_id=payment_id,
+                        refund_id=refund_id,
+                        recovered=True,
+                    )
+                    if state == PaymentState.REFUND_PENDING:
+                        raise _PendingRefund(result)
+                    updated = current.model_copy(
+                        update={
+                            "state": PaymentState.REFUNDED,
+                            "last_reference": refund_id,
+                        }
+                    )
+                    self._state_store.compare_and_set(
+                        transaction.transaction_id,
+                        expected=current,
+                        updated=updated,
+                    )
+                    return result
                 if current.state != PaymentState.CAPTURED:
                     raise PaymentStateError(
                         f"cannot REFUND Razorpay payment from {current.state.value}"
@@ -682,7 +870,6 @@ class RazorpayTestPaymentAdapter:
                     payment_id=payment_id,
                     allowed_statuses={"captured"},
                     require_full_capture=True,
-                    require_no_refund=True,
                 )
                 refund = self._transport.request(
                     "POST",
@@ -699,14 +886,19 @@ class RazorpayTestPaymentAdapter:
                     transaction=transaction,
                     payment_id=payment_id,
                 )
-                self._payments[transaction.transaction_id] = current.model_copy(
+                updated = current.model_copy(
                     update={
                         "state": state,
                         "last_reference": refund_id,
                         "refund_id": refund_id,
                     }
                 )
-                return self._payment_result(
+                self._state_store.compare_and_set(
+                    transaction.transaction_id,
+                    expected=current,
+                    updated=updated,
+                )
+                result = self._payment_result(
                     transaction,
                     operation=PaymentOperation.REFUND,
                     state=state,
@@ -716,24 +908,37 @@ class RazorpayTestPaymentAdapter:
                     payment_id=payment_id,
                     refund_id=refund_id,
                 )
+                if state == PaymentState.REFUND_PENDING:
+                    raise _PendingRefund(result)
+                return result
 
-        return self._idempotency.execute(
-            scope=f"RAZORPAY_TEST_MODE:{transaction.transaction_id}:REFUND",
-            key=idempotency_key,
-            fingerprint=fingerprint,
-            operation=perform,
-        )
+        try:
+            return self._idempotency.execute(
+                # V2 deliberately does not retain a pending response as a
+                # completed operation. Retrying polls the exact bound refund.
+                # The ledger key is provider-payment scoped rather than caller
+                # supplied, so two different local keys cannot race two full
+                # refund submissions for one payment.
+                scope=f"RAZORPAY_TEST_MODE:{transaction.transaction_id}:REFUND_V2",
+                key=f"FULL_REFUND:{payment_id}",
+                fingerprint=fingerprint,
+                operation=perform,
+            )
+        except _PendingRefund as pending:
+            return pending.result
 
     def snapshot(self, transaction_id: str) -> PaymentSnapshot:
         with self._lock:
-            return self._payments.get(
-                transaction_id,
-                PaymentSnapshot(
+            current = self._state_store.get(transaction_id)
+            return (
+                current
+                if current is not None
+                else PaymentSnapshot(
                     simulated=False,
                     adapter_name="RAZORPAY_TEST_MODE",
                     transaction_id=transaction_id,
                     state=PaymentState.NONE,
-                ),
+                )
             ).model_copy(deep=True)
 
     def _find_order_by_receipt(self, receipt: str) -> Mapping[str, Any] | None:
@@ -922,14 +1127,20 @@ class RazorpayWebhookVerifier:
     ) -> Mapping[str, Any]:
         if not isinstance(raw_body, bytes) or not isinstance(signature, str):
             raise PaymentStateError("Razorpay webhook body and signature are required")
+        if not raw_body or len(raw_body) > _MAX_WEBHOOK_BODY_BYTES:
+            raise PaymentStateError("Razorpay webhook body size is invalid")
         if not _HEX_SIGNATURE.fullmatch(signature):
             raise PaymentStateError("Razorpay webhook signature format is invalid")
         expected = hmac.new(self._secret, raw_body, sha256).hexdigest()
         if not hmac.compare_digest(expected, signature.lower()):
             raise PaymentStateError("Razorpay webhook signature is invalid")
         try:
-            event = json.loads(raw_body.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
+            event = json.loads(
+                raw_body.decode("utf-8"),
+                object_pairs_hook=_unique_provider_object,
+                parse_constant=_reject_provider_constant,
+            )
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
             raise PaymentStateError("Razorpay webhook body is invalid JSON") from None
         if not isinstance(event, dict):
             raise PaymentStateError("Razorpay webhook body must be an object")

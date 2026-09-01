@@ -420,6 +420,108 @@ that existed at that revision. The final tree adds the build-lock guard as test
 271. This remains same-host/operator evidence; published-wheel availability and
 independent reproduction are still external.
 
+## 2026-09-02 — Authoritative runtime evidence and single-host durability
+
+### What broke or remained unsafe
+
+The D status object still depended on code-supplied gate reports: no runtime
+loader could distinguish a pinned real receipt from a fixture or caller-created
+model. Payment, commitment, and idempotency state disappeared with the process;
+the audit lock coordinated only objects in one interpreter. A crash after a
+provider mutation but before the local idempotency result could cause a retry,
+and pending compensation could be mistaken for a completed overall operation.
+
+The checkpoint status contract also required E before provider execution. E is
+the submission bundle created after D, so this made the integrated D run
+architecturally impossible. After separating E, a second cycle remained: D
+cannot be evidence required before the provider-Test run that produces D.
+
+Finally, the Razorpay webhook verifier was a detached HMAC helper. There was no
+raw-body route, durable provider event-ID deduplication, exact operation binding,
+out-of-order capture/refund handling, or redacted webhook evidence export. The D
+UI could display simulation only even if an operator safely installed a real
+Test operation.
+
+The post-implementation audit then found four recovery/security defects that the
+first green suite did not expose. A pending provider refund was intentionally not
+called complete, but its adapter result was journaled and the compensation layer
+never polled it, so it could not later reach `processed`. Webhook redelivery at a
+later local time changed the locally computed record digest and was misclassified
+as an event-ID collision. Failed bearer authentication did not consume the rate
+limit, and runtime construction could reach the read-only credential preflight
+before all evidence and webhook configuration had been validated. Audit rows also
+accepted semantically equivalent noncanonical encodings, and an expired handoff
+with only a reservation needed a more precise authority boundary.
+
+### How it was fixed
+
+- Added strict Checkpoint B and D receipt schemas and an authoritative loader
+  whose pin file requires an out-of-band SHA-256. Every evidence file is hashed
+  before parsing; duplicate/nonfinite/unknown/symlinked inputs are rejected; and
+  A→B→C→D source/upstream links are recomputed. Status reloads the bundle on
+  every request so later file modification fails closed.
+- Added SQLite WAL with `synchronous=FULL` for canonical JSON state, optimistic
+  CAS, payment and commitment snapshots, typed allowlisted idempotency results,
+  stale-lease recovery, and integrity checks. Cross-process regressions prove one
+  side effect/result for concurrent callers on the claimed single host.
+- Bound Razorpay reserve/capture/refund to that durable state and provider-side
+  idempotency. Exact state can reconstruct a result when the mutation commits
+  immediately before the result journal. Completed lifecycles resume after
+  restart without another provider call; pending compensation is deliberately
+  not cached as a terminal D result.
+- Added OS-level companion locking around the audit read/verify/append critical
+  section and a three-process append regression.
+- Separated prerequisites: A–C plus current verified Test runtime may authorize
+  the compensated integration run; A–D plus final integration evidence govern
+  final D readiness; E remains downstream packaging. The real-money field stays
+  permanently false.
+- Added a startup-pinned execution adapter. The HTTP route requires an
+  environment-only bearer token, a local rate limit, and exactly one opaque
+  operation ID. Transaction, callback, receipts, provider configuration,
+  credentials, and signing keys cannot come from request JSON. Current Test
+  credentials receive a read-only preflight before enablement.
+- Added strict provider JSON parsing and a raw webhook endpoint following the
+  documented Razorpay HMAC and event-ID headers. `payment.captured` and
+  `refund.processed` are bound to the prepared order/payment/amount/currency,
+  stored durably, duplicate/collision checked, accepted in either order, and
+  exported as a digest-bound set without raw bodies or secrets.
+- Added a hidden-by-default operator Test control to the UI. It appears only when
+  the server reports the prepared path ready, sends the token only as an
+  Authorization header, clears it immediately, and labels the result as
+  insufficient by itself for D.
+- Made pending refund results non-terminal at both idempotency layers. Retry uses
+  Razorpay's exact refund-ID lookup, validates the same payment/amount/currency,
+  and advances the durable state only when the provider says `processed`. One
+  provider-payment-scoped ledger key prevents different local keys from racing
+  two full refunds.
+- Restricted post-expiry continuation to exact durable lifecycle state. A
+  reservation alone is insufficient unless its matching commitment had already
+  persisted `CAPTURE_ALLOWED`; captured/refund states remain recoverable for
+  compensation.
+- Made webhook deduplication compare stable signed-event fields and return the
+  first retained timestamp/digest on redelivery. Changed content under the same
+  provider event ID still fails as a collision.
+- Moved evidence, repository, and local secret validation before provider
+  preflight; rate-limited failed authentication; required canonical strict audit
+  JSON; and made sensitive prepared/lifecycle outputs refuse overwrite.
+
+### Regression evidence and limitation
+
+The current tree passes 95 Checkpoint B-focused tests, 76 Checkpoint D-focused
+tests, and 325 total deterministic tests, plus compilation, dependency, and
+JavaScript syntax checks. Tests cover evidence tampering, restart/cross-process
+state, payment journal crash windows, completed and pending lifecycle replay,
+adapter request authority, authentication/rate limiting, strict/canonical JSON,
+pending-to-processed refund polling, expiry authority, raw webhook signatures,
+late redelivery/collisions/order, and redacted export.
+
+This is local fake-transport and same-host evidence. No genuine Candidate 2 A
+receipt, complete B receipt, final C evidence, provider Checkout/capture/refund,
+webhook delivery, public TLS host, managed key, backup/restore, HA, hosted
+security review, or D receipt was created. SQLite digests are not protection
+against an attacker who can rewrite both a row and its unkeyed digest. The
+bundled WSGI server remains loopback development software.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

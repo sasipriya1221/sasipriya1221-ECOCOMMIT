@@ -3,19 +3,25 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from threading import RLock
-from typing import Literal
+from pathlib import Path
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ._canonical import sha256_hex
 from .certificates import CertificateVerifier, CommitCertificate
 from .commitment import CommitmentStage, CommitmentState
+from .durable import DurableStateConflict, SQLiteJSONStateStore
 from .evidence import EvidenceRegistry
 from .exposure import TransactionBinding
-from .idempotency import IdempotencyLedger, request_fingerprint
+from .idempotency import IdempotencyBackend, IdempotencyLedger, request_fingerprint
 
 
 class PaymentStateError(RuntimeError):
+    pass
+
+
+class PaymentStateConflict(PaymentStateError):
     pass
 
 
@@ -44,7 +50,7 @@ class PaymentState(str, Enum):
 
 
 class PaymentResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     simulated: bool
     adapter_name: Literal["SIMULATED_LOCAL", "RAZORPAY_TEST_MODE"]
@@ -57,7 +63,7 @@ class PaymentResult(BaseModel):
 
 
 class SimulatedPaymentResult(PaymentResult):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     simulated: Literal[True] = True
     adapter_name: Literal["SIMULATED_LOCAL"] = "SIMULATED_LOCAL"
@@ -65,7 +71,7 @@ class SimulatedPaymentResult(PaymentResult):
 
 
 class PaymentSnapshot(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     simulated: bool = True
     adapter_name: Literal["SIMULATED_LOCAL", "RAZORPAY_TEST_MODE"] = "SIMULATED_LOCAL"
@@ -89,15 +95,118 @@ class PaymentSnapshot(BaseModel):
         return self
 
 
+class PaymentStateStore(Protocol):
+    def get(self, transaction_id: str) -> PaymentSnapshot | None: ...
+
+    def compare_and_set(
+        self,
+        transaction_id: str,
+        *,
+        expected: PaymentSnapshot | None,
+        updated: PaymentSnapshot,
+    ) -> None: ...
+
+
+class InMemoryPaymentStateStore:
+    def __init__(self) -> None:
+        self._values: dict[str, PaymentSnapshot] = {}
+        self._lock = RLock()
+
+    def get(self, transaction_id: str) -> PaymentSnapshot | None:
+        with self._lock:
+            value = self._values.get(transaction_id)
+            return None if value is None else value.model_copy(deep=True)
+
+    def compare_and_set(
+        self,
+        transaction_id: str,
+        *,
+        expected: PaymentSnapshot | None,
+        updated: PaymentSnapshot,
+    ) -> None:
+        if updated.transaction_id != transaction_id:
+            raise PaymentStateConflict("payment state transaction id does not match")
+        with self._lock:
+            current = self._values.get(transaction_id)
+            if current != expected:
+                raise PaymentStateConflict("payment state changed concurrently")
+            self._values[transaction_id] = updated.model_copy(deep=True)
+
+
+class SQLitePaymentStateStore:
+    """Durable PaymentSnapshot storage with optimistic cross-process updates."""
+
+    _NAMESPACE = "payment-snapshots-v1"
+
+    def __init__(
+        self,
+        path_or_store: str | Path | SQLiteJSONStateStore,
+    ) -> None:
+        self._store = (
+            path_or_store
+            if isinstance(path_or_store, SQLiteJSONStateStore)
+            else SQLiteJSONStateStore(path_or_store)
+        )
+
+    def get(self, transaction_id: str) -> PaymentSnapshot | None:
+        document = self._store.load(self._NAMESPACE, transaction_id)
+        if document is None:
+            return None
+        try:
+            return PaymentSnapshot.model_validate(document.value)
+        except ValueError as exc:
+            raise PaymentStateError("durable payment state is invalid") from exc
+
+    def compare_and_set(
+        self,
+        transaction_id: str,
+        *,
+        expected: PaymentSnapshot | None,
+        updated: PaymentSnapshot,
+    ) -> None:
+        if updated.transaction_id != transaction_id:
+            raise PaymentStateConflict("payment state transaction id does not match")
+        document = self._store.load(self._NAMESPACE, transaction_id)
+        try:
+            if expected is None:
+                if document is not None:
+                    raise PaymentStateConflict("payment state changed concurrently")
+                self._store.create(
+                    self._NAMESPACE,
+                    transaction_id,
+                    updated.model_dump(mode="json"),
+                )
+                return
+            if document is None:
+                raise PaymentStateConflict("payment state disappeared")
+            current = PaymentSnapshot.model_validate(document.value)
+            if current != expected:
+                raise PaymentStateConflict("payment state changed concurrently")
+            self._store.compare_and_swap(
+                self._NAMESPACE,
+                transaction_id,
+                expected_version=document.version,
+                expected_sha256=document.payload_sha256,
+                value=updated.model_dump(mode="json"),
+            )
+        except DurableStateConflict as exc:
+            raise PaymentStateConflict("payment state changed concurrently") from exc
+
+
 class SimulatedPaymentAdapter:
     """Explicit local simulator. It does not claim Razorpay/API execution."""
 
     is_simulation: Literal[True] = True
     adapter_name: Literal["SIMULATED_LOCAL"] = "SIMULATED_LOCAL"
 
-    def __init__(self, *, idempotency: IdempotencyLedger | None = None):
+    def __init__(
+        self,
+        *,
+        idempotency: IdempotencyBackend | None = None,
+        state_store: PaymentStateStore | None = None,
+    ):
         self._idempotency = idempotency or IdempotencyLedger()
-        self._payments: dict[str, PaymentSnapshot] = {}
+        self._state_store = state_store or InMemoryPaymentStateStore()
         self._fail_operations: set[PaymentOperation] = set()
         self._lock = RLock()
 
@@ -141,9 +250,11 @@ class SimulatedPaymentAdapter:
 
     def snapshot(self, transaction_id: str) -> PaymentSnapshot:
         with self._lock:
-            return self._payments.get(
-                transaction_id,
-                PaymentSnapshot(transaction_id=transaction_id, state=PaymentState.NONE),
+            current = self._state_store.get(transaction_id)
+            return (
+                current
+                if current is not None
+                else PaymentSnapshot(transaction_id=transaction_id, state=PaymentState.NONE)
             ).model_copy(deep=True)
 
     def _execute(
@@ -187,16 +298,18 @@ class SimulatedPaymentAdapter:
                         raise PaymentStateError(
                             "CAPTURE requires CAPTURE_ALLOWED commitment and commit certificate"
                         )
+                    current = self._state_store.get(transaction.transaction_id)
                     self._assert_capture_authority(
                         commitment,
                         transaction=transaction,
                         certificate=certificate,
-                        current=self._payments.get(
-                            transaction.transaction_id,
-                            PaymentSnapshot(
+                        current=(
+                            current
+                            if current is not None
+                            else PaymentSnapshot(
                                 transaction_id=transaction.transaction_id,
                                 state=PaymentState.NONE,
-                            ),
+                            )
                         ),
                     )
                     verifier.verify(
@@ -206,9 +319,10 @@ class SimulatedPaymentAdapter:
                         registry=registry,
                         now=now,
                     )
-                current = self._payments.get(
-                    transaction.transaction_id,
-                    PaymentSnapshot(transaction_id=transaction.transaction_id, state=PaymentState.NONE),
+                stored_current = self._state_store.get(transaction.transaction_id)
+                current = stored_current or PaymentSnapshot(
+                    transaction_id=transaction.transaction_id,
+                    state=PaymentState.NONE,
                 )
                 self._assert_transaction_unchanged(current, transaction)
                 expected, target = {
@@ -217,10 +331,6 @@ class SimulatedPaymentAdapter:
                     PaymentOperation.VOID: (PaymentState.RESERVED, PaymentState.VOIDED),
                     PaymentOperation.REFUND: (PaymentState.CAPTURED, PaymentState.REFUNDED),
                 }[operation]
-                if current.state != expected:
-                    raise PaymentStateError(
-                        f"cannot {operation.value} simulated payment from {current.state.value}"
-                    )
                 reference = "sim_" + sha256_hex(
                     {
                         "operation": operation.value,
@@ -236,13 +346,28 @@ class SimulatedPaymentAdapter:
                     currency=transaction.currency,
                     provider_reference=reference,
                 )
-                self._payments[transaction.transaction_id] = PaymentSnapshot(
+                if current.state == target and current.last_reference == reference:
+                    # The durable state mutation may have committed immediately
+                    # before a crash prevented the idempotency row from being
+                    # marked complete. Reconstruct only the exact deterministic
+                    # result for the same request identity.
+                    return result
+                if current.state != expected:
+                    raise PaymentStateError(
+                        f"cannot {operation.value} simulated payment from {current.state.value}"
+                    )
+                updated = PaymentSnapshot(
                     transaction_id=transaction.transaction_id,
                     state=target,
                     amount_minor=transaction.amount_minor,
                     currency=transaction.currency,
                     transaction_digest=transaction.digest(),
                     last_reference=reference,
+                )
+                self._state_store.compare_and_set(
+                    transaction.transaction_id,
+                    expected=stored_current,
+                    updated=updated,
                 )
                 return result
 

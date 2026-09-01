@@ -14,6 +14,13 @@ const capturedExposure = document.querySelector("#captured-exposure");
 const finalState = document.querySelector("#final-state");
 const stateTrace = document.querySelector("#state-trace");
 const workflowAlert = document.querySelector("#workflow-alert");
+const runtimeNotice = document.querySelector("#runtime-notice");
+const testExecutionPanel = document.querySelector("#test-execution-panel");
+const testExecutionForm = document.querySelector("#test-execution-form");
+const preparedOperationId = document.querySelector("#prepared-operation-id");
+const testApiToken = document.querySelector("#test-api-token");
+const testExecutionConfirmation = document.querySelector("#test-execution-confirmation");
+const testExecutionResult = document.querySelector("#test-execution-result");
 
 function setMode(mode) {
   if (mode === "SIMULATED") {
@@ -40,12 +47,30 @@ function clearGateCards(message) {
   }
 }
 
+function setRuntimeNotice(testExecutionReady) {
+  const lead = document.createElement("strong");
+  lead.textContent = testExecutionReady
+    ? "Startup-pinned Razorpay Test execution is available."
+    : "This interface is local validation software.";
+  const detail = document.createTextNode(testExecutionReady
+    ? " A–C evidence, current Test credentials, API authentication, durable state, and the prepared operation were configured by the operator. D and E remain evidence-gated; real money stays disabled."
+    : " A healthy service is not proof that any checkpoint passed. The visible workflow uses synthetic evidence and SIMULATED_LOCAL unless an operator-pinned Test operation becomes ready.");
+  runtimeNotice.replaceChildren(lead, detail);
+}
+
 function renderStatus(status) {
   setMode(status.mode);
-  commitReady.textContent = status.irreversible_commit_ready ? "READY (TEST MODE ONLY)" : "BLOCKED";
+  const testExecutionReady = status.service_test_execution_ready === true;
+  commitReady.textContent = testExecutionReady ? "READY — OPERATOR TEST ONLY" : "BLOCKED";
   providerStatus.textContent = status.provider?.status || "NOT REPORTED";
   integrationStatus.textContent = status.final_integration_verified ? "VERIFIED" : "NOT VERIFIED";
   realMoneyStatus.textContent = "DISABLED (OUT OF SCOPE)";
+  testExecutionPanel.hidden = !testExecutionReady;
+  setRuntimeNotice(testExecutionReady);
+  if (!testExecutionReady) {
+    testApiToken.value = "";
+    testExecutionConfirmation.checked = false;
+  }
 
   for (const checkpoint of ["A", "B", "C", "D", "E"]) {
     const card = document.querySelector(`[data-checkpoint="${checkpoint}"]`);
@@ -72,6 +97,10 @@ function renderStatusUnavailable() {
   integrationStatus.textContent = "NOT VERIFIED";
   realMoneyStatus.textContent = "DISABLED (OUT OF SCOPE)";
   clearGateCards("Status API unavailable; no acceptance inferred");
+  testExecutionPanel.hidden = true;
+  setRuntimeNotice(false);
+  testApiToken.value = "";
+  testExecutionConfirmation.checked = false;
   lastUpdated.textContent = "Status API unavailable; no acceptance inferred";
 }
 
@@ -153,6 +182,37 @@ simulationForm.addEventListener("submit", async (event) => {
     workflowAlert.hidden = false;
     workflowAlert.textContent = `Simulation stopped safely: ${safeError}`;
     simulationResult.textContent = `Simulation not completed: ${safeError}`;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+testExecutionForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = testExecutionForm.querySelector("button");
+  const operationId = preparedOperationId.value.trim();
+  const bearerToken = testApiToken.value;
+  testApiToken.value = "";
+  testExecutionConfirmation.checked = false;
+  button.disabled = true;
+  testExecutionResult.textContent = "Running the startup-pinned Razorpay Test operation…";
+  try {
+    const response = await fetch("/v1/commit", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${bearerToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ operation_id: operationId }),
+    });
+    const result = await response.json();
+    if (!response.ok && response.status !== 202) {
+      throw new Error(`${result.reason || "TEST_EXECUTION_REJECTED"} (correlation ${result.correlation_id || "unavailable"})`);
+    }
+    testExecutionResult.textContent = JSON.stringify(result, null, 2);
+    await loadStatus();
+  } catch (error) {
+    testExecutionResult.textContent = `Test operation stopped safely: ${safeSimulationError(error)}`;
   } finally {
     button.disabled = false;
   }

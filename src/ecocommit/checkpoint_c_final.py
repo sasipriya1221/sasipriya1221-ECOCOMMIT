@@ -15,7 +15,7 @@ def _utc(value: datetime, field_name: str) -> datetime:
 
 
 class CheckpointCUpstreamBinding(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     checkpoint_a_receipt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     checkpoint_b_receipt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -27,7 +27,7 @@ class CheckpointCUpstreamBinding(BaseModel):
 class CheckpointCAcceptanceRule(BaseModel):
     """Quantitative rule that must be frozen before final outcomes exist."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     comparator_id: str = Field(min_length=1)
     minimum_tel_reduction_bps: int = Field(ge=0, le=10_000)
@@ -45,7 +45,7 @@ class CheckpointCAcceptanceRule(BaseModel):
 
 
 class CheckpointCFinalRegistration(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: Literal["C.FINAL.REGISTRATION.1"] = "C.FINAL.REGISTRATION.1"
     registration_id: str = Field(min_length=1)
@@ -85,7 +85,7 @@ class CheckpointCFinalRegistration(BaseModel):
 
 
 class CheckpointCFinalMetricSnapshot(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     baseline_id: str = Field(min_length=1)
     total_cases: int = Field(gt=0)
@@ -102,9 +102,17 @@ class CheckpointCFinalMetricSnapshot(BaseModel):
     contains_simulated_costs: Literal[False] = False
     contains_simulated_latency: Literal[False] = False
 
+    @model_validator(mode="after")
+    def case_counts_are_coherent(self):
+        if self.errored_cases > self.total_cases:
+            raise ValueError("errored case count exceeds total cases")
+        if self.missing_latency_cases > self.total_cases:
+            raise ValueError("missing-latency case count exceeds total cases")
+        return self
+
 
 class CheckpointCFinalDecision(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     tel_reduction_bps: int
     passed: bool
@@ -163,7 +171,7 @@ def evaluate_final_metrics(
 
 
 class CheckpointCFinalEvidence(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     schema_version: Literal["C.FINAL.EVIDENCE.1"] = "C.FINAL.EVIDENCE.1"
     generated_at_utc: datetime

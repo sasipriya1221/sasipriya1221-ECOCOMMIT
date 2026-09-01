@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from threading import Condition, RLock, get_ident
-from typing import Callable, Generic, TypeVar
+from typing import Callable, Generic, Protocol, TypeVar
 
 from ._canonical import sha256_hex
 
@@ -22,6 +22,19 @@ class IdempotencyConflict(IdempotencyError):
 
 class IdempotencyReentry(IdempotencyError):
     pass
+
+
+class IdempotencyBackend(Protocol):
+    def execute(
+        self,
+        *,
+        scope: str,
+        key: str,
+        fingerprint: str,
+        operation: Callable[[], T],
+    ) -> T: ...
+
+    def completed_count(self) -> int: ...
 
 
 class _EntryStatus(str, Enum):
