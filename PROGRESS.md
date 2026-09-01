@@ -72,6 +72,8 @@ fresh 80-case run. It does not reuse Candidate 1 rows. The local implementation:
   that later recover—without retaining raw provider text;
 - treats a provider failure after an invalid candidate as a terminal interrupted
   correction, not a resumable pure provider deferral;
+- records whether a terminal schema failure occurred before or after a correction
+  request instead of inferring correction from a generic error label;
 - restricts provider URLs to HTTPS allowlisted hosts and bounds response bodies;
 - strictly decodes provider envelopes and candidates, rejecting duplicate keys,
   non-finite numbers, invalid Unicode scalar values, and excessive structure;

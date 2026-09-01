@@ -672,6 +672,45 @@ This is same-host deterministic evidence. It does not prove external provider
 behavior, run Candidate 2, fill any final evidence slot, or change any checkpoint
 to passed.
 
+## 2026-09-02 — Terminal schema failure falsely labeled as corrected
+
+### What broke or remained unsafe
+
+The provider request limit is shared by transport retries and the single bounded
+schema-correction opportunity. If a transient provider failure consumed an early
+attempt and the final allowed response was the first schema-invalid candidate,
+no correction request ran. `CandidateContractError` nevertheless always said the
+candidate failed after correction, and the live evaluator always emitted
+`SCHEMA_INVALID_AFTER_CORRECTION`.
+
+The provider trace still exposed the actual order, so this could be reconstructed
+manually, but the terminal classification itself was false. This did not affect
+Candidate 1 evidence and Candidate 2 has not run remotely.
+
+### How it was fixed
+
+- `CandidateContractError` now carries immutable `correction_attempted` state.
+- The interpreter sets it from the actual correction state-machine branch.
+- The live row retains that boolean and emits
+  `SCHEMA_INVALID_BEFORE_CORRECTION` or `SCHEMA_INVALID_AFTER_CORRECTION`
+  accordingly.
+- Regressions cover both terminal phases and the concrete transient transport →
+  first schema-invalid exhaustion sequence.
+
+### Regression evidence and limitation
+
+The first red test run produced the expected two failures because the old error
+object had no correction-attempt state. After the fix, the focused Candidate 2/
+provider suite passes **48/48** and the full suite passes **346/346** in both the
+working repository and a no-hardlink clone at
+`e616ce47a86f91af9810f089bd4ed5ee0ebd7849`. The clone also passes compilation,
+dependency consistency, JavaScript syntax, readiness, diff, and clean-status
+checks.
+
+The fix makes evidence truthful; it does not increase the configured provider
+request budget, promise that correction is always available during an outage,
+run Candidate 2, or change any checkpoint to passed.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

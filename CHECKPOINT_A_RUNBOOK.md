@@ -87,6 +87,9 @@ fields or graph edges. One schema-invalid candidate receives at most one bounded
 model correction request. A second invalid candidate is terminal. If the
 correction request itself ends in a provider error, both facts are retained and
 the row is terminal rather than misclassified as a pure provider deferral.
+If earlier provider retries exhaust the request budget before the first invalid
+candidate can be corrected, the row explicitly records that correction was not
+attempted; it is never described as a failed correction.
 
 Provider envelopes and candidate content are decoded as bounded strict JSON.
 Duplicate keys, NaN/Infinity, invalid Unicode scalar values, and excessive

@@ -142,6 +142,8 @@ schema failures cannot become a pass.
 Candidate 2 retains a redacted record for every provider attempt, including a
 transient HTTP or transport retry that later succeeds. This preserves the actual
 attempt chronology without retaining provider bodies or credentials.
+Terminal candidate evidence also carries an explicit correction-attempt flag and
+uses different codes for failure before versus after a correction request.
 
 Never print or pass a provider key in a shell command that will be retained. Use
 the approved CI secret boundary.
