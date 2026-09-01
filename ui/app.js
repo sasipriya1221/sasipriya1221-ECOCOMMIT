@@ -108,6 +108,15 @@ function renderWorkflow(workflow, correlationId) {
     : "";
 }
 
+function safeSimulationError(error) {
+  const message = error instanceof SyntaxError
+    ? "Service returned an unreadable response"
+    : (error?.message || "Service request failed");
+  return message.toLowerCase().includes("correlation")
+    ? message
+    : `${message} (correlation unavailable)`;
+}
+
 async function loadStatus() {
   try {
     const response = await fetch("/v1/status", { cache: "no-store" });
@@ -137,12 +146,13 @@ simulationForm.addEventListener("submit", async (event) => {
     renderWorkflow(result.workflow, result.correlation_id);
     simulationResult.textContent = JSON.stringify(result, null, 2);
   } catch (error) {
+    const safeError = safeSimulationError(error);
     workflowOutcome.textContent = "SIMULATION NOT COMPLETED";
     workflowOutcome.dataset.outcome = "ERROR";
     finalState.textContent = "BLOCKED";
     workflowAlert.hidden = false;
-    workflowAlert.textContent = `Simulation stopped safely: ${error.message}`;
-    simulationResult.textContent = `Simulation not completed: ${error.message}`;
+    workflowAlert.textContent = `Simulation stopped safely: ${safeError}`;
+    simulationResult.textContent = `Simulation not completed: ${safeError}`;
   } finally {
     button.disabled = false;
   }

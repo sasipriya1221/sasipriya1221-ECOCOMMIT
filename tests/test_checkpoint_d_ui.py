@@ -39,6 +39,8 @@ def test_ui_renders_economic_state_and_explicit_failure_feedback():
     assert "renderWorkflow" in script
     assert "Simulation stopped safely" in script
     assert "correlation" in script
+    assert "Service returned an unreadable response" in script
+    assert "correlation unavailable" in script
 
 
 def test_status_failure_resets_stale_gate_acceptance_in_the_ui():
