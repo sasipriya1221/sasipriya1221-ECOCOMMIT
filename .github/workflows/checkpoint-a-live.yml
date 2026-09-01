@@ -12,11 +12,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  checkpoint-a:
+  regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 20
     permissions:
       contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Offline regression suite
+        run: pytest
+
+  shard:
+    needs: regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - shard: 0
+            start: 0
+            end: 20
+          - shard: 1
+            start: 20
+            end: 40
+          - shard: 2
+            start: 40
+            end: 60
+          - shard: 3
+            start: 60
+            end: 80
     env:
       ECOCOMMIT_LLM_BASE_URL: https://api.groq.com/openai/v1
       ECOCOMMIT_LLM_MODEL: qwen/qwen3.8-27b
@@ -32,24 +66,62 @@ jobs:
           cache: pip
       - name: Install project
         run: python -m pip install -e '.[dev]'
-      - name: Offline regression suite
-        run: pytest
-      - name: Verify live-model secret exists
+      - name: Verify Groq secret exists
         shell: bash
         run: |
           if [ -z "$ECOCOMMIT_LLM_API_KEY" ]; then
             echo 'ECOCOMMIT_GROQ_API_KEY is not configured. Checkpoint A cannot be claimed with fixtures.' >&2
             exit 3
           fi
-      - name: Run live Checkpoint A evaluation
-        run: python scripts/checkpoint_a_live.py --output artifacts/checkpoint_a_results.json
+      - name: Run frozen benchmark shard
+        run: >-
+          python scripts/checkpoint_a_shard.py
+          --start ${{ matrix.start }}
+          --end ${{ matrix.end }}
+          --output artifacts/shard-${{ matrix.shard }}.json
+      - name: Upload shard artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoint-a-shard-${{ matrix.shard }}
+          path: artifacts/shard-${{ matrix.shard }}.json
+          if-no-files-found: warn
+
+  aggregate:
+    needs: shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Download shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: checkpoint-a-shard-*
+          path: artifacts/shards
+          merge-multiple: false
+      - name: Aggregate frozen Checkpoint A result
+        id: aggregate
+        continue-on-error: true
+        run: python scripts/checkpoint_a_aggregate.py --input-dir artifacts/shards --output artifacts/checkpoint_a_results.json
       - name: Print compact live diagnostics
         if: always()
         run: python scripts/checkpoint_a_diagnostics.py artifacts/checkpoint_a_results.json
-      - name: Upload evaluation artifact
+      - name: Upload final evaluation artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: checkpoint-a-results
           path: artifacts/checkpoint_a_results.json
           if-no-files-found: warn
+      - name: Enforce frozen gate
+        if: steps.aggregate.outcome != 'success'
+        run: exit 2
