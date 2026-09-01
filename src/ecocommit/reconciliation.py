@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Literal
+from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -12,13 +12,13 @@ from .commitment import (
     CommitmentState,
     ProgressiveCommitmentEngine,
 )
+from .exposure import TransactionBinding
 from .payments import (
+    PaymentProviderError,
+    PaymentResult,
     PaymentSnapshot,
     PaymentState,
     PaymentStateError,
-    SimulatedPaymentAdapter,
-    SimulatedPaymentFailure,
-    SimulatedPaymentResult,
 )
 
 
@@ -102,7 +102,11 @@ class Reconciler:
             return {PaymentState.CAPTURED}
         if stage == CommitmentStage.COMPENSATION_PENDING:
             # A refund can succeed just before its state transition is journaled.
-            return {PaymentState.CAPTURED, PaymentState.REFUNDED}
+            return {
+                PaymentState.CAPTURED,
+                PaymentState.REFUND_PENDING,
+                PaymentState.REFUNDED,
+            }
         if stage == CommitmentStage.COMPENSATED:
             return {PaymentState.REFUNDED}
         if stage == CommitmentStage.CANCELLED:
@@ -128,6 +132,12 @@ class Reconciler:
                 "UNEXPECTED_CAPTURE",
                 f"payment is CAPTURED while commitment is {stage.value}",
                 compensate=True,
+            )
+        if payment_state == PaymentState.REFUND_PENDING:
+            return ReconciliationFinding(
+                code="REFUND_PENDING",
+                severity=ReconciliationSeverity.WARNING,
+                message="provider accepted the refund but has not confirmed completion",
             )
         if stage in {CommitmentStage.RESERVED, CommitmentStage.CAPTURE_ALLOWED}:
             return ReconciliationFinding(
@@ -166,22 +176,34 @@ class Reconciler:
 class CompensationOutcome(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    simulated: Literal[True] = True
+    simulated: bool
     succeeded: bool
+    pending: bool = False
     state: CommitmentState
-    payment_result: SimulatedPaymentResult | None = None
+    payment_result: PaymentResult | None = None
     error: str | None = None
     reconciled_existing_refund: bool = False
 
 
+class CompensatingPaymentAdapter(Protocol):
+    def snapshot(self, transaction_id: str) -> PaymentSnapshot: ...
+
+    def refund(
+        self,
+        transaction: TransactionBinding,
+        *,
+        idempotency_key: str,
+    ) -> PaymentResult: ...
+
+
 class CompensationCoordinator:
-    """Retry-safe full-refund compensation against the explicit simulator."""
+    """Retry-safe full-refund compensation against a payment-boundary adapter."""
 
     def __init__(
         self,
         *,
         engine: ProgressiveCommitmentEngine,
-        payments: SimulatedPaymentAdapter,
+        payments: CompensatingPaymentAdapter,
     ):
         self.engine = engine
         self.payments = payments
@@ -251,9 +273,26 @@ class CompensationCoordinator:
                 at=at,
             )
             return CompensationOutcome(
+                simulated=payment.simulated,
                 succeeded=True,
                 state=completed,
                 reconciled_existing_refund=True,
+            )
+
+        if payment.state == PaymentState.REFUND_PENDING:
+            if (
+                payment.transaction_digest != pending.transaction.digest()
+                or not payment.last_reference
+                or not payment.refund_id
+            ):
+                raise CompensationError(
+                    "pending refund cannot be reconciled to the pending transaction"
+                )
+            return CompensationOutcome(
+                simulated=payment.simulated,
+                succeeded=False,
+                pending=True,
+                state=pending,
             )
 
         try:
@@ -261,12 +300,24 @@ class CompensationCoordinator:
                 pending.transaction,
                 idempotency_key=idempotency_key,
             )
-        except (SimulatedPaymentFailure, PaymentStateError) as exc:
+        except (PaymentProviderError, PaymentStateError) as exc:
             return CompensationOutcome(
+                simulated=payment.simulated,
                 succeeded=False,
                 state=pending,
                 error=str(exc),
             )
+
+        if result.state == PaymentState.REFUND_PENDING:
+            return CompensationOutcome(
+                simulated=result.simulated,
+                succeeded=False,
+                pending=True,
+                state=pending,
+                payment_result=result,
+            )
+        if result.state != PaymentState.REFUNDED:
+            raise CompensationError("payment adapter did not confirm a completed refund")
 
         completed = self.engine.complete_compensation(
             pending,
@@ -275,6 +326,7 @@ class CompensationCoordinator:
             at=at,
         )
         return CompensationOutcome(
+            simulated=result.simulated,
             succeeded=True,
             state=completed,
             payment_result=result,

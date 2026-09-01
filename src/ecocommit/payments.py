@@ -5,7 +5,7 @@ from enum import Enum
 from threading import RLock
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ._canonical import sha256_hex
 from .certificates import CertificateVerifier, CommitCertificate
@@ -19,7 +19,11 @@ class PaymentStateError(RuntimeError):
     pass
 
 
-class SimulatedPaymentFailure(RuntimeError):
+class PaymentProviderError(RuntimeError):
+    """A safe operational provider/adapter failure at the payment boundary."""
+
+
+class SimulatedPaymentFailure(PaymentProviderError):
     pass
 
 
@@ -35,33 +39,54 @@ class PaymentState(str, Enum):
     RESERVED = "RESERVED"
     CAPTURED = "CAPTURED"
     VOIDED = "VOIDED"
+    REFUND_PENDING = "REFUND_PENDING"
     REFUNDED = "REFUNDED"
 
 
-class SimulatedPaymentResult(BaseModel):
+class PaymentResult(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    simulated: Literal[True] = True
-    adapter_name: Literal["SIMULATED_LOCAL"] = "SIMULATED_LOCAL"
+    simulated: bool
+    adapter_name: Literal["SIMULATED_LOCAL", "RAZORPAY_TEST_MODE"]
     transaction_id: str
     operation: PaymentOperation
     state: PaymentState
     amount_minor: int = Field(gt=0)
     currency: str = Field(pattern=r"^[A-Z]{3}$")
+    provider_reference: str = Field(min_length=1)
+
+
+class SimulatedPaymentResult(PaymentResult):
+    model_config = ConfigDict(frozen=True)
+
+    simulated: Literal[True] = True
+    adapter_name: Literal["SIMULATED_LOCAL"] = "SIMULATED_LOCAL"
     provider_reference: str = Field(pattern=r"^sim_[0-9a-f]{24}$")
 
 
 class PaymentSnapshot(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    simulated: Literal[True] = True
-    adapter_name: Literal["SIMULATED_LOCAL"] = "SIMULATED_LOCAL"
+    simulated: bool = True
+    adapter_name: Literal["SIMULATED_LOCAL", "RAZORPAY_TEST_MODE"] = "SIMULATED_LOCAL"
     transaction_id: str
     state: PaymentState
     amount_minor: int | None = Field(default=None, gt=0)
     currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
     transaction_digest: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     last_reference: str | None = None
+    order_id: str | None = Field(default=None, pattern=r"^order_[A-Za-z0-9]+$")
+    payment_id: str | None = Field(default=None, pattern=r"^pay_[A-Za-z0-9]+$")
+    refund_id: str | None = Field(default=None, pattern=r"^rfnd_[A-Za-z0-9]+$")
+
+    @model_validator(mode="after")
+    def coherent_adapter_identity(self):
+        if self.simulated != (self.adapter_name == "SIMULATED_LOCAL"):
+            raise ValueError("payment simulation flag and adapter name disagree")
+        if self.adapter_name == "RAZORPAY_TEST_MODE" and self.state != PaymentState.NONE:
+            if self.order_id is None or self.payment_id is None:
+                raise ValueError("Razorpay payment activity requires order and payment identifiers")
+        return self
 
 
 class SimulatedPaymentAdapter:

@@ -1,0 +1,88 @@
+name: Razorpay Test Lifecycle Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_test_mode:
+        description: Create one INR 1.00 Razorpay Test Mode order (no real money)
+        required: true
+        type: choice
+        options:
+          - RUN_TEST_MODE_ORDER
+      credential_preflight_run_id:
+        description: Successful redacted credential-preflight run id
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate-order-api-boundary-without-capture-claim:
+    if: inputs.confirm_test_mode == 'RUN_TEST_MODE_ORDER'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+      RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+      B8_PREFLIGHT_RUN_ID: ${{ inputs.credential_preflight_run_id }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install the ECOCOMMIT validation snapshot
+        run: python -m pip install -e .
+      - name: Create, bind, fetch, and replay one Test Mode order
+        run: >-
+          python scripts/checkpoint_b8_razorpay_live.py
+          --output artifacts/checkpoint-b8-razorpay-test.json
+      - name: Publish only redacted validation facts
+        if: always()
+        shell: python
+        run: |
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("artifacts/checkpoint-b8-razorpay-test.json")
+          if not path.is_file():
+              raise SystemExit("B8 evidence file was not produced")
+          evidence = json.loads(path.read_text(encoding="utf-8"))
+          serialized = json.dumps(evidence, sort_keys=True)
+          for name in ("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"):
+              value = os.environ.get(name, "")
+              if value and value in serialized:
+                  raise SystemExit("B8 evidence contains a credential value")
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("# ECOCOMMIT B8 — Razorpay Test Mode\n\n")
+              summary.write(f"- Validation status: `{evidence['status']}`\n")
+              summary.write(f"- B8 passed: `{evidence['checkpoint_b8_passed']}`\n")
+              summary.write(f"- Credential preflight run: `{evidence['github']['credential_preflight_run_id']}`\n")
+              order = evidence.get("order", {})
+              summary.write(f"- Test order created: `{order.get('executed', False)}`\n")
+              if order.get("order_id"):
+                  summary.write(f"- Order id: `{order['order_id']}`\n")
+              summary.write(f"- Amount/currency: `{order.get('amount_minor')}` / `{order.get('currency')}`\n")
+              summary.write(
+                  f"- Provider create calls after identical replay: "
+                  f"`{evidence.get('idempotency', {}).get('provider_create_order_post_count')}`\n"
+              )
+              summary.write(
+                  f"- Payments attached to order: "
+                  f"`{evidence.get('payments_for_order', {}).get('count')}`\n"
+              )
+              summary.write(f"- Capture executed: `{evidence.get('capture', {}).get('executed')}`\n")
+              blocker = evidence.get("external_blocker") or {}
+              summary.write(f"- Exact blocker: `{blocker.get('code')}`\n")
+              summary.write("- Credential values and provider response bodies: not retained\n")
+      - name: Retain redacted B8 evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: checkpoint-b8-razorpay-test-evidence-${{ github.run_id }}
+          path: artifacts/checkpoint-b8-razorpay-test.json
+          if-no-files-found: error
+          retention-days: 30

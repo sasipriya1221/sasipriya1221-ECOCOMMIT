@@ -1,0 +1,73 @@
+name: Razorpay Test Credential Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authenticate-without-retaining-provider-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+      RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+    steps:
+      - name: Verify redacted Test Mode authentication
+        shell: python
+        run: |
+          import base64
+          import json
+          import os
+          from urllib import error, request
+
+          key_id = os.environ.get("RAZORPAY_KEY_ID", "")
+          key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "")
+          if not key_id or not key_secret:
+              raise SystemExit("PREFLIGHT_FAILED reason=secret_missing")
+          if not key_id.startswith("rzp_test_"):
+              raise SystemExit("PREFLIGHT_FAILED reason=not_test_mode")
+          if any(character.isspace() for character in key_id + key_secret):
+              raise SystemExit("PREFLIGHT_FAILED reason=credential_format")
+
+          token = base64.b64encode(f"{key_id}:{key_secret}".encode()).decode()
+          probe = request.Request(
+              "https://api.razorpay.com/v1/orders?count=1",
+              headers={
+                  "Authorization": f"Basic {token}",
+                  "Accept": "application/json",
+                  "User-Agent": "ECOCOMMIT-B8-Preflight/1.0",
+              },
+              method="GET",
+          )
+          try:
+              with request.urlopen(probe, timeout=30) as response:
+                  raw = response.read(2_000_001)
+                  status = response.status
+          except error.HTTPError as exc:
+              # Provider headers and bodies are deliberately discarded.
+              exc.read(65_537)
+              raise SystemExit(f"PREFLIGHT_FAILED reason=http_{exc.code}") from None
+          except (error.URLError, TimeoutError, OSError):
+              raise SystemExit("PREFLIGHT_FAILED reason=transport") from None
+
+          if len(raw) > 2_000_000:
+              raise SystemExit("PREFLIGHT_FAILED reason=response_too_large")
+          try:
+              payload = json.loads(raw.decode("utf-8"))
+          except (UnicodeDecodeError, json.JSONDecodeError):
+              raise SystemExit("PREFLIGHT_FAILED reason=invalid_response") from None
+          if status != 200 or not isinstance(payload, dict) or payload.get("entity") != "collection":
+              raise SystemExit("PREFLIGHT_FAILED reason=unexpected_response")
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as handle:
+                  handle.write("# Razorpay Test credential preflight\n\n")
+                  handle.write("- Secret presence: configured\n")
+                  handle.write("- Key mode: Test\n")
+                  handle.write("- Authentication: verified (HTTP 200)\n")
+                  handle.write("- Probe: read-only order listing\n")
+                  handle.write("- Secret values/provider response: not printed or retained\n")
+          print("PREFLIGHT_OK mode=test authentication=verified response=discarded")
