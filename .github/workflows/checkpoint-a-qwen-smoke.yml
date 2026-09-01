@@ -18,9 +18,9 @@ jobs:
       contents: read
     env:
       ECOCOMMIT_LLM_BASE_URL: https://api.groq.com/openai/v1
-      ECOCOMMIT_LLM_MODEL: qwen/qwen3.8-27b
-      ECOCOMMIT_LLM_REASONING_EFFORT: low
-      ECOCOMMIT_LLM_JSON_SCHEMA: 'true'
+      ECOCOMMIT_LLM_MODEL: qwen/qwen3.6-27b
+      ECOCOMMIT_LLM_REASONING_EFFORT: default
+      ECOCOMMIT_LLM_JSON_SCHEMA: 'false'
       ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS: '2048'
       ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
     steps:
