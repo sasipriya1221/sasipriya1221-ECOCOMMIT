@@ -102,7 +102,11 @@ class Reconciler:
             return {PaymentState.CAPTURED}
         if stage == CommitmentStage.COMPENSATION_PENDING:
             # A refund can succeed just before its state transition is journaled.
-            return {PaymentState.CAPTURED, PaymentState.REFUNDED}
+            return {
+                PaymentState.CAPTURED,
+                PaymentState.REFUND_PENDING,
+                PaymentState.REFUNDED,
+            }
         if stage == CommitmentStage.COMPENSATED:
             return {PaymentState.REFUNDED}
         if stage == CommitmentStage.CANCELLED:
@@ -128,6 +132,12 @@ class Reconciler:
                 "UNEXPECTED_CAPTURE",
                 f"payment is CAPTURED while commitment is {stage.value}",
                 compensate=True,
+            )
+        if payment_state == PaymentState.REFUND_PENDING:
+            return ReconciliationFinding(
+                code="REFUND_PENDING",
+                severity=ReconciliationSeverity.WARNING,
+                message="provider accepted the refund but has not confirmed completion",
             )
         if stage in {CommitmentStage.RESERVED, CommitmentStage.CAPTURE_ALLOWED}:
             return ReconciliationFinding(
