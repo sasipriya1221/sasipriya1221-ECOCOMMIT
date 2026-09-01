@@ -577,6 +577,62 @@ This corrects repository wording and validation discipline only; it does not
 create any new provider, checkpoint, independent-reproduction, or submission
 evidence.
 
+## 2026-09-02 — Strict JSON at candidate and final-gate boundaries
+
+### What broke or remained unsafe
+
+Candidate 2 parsed both the provider envelope and the model's nested candidate
+with Python's permissive JSON defaults. Duplicate keys could therefore overwrite
+earlier values silently, while NaN/Infinity and invalid Unicode scalar values
+could take parser-specific paths before schema validation. A resume or aggregate
+artifact used the same permissive decoding and had no file-size or symlink
+boundary. The source revision bound the implementation, but the runner digest
+did not directly enumerate the interpreter, strict decoder, protocol, or typed
+A-receipt code.
+
+The standalone C plan/suite loader and E independent-reproduction receipt also
+used permissive decoding. In E, duplicate boolean fields could be normalized to
+the last value before the final-readiness decision. This did not create a false
+pass in retained evidence—every current slot remains blocked—but it was an
+unacceptable future parser-differential surface.
+
+### How it was fixed
+
+- Added a shared strict decoder that rejects duplicate object names,
+  NaN/Infinity, invalid Unicode surrogates, excessive depth/node counts, and
+  malformed JSON without retaining input values.
+- Applied it to provider envelopes and nested Candidate 2 content. Candidate
+  JSON defects receive the existing single bounded correction opportunity and
+  remain distinct from malformed provider envelopes.
+- Made A resume/aggregate inputs bounded, nonsymlinked, strict UTF-8 JSON objects
+  and made canonical A hashing forbid non-finite values.
+- Expanded the A runner digest to include the interpreter, strict decoder,
+  protocol, shard, aggregate, constants, and typed receipt implementation.
+- Applied bounded nonsymlinked strict-object loading to standalone C plan/suite
+  files and the E reproduction receipt; E additionally requires exactly the
+  typed receipt fields.
+- Added adversarial tests for duplicate candidates and envelopes, non-finite and
+  invalid-Unicode candidates, strict A artifacts and resume behavior, manifest
+  runtime coverage, duplicate C inputs, and malformed E receipts.
+
+### Regression evidence and limitation
+
+The focused Candidate 2/provider suite passes **44/44**, the focused C suite
+passes **47/47**, the focused E suite passes **13/13**, and the full suite passes
+**342/342** in both the working repository and a no-hardlink clone at
+`3ea35a8a64e5f7eaa65f05c7c720b43d5658958b`. The clone also passes compilation,
+dependency consistency, JavaScript syntax, readiness, diff, and clean-status
+checks.
+
+The first combined focused run stopped during collection because the newly
+parametrized E test used `pytest` without importing it. No product assertion ran
+or failed. Adding the missing test import made the identical 70-test combined
+scope pass; the failed harness invocation is retained here rather than hidden.
+
+Strict parsing protects interpretation of evidence; it does not authenticate an
+independent reproducer, supply real C inputs, make Candidate 2 run remotely, or
+turn any blocked checkpoint into a pass.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

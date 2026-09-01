@@ -52,6 +52,7 @@ production-readiness claim.
 | Model invents authority | Closed mapping, explicit provider candidate fields, bounded model correction, provenance/fidelity gate, trusted exposure config | Adversarial A/B tests | Candidate 2 real gate not evaluated |
 | Material ambiguity guessed | Clarification/rejection based on material risk | Ambiguity and live-failure regressions | Candidate 1 failed; Candidate 2 real gate not evaluated |
 | Caller forges pass/readiness | Caller claims ignored; A→B and D require strict digest-bound receipts; D reloads an out-of-band-hash-pinned cross-linked bundle | A/B/D boundary and loader-tamper tests | Real passing A/B/C receipts and trusted operational pin distribution absent |
+| JSON parser differential or duplicate-key overwrite | Shared bounded strict decoder rejects duplicates, non-finite values, invalid Unicode scalars, excessive structure, symlinked evidence inputs, and non-object A/C/E gate artifacts | Candidate correction, A resume/aggregate, C loader, and E receipt adversarial tests | External providers and independent attestors remain outside local parser control |
 | Unknown evidence source | Registered authority/issuer/kind/scope and subject checks | B evidence tests | Durable authority service absent |
 | Stale/revoked evidence | Freshness, expiry, revocation, version and observation-time checks | B tests | External evidence retrieval absent |
 | Negative approval interpreted positive | Exact claim value/digest predicates | B regression | External schema governance absent |

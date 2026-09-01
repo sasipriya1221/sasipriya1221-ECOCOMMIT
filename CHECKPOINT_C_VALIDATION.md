@@ -17,6 +17,17 @@ and statistical method before any outcome can validate. It structurally refuses
 fixture inputs and simulated cost or latency. No real values or outcomes have
 been filled into that contract.
 
+### Current boundary-hardening addendum
+
+The current input loader rejects oversized, empty, symlinked, duplicate-key,
+non-finite, invalid-Unicode, over-complex, and non-object plan/suite JSON before
+Pydantic validation. This closes parser-differential ambiguity without changing
+any frozen fixture or final decision rule. The current focused C suite passes
+**47/47** and the full deterministic suite passes **342/342**; a separate
+no-hardlink clone at `3ea35a8a64e5f7eaa65f05c7c720b43d5658958b`
+passes the same suite and static/readiness checks. This remains same-host local
+evidence, not a final comparison or independent reproduction.
+
 ## Validation boundary
 
 - Validation date: 2026-09-01.
@@ -127,6 +138,9 @@ one mutable factory.
     recomputes the quantitative gate, binds A/B receipts and the candidate
     revision, and makes post-outcome rule changes or fixture/simulation promotion
     invalid.
+16. Replaced permissive plan/suite JSON loading with a bounded nonsymlinked
+    strict decoder so duplicate keys and non-standard JSON cannot be normalized
+    into a different frozen input.
 
 ## Remaining blockers
 

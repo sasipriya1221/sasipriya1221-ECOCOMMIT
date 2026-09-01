@@ -40,6 +40,11 @@ regression brings the current tracked suite to **326 / 326 passed** in the worki
 repository. These additions close implementation gaps;
 they do not fill any final evidence slot.
 
+The subsequent strict-boundary hardening makes A candidates/shards, C plan/suite
+inputs, and the E independent-reproduction receipt reject ambiguous or
+non-standard JSON before schema validation. The current tree and a no-hardlink
+clone at `3ea35a8a64e5f7eaa65f05c7c720b43d5658958b` pass **342 / 342**.
+
 ## Frozen-boundary check
 
 The historical E snapshot left A on its guarded retry process. Subsequent
@@ -63,7 +68,7 @@ No competing provider run was started.
 | pytest | 8.4.2 |
 | Pydantic | 2.13.5 |
 | Node.js syntax check | v24.18.1 |
-| Latest fully validated code/test revision | `fc63416d7e53455285d89837b17680ea2b9e65e7` |
+| Latest fully validated code/test revision | `3ea35a8a64e5f7eaa65f05c7c720b43d5658958b` |
 | Public remote HEAD during validation | `6485d3b24f4967c178cce9b1a9b67cdf0230840c` |
 | Provider/payment mode | Current local run made no provider call; retained prior evidence proves Razorpay Test authentication and order creation only |
 
@@ -76,7 +81,7 @@ No competing provider run was started.
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
 | Reproducibility | Exact runtime, test, and build-backend distributions plus published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Published wheels must still be obtained; independent reproduction is absent |
-| Clean clone | Separate no-hardlink clone at `fc63416d7e53455285d89837b17680ea2b9e65e7` passed 326/326 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
+| Clean clone | Separate no-hardlink clone at `3ea35a8a64e5f7eaa65f05c7c720b43d5658958b` passed 342/342 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
 | Engineering log | Real provider, semantic, schema, harness, product, documentation, and portability failures remain recorded with fixes and limitations | **LOCAL PASS** | Log is repository evidence, not external attestation |
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
 | Demo/pitch | Runbook and five-minute outline distinguish local simulation from provider/final evidence | **LOCAL PASS** | No final screenshots or video were produced |
@@ -96,7 +101,9 @@ No competing provider run was started.
   **326/326 passed** in the working repository and in a separate no-hardlink
   clone at `fc63416d7e53455285d89837b17680ea2b9e65e7` using its hash-locked
   virtual environment.
-- Current Checkpoint E-focused readiness regression: **9/9 passed**.
+- Current strict-boundary tree: **342/342 passed** in the working repository and
+  the no-hardlink clone at `3ea35a8a64e5f7eaa65f05c7c720b43d5658958b`.
+- Current Checkpoint E-focused readiness regression: **13/13 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.
 - Browser JavaScript syntax: **PASS**.

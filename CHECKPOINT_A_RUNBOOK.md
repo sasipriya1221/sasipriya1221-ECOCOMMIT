@@ -88,6 +88,14 @@ model correction request. A second invalid candidate is terminal. If the
 correction request itself ends in a provider error, both facts are retained and
 the row is terminal rather than misclassified as a pure provider deferral.
 
+Provider envelopes and candidate content are decoded as bounded strict JSON.
+Duplicate keys, NaN/Infinity, invalid Unicode scalar values, and excessive
+structure are rejected rather than normalized by the parser; a candidate-level
+failure follows the same one-correction limit. Resume and aggregate artifacts
+must also be bounded nonsymlinked strict UTF-8 JSON objects. The manifest directly
+hashes the candidate interpreter, strict decoder, protocol, shard, aggregate,
+and typed A-receipt code in addition to binding the source revision.
+
 Provider failures are evidence too. Groq's HTTP 429/5xx responses are retried
 with bounded backoff using the provider `Retry-After` window; transient transport
 failures are also retried. If one remains unavailable, that case records an

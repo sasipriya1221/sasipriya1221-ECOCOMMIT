@@ -72,11 +72,16 @@ fresh 80-case run. It does not reuse Candidate 1 rows. The local implementation:
 - treats a provider failure after an invalid candidate as a terminal interrupted
   correction, not a resumable pure provider deferral;
 - restricts provider URLs to HTTPS allowlisted hosts and bounds response bodies;
+- strictly decodes provider envelopes and candidates, rejecting duplicate keys,
+  non-finite numbers, invalid Unicode scalar values, and excessive structure;
 - accepts credentials only through the environment;
 - binds each row to the frozen dataset, case, prompt/schema, evaluator, runner,
   criteria, provider configuration, source revision, and manifest digests;
+- directly hashes the interpreter, strict decoder, protocol, shard, aggregate,
+  and typed receipt implementation into the runner manifest;
 - recomputes every successful semantic row during aggregation; and
-- permits identical attempt duplicates but rejects conflicts or mixed manifests.
+- permits identical attempt duplicates but rejects conflicts or mixed manifests;
+  resume/aggregate files must be bounded nonsymlinked strict UTF-8 JSON objects.
 
 The Candidate 2 workflow uses fresh, immutable, per-attempt artifact names and
 emits a typed passing receipt only after a complete aggregate passes. It is
@@ -145,6 +150,9 @@ A separate final protocol now requires, before outcomes are observed:
 
 No real plan values or results were invented. C remains blocked on the real
 inputs, preregistration decisions, A+B, and one-shot held-out execution.
+Standalone plan/suite loading now uses the same bounded nonsymlinked strict-JSON
+boundary, so duplicate-key or non-standard JSON cannot silently change a frozen
+benchmark input.
 
 ## Checkpoint D
 
@@ -178,7 +186,8 @@ receipt. The bundled WSGI server remains loopback development software.
 
 The readiness checker can now genuinely transition to final-ready: it reads each
 evidence slot's `BLOCKED`/`FAILED`/`PASSED` state, validates a revision-bound
-independent-reproduction receipt, and provides a strict `--mode final`. Today's
+independent-reproduction receipt as a bounded nonsymlinked strict JSON object
+with exactly the typed fields, and provides a strict `--mode final`. Today's
 real slots remain blocked, so final readiness remains false.
 
 All repository workflows now:
