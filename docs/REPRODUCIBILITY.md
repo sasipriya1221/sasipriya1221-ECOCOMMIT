@@ -20,9 +20,13 @@ python -m venv .venv
 .venv\Scripts\python -m pytest
 ```
 
-The full local suite includes Checkpoint A regressions and the independent B/C/D
-scaffold tests. No network credential is required for these tests. Any local
-payment behavior is simulated and must remain labeled `SIMULATED`.
+The full local suite includes Checkpoint A regressions, the locally validated
+Checkpoint B B1–B7 boundary, and the independent C/D scaffold tests. No network
+credential is required for these tests. Any local payment behavior is simulated
+and must remain labeled `SIMULATED_LOCAL`.
+
+The focused B commands, tested commit, environment versions, gate matrix, and
+known blockers are retained in `CHECKPOINT_B_VALIDATION.md`.
 
 ## Preliminary Checkpoint C runs
 

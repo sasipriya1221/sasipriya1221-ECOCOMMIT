@@ -66,34 +66,42 @@ describe decisions, but it never grants authority.
 | Area | Current implementation |
 |---|---|
 | A contract boundary | `contracts.py`, `interpreter.py`, `validator.py`, `evaluation.py` |
+| A-to-B admission | `checkpoint_b_integration.py` recomputes the current A fidelity report and keeps B locked unless the A gate is accepted |
 | B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `payments.py`, `reconciliation.py` |
 | C preliminary evaluation | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py` |
 | D product/operations scaffold | `checkpoint_status.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, and `ui/` |
 | E evidence discipline | This document, `THREAT_MODEL.md`, and `REPRODUCIBILITY.md` |
 
-These boundaries are intentionally not wired into a real execution route yet.
-Checkpoint D's commit endpoint always denies, and the only payment adapter is the
-explicit `SIMULATED_LOCAL` adapter exercised by Checkpoint B tests.
+The A-to-B authorization boundary is wired and adversarially tested locally, but
+the actual failed A gate releases no obligations or certificate. It is not wired
+into Checkpoint D's real execution route: D's commit endpoint still always denies,
+and the only payment adapter is the explicit `SIMULATED_LOCAL` adapter exercised
+by Checkpoint B tests.
 
 ## Invariants
 
 1. **No probabilistic financial authority.** Model output is data. It cannot set
    exposure, waive evidence, select a payment mode, or advance a commitment.
-2. **Evidence is scoped and fresh.** Source identity, subject, version, retrieval
-   time, expiry, and content digest are checked at the decision boundary.
+2. **Evidence is scoped and fresh.** Source identity, subject, version, monotonic
+   observation time, expiry, exact claim predicates, and content digest are
+   checked at the decision boundary.
 3. **Authorization is transaction-specific.** Certificates bind contract hash,
    evidence digests, policy version, merchant, transaction ID, amount, currency,
    allowed state, issue time, and expiry.
 4. **TOCTOU changes deny.** Any bound-field change after authorization requires a
-   new decision and certificate.
-5. **Transitions are explicit.** The intended lifecycle is `PROPOSED -> AUTHORIZED
-   -> RESERVED -> CAPTURE_ALLOWED -> CAPTURED`, with separately recorded denied,
-   expired, cancelled, failed, released, and compensation outcomes.
+   new decision and certificate. The local capture boundary holds the evidence
+   version lock from final verification through the simulated side effect.
+5. **Transitions are explicit.** The implemented lifecycle is `PROPOSED ->
+   AUTHORIZED -> RESERVED -> CAPTURE_ALLOWED -> CAPTURED`, with explicit
+   `CANCELLED`, `FAILED`, `COMPENSATION_PENDING`, and `COMPENSATED` outcomes.
+   Certificate expiry blocks capture; reversible-hold cleanup is recorded by the
+   payment and reconciliation layers.
 6. **At-most-once side effects.** Repeating the same idempotency key and identical
    request returns the recorded result. Reusing a key for a different request is
    rejected.
 7. **Compensation is not erasure.** A reversal or release is a new auditable event;
-   it never rewrites the original attempt.
+   it never rewrites the original attempt. Capture-before-journal and
+   refund-before-journal windows are reconciled into explicit transitions.
 8. **Simulation is unmistakable.** Local runs and fixtures carry an explicit
    simulated mode marker in results, UI, audit records, and artifacts.
 9. **Acceptance is gated.** Independent construction may proceed in parallel, but

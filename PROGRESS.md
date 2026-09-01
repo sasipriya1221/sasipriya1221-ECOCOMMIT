@@ -7,7 +7,7 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 |---|---|---|
 | A — M0/M1 specification and contract language | 🟢 PASSED (offline scope) | Frozen specifications and authority invariants retained |
 | A — M2/M3 intent intelligence and abstention | 🔴 LATEST FULL LIVE GATE FAILED — NOT PASSED | One real full run must satisfy every frozen A threshold together |
-| B — deterministic economic safety | 🟡 LOCALLY VERIFIED SCAFFOLD — NOT PASSED | A pass, A-to-B integration, durability/security work, and applicable Razorpay Test Mode evidence |
+| B — deterministic economic safety | 🟡 B1–B7 LOCALLY VALIDATED — BLOCKED / NOT PASSED | A pass, real A-to-B evidence, durability/security work, and Razorpay Test Mode evidence |
 | C — comparative benchmark | 🟡 LOCALLY VERIFIED HARNESS — NOT PASSED | Frozen real suite/plan, valid integrated candidate, and separately gated final held-out run |
 | D — product/API/UI/operations | 🟡 LOCALLY VERIFIED SCAFFOLD — NOT PASSED | Upstream gates, integrated product/security/operational evidence, and no default-deny bypass |
 | E — architecture/reproducibility | 🟡 DOCUMENTATION SCAFFOLD — NOT PASSED | Reproduced end-to-end demo and complete retained evidence bundle |
@@ -90,33 +90,45 @@ provider workflows, model configuration, or frozen thresholds.
 
 ## Parallel local implementation evidence
 
-The full deterministic regression suite passes **126/126 tests** in an isolated
+The full deterministic regression suite passes **147/147 tests** in an isolated
 local environment. This is local engineering evidence only; it does not substitute
 for any live or final checkpoint gate.
 
-### Checkpoint B — 32 focused tests
+### Checkpoint B — 53 focused tests
 
 Implemented and locally verified:
 
-- closed deterministic policy-class mapping;
-- registered authority/issuer/kind/scope, freshness, version, revocation, and
-  subject checks for evidence;
-- trusted-config-only exposure tiers (contract/evidence payloads cannot raise a
-  monetary cap);
+- fail-closed A-to-B admission that recomputes the current `FidelityReport`,
+  releases no obligations while the actual A gate is failed, and rejects a
+  substituted contract hash;
+- closed deterministic policy-class mapping over all 11 current A clause types;
+- registered authority/issuer/kind/scope, freshness, version, identity,
+  observation-time, revocation, subject, and exact-claim checks for evidence;
+- trusted-config-only exposure tiers with exact authoritative claim predicates
+  (contract/evidence payloads cannot raise a monetary cap, and negative approval
+  cannot satisfy a tier);
 - transaction-, merchant-, amount-, currency-, contract-, evidence-, policy-,
   expiry-, and nonce-bound HMAC commit certificates;
 - trusted-policy recomputation before signing, so a self-consistent forged cap is
   rejected;
-- strict progressive commitment state transitions;
-- certificate reverification at capture authorization and at the simulated
-  irreversible capture boundary;
-- thread-safe process-local idempotency, collision rejection, compensation, and
+- strict progressive commitment histories and payment-boundary enforcement of the
+  exact `CAPTURE_ALLOWED` state, certificate, transaction, and reservation;
+- certificate reverification plus a registry version lock across the simulated
+  irreversible capture boundary, including repeated concurrency tests;
+- thread-safe process-local idempotency with complete signed-request collision
+  checks, retry-safe compensation, capture/refund crash-window recovery, and
   reconciliation;
 - an explicitly labelled `SIMULATED_LOCAL` payment adapter.
 
-Checkpoint B is not passed. The registries/ledgers are process-local scaffolding,
-the HMAC key is a local-test boundary rather than a KMS claim, A-to-B integration
-has not run, and no Razorpay adapter or credentialed Test Mode evidence exists.
+The full local B1–B7 validation matrix is recorded in
+`CHECKPOINT_B_VALIDATION.md` against implementation commit `6877a81`. A synthetic
+passed-A fixture proves interface compatibility only; it is not Checkpoint A
+evidence.
+
+Checkpoint B is not passed. The actual latest A gate failed and the real A-to-B
+path correctly remains locked. The registries/ledgers are process-local, the HMAC
+key is a local-test boundary rather than a KMS claim, and no Razorpay adapter,
+credentialed Test Mode run, webhook evidence, or provider result exists.
 
 ### Checkpoint C — 21 focused tests
 
