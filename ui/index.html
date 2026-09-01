@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>ECOCOMMIT Safety Console</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-mode="unverified">
+  <div id="mode-banner" class="mode-banner" role="status" aria-live="polite">
+    MODE UNVERIFIED — EXECUTION DISABLED
+  </div>
+
+  <main>
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">ECOCOMMIT / CHECKPOINT D SCAFFOLD</p>
+        <h1>Safety console</h1>
+        <p class="lede">Operational visibility without an acceptance claim.</p>
+      </div>
+      <div class="safety-lock" aria-label="Real money movement disabled">
+        <span class="lock-dot" aria-hidden="true"></span>
+        <span><strong>Real money movement</strong><br>Disabled</span>
+      </div>
+    </header>
+
+    <section class="notice" aria-label="Safety notice">
+      <strong>This interface is scaffolding.</strong>
+      A healthy service is not proof that any checkpoint passed. Only recorded gate
+      evidence and final integration verification can change readiness.
+    </section>
+
+    <section class="summary-grid" aria-label="System summary">
+      <article class="summary-card">
+        <span>Commit path</span>
+        <strong id="commit-ready">NOT REPORTED</strong>
+      </article>
+      <article class="summary-card">
+        <span>Provider</span>
+        <strong id="provider-status">NOT REPORTED</strong>
+      </article>
+      <article class="summary-card">
+        <span>Final integration</span>
+        <strong id="integration-status">NOT REPORTED</strong>
+      </article>
+    </section>
+
+    <section class="panel" aria-labelledby="gate-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">ACCEPTANCE GATES</p>
+          <h2 id="gate-title">Checkpoint evidence</h2>
+        </div>
+        <span id="last-updated" class="muted">Waiting for status API</span>
+      </div>
+      <div id="gate-grid" class="gate-grid">
+        <article class="gate" data-checkpoint="A">
+          <span>Checkpoint A</span><strong>NOT REPORTED</strong><small>No evidence loaded</small>
+        </article>
+        <article class="gate" data-checkpoint="B">
+          <span>Checkpoint B</span><strong>NOT REPORTED</strong><small>No evidence loaded</small>
+        </article>
+        <article class="gate" data-checkpoint="C">
+          <span>Checkpoint C</span><strong>NOT REPORTED</strong><small>No evidence loaded</small>
+        </article>
+        <article class="gate" data-checkpoint="D">
+          <span>Checkpoint D</span><strong>NOT REPORTED</strong><small>No evidence loaded</small>
+        </article>
+        <article class="gate" data-checkpoint="E">
+          <span>Checkpoint E</span><strong>NOT REPORTED</strong><small>No evidence loaded</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel simulation-panel" aria-labelledby="simulation-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">SIDE-EFFECT-FREE</p>
+          <h2 id="simulation-title">Simulation request</h2>
+        </div>
+        <span class="simulation-chip">SIMULATION ONLY</span>
+      </div>
+      <p class="muted">This sends data only to the simulation endpoint. It does not evaluate authority, call Razorpay, reserve funds, or move money.</p>
+      <form id="simulation-form">
+        <label for="simulation-payload">Untrusted request JSON</label>
+        <textarea id="simulation-payload" spellcheck="false">{
+  "contract_hash": "example-only",
+  "amount_minor": 10000,
+  "currency": "INR"
+}</textarea>
+        <button type="submit">Run simulation — no provider call</button>
+      </form>
+      <pre id="simulation-result" tabindex="0">No simulation run.</pre>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
