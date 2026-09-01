@@ -148,10 +148,20 @@ def test_http_429_respects_retry_after_with_hard_ceiling(monkeypatch):
         max_attempts=2,
         max_retry_delay=65,
     )
-    provider.interpret(instruction)
+    result = provider.interpret_with_metadata(instruction)
 
     assert calls == 2
     assert sleeps == [61.0]
+    assert [item["outcome"] for item in result.provider_trace] == [
+        "provider_error",
+        "accepted",
+    ]
+    assert result.provider_trace[0] == {
+        "attempt": 1,
+        "outcome": "provider_error",
+        "code": "HTTP_429",
+        "transient": True,
+    }
 
 
 def test_transport_error_is_retried(monkeypatch):
@@ -176,10 +186,16 @@ def test_transport_error_is_retried(monkeypatch):
         instruction,
         max_attempts=2,
     )
-    provider.interpret(instruction)
+    result = provider.interpret_with_metadata(instruction)
 
     assert calls == 2
     assert sleeps == [1.0]
+    assert [item["outcome"] for item in result.provider_trace] == [
+        "provider_error",
+        "accepted",
+    ]
+    assert result.provider_trace[0]["code"] == "TRANSPORT_ERROR"
+    assert result.provider_trace[0]["transient"] is True
 
 
 def test_schema_invalid_candidate_gets_one_bounded_correction(monkeypatch):
@@ -449,3 +465,44 @@ def test_schema_failure_then_provider_deferral_retains_both_facts(monkeypatch):
         "schema_invalid",
         "provider_error",
     ]
+
+
+def test_schema_correction_retains_intermediate_provider_retry_chronology(monkeypatch):
+    instruction = "Buy bearings."
+    malformed = _provider_body(instruction)
+    raw = json.loads(malformed["choices"][0]["message"]["content"])
+    del raw["clauses"][0]["confidence"]
+    malformed["choices"][0]["message"]["content"] = json.dumps(raw)
+    calls = 0
+
+    def fake_urlopen(req, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return _FakeResponse(malformed)
+        if calls == 2:
+            raise error.HTTPError(
+                req.full_url,
+                503,
+                "Service Unavailable",
+                {},
+                io.BytesIO(b"private"),
+            )
+        return _FakeResponse(_provider_body(instruction))
+
+    sleeps = []
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("ecocommit.interpreter.time.sleep", sleeps.append)
+
+    result = _provider(instruction, max_attempts=3).interpret_with_metadata(instruction)
+
+    assert calls == 3
+    assert sleeps == [2.0]
+    assert [item["outcome"] for item in result.provider_trace] == [
+        "schema_invalid",
+        "provider_error",
+        "accepted",
+    ]
+    assert [item["attempt"] for item in result.provider_trace] == [1, 2, 3]
+    assert result.provider_trace[1]["code"] == "HTTP_503"
+    assert result.provider_trace[1]["transient"] is True

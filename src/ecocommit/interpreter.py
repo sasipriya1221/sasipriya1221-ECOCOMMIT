@@ -491,6 +491,12 @@ class OpenAICompatibleIntentProvider(IntentProvider):
 
                 retryable = exc.code == 429 or 500 <= exc.code <= 599
                 if retryable and attempt < self.max_attempts:
+                    provider_trace.append({
+                        "attempt": attempt,
+                        "outcome": "provider_error",
+                        "code": f"HTTP_{exc.code}",
+                        "transient": True,
+                    })
                     retry_after = exc.headers.get("Retry-After") if exc.headers else None
                     try:
                         provider_delay = float(retry_after) if retry_after is not None else 0.0
@@ -518,6 +524,12 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                 ) from exc
             except (error.URLError, TimeoutError) as exc:
                 if attempt < self.max_attempts:
+                    provider_trace.append({
+                        "attempt": attempt,
+                        "outcome": "provider_error",
+                        "code": "TRANSPORT_ERROR",
+                        "transient": True,
+                    })
                     time.sleep(min(self.max_retry_delay, min(8.0, 2.0 ** (attempt - 1))))
                     continue
                 trace = provider_trace + [{
