@@ -28,6 +28,8 @@ production-readiness claim.
 - Replay, duplicate delivery, concurrency, race, restart, and crash windows.
 - Provider throttling, outage, ambiguous timeout, webhook reordering, or partial
   side effect.
+- Provider/API redirect responses that could otherwise forward authorization or
+  substitute a response origin.
 - Operator confusion between local simulation, provider Test Mode, and live money.
 - Audit deletion/modification, benchmark cherry-picking, or fabricated final
   screenshots/metrics/video.
@@ -67,6 +69,7 @@ production-readiness claim.
 | HTTP parser/route abuse | 64 KiB bound, duplicate/nonfinite rejection, WSGI checks, optional environment-only bearer auth, exact opaque-operation body, and single-process rate limit including failed authentication | D negative/auth/rate tests | Production TLS/proxy, distributed limiter, network controls, and abuse load evidence absent |
 | Mode confusion | Explicit simulation/Test labels, non-test credential refusal, same-revision GitHub-API-verified preflight receipt, read-only current-credential preflight, and permanently disabled real-money field | Preflight identity/tamper tests, API/UI/browser checks, and redacted Test authentication/order evidence | Current verifier not run remotely; authorization/capture evidence and external webhook Test-mode configuration absent |
 | Provider ambiguity | Exact provider bindings, complete redacted per-attempt retry chronology, explicit correction-attempt state, provider/local idempotency, durable result recovery, capture re-fetch, exact refund-ID polling, and raw webhook HMAC/stable event-ID binding | Provider retry/correction-state, adapter, and webhook adversarial tests plus live order replay | Genuine Candidate 2 evaluation, authorization, asynchronous refund, and webhook delivery evidence absent |
+| Credentialed HTTP redirect | Fixed HTTPS/allowlisted origins, non-redirectable authorization headers, exact final-URL checks, and non-transient model redirect evidence | Model, GitHub verifier, Razorpay transport, and inline-workflow redirect-policy regressions | Provider/TLS/proxy trust and remote workflow execution remain external; no managed egress proxy attestation |
 | Malicious local DB writer | Payload digests, strict models, SQLite integrity check, CAS | Corruption/unknown-field/stale-write tests | Digests are unkeyed; a writer able to rewrite DB rows and hashes is outside the boundary |
 | Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation, and pre-outcome final registration/decision contract | C artifact/final-gate tests | Real registration/inputs/final run absent |
 | Fabricated submission media | Blocked evidence markers and promotion rule | E readiness checks | Human review/final evidence still required |
@@ -79,7 +82,9 @@ Local certificate tests and D synthetic workflows use named test keys embedded i
 test/local code. They are not provider credentials or production authority. The
 Razorpay Test adapter reads API credentials only from environment injection; its
 Actions workflows use repository secrets, refuse non-test key IDs, and retain no
-credential values or provider response bodies. This proves the scoped Test
+credential values or provider response bodies. Tracked credentialed urllib calls
+keep authorization out of redirected requests and reject changed final response
+URLs. This proves the scoped Test
 boundary, not production-grade rotation/access control. A production signing or
 provider boundary still requires managed secret storage, explicit key IDs and
 rotation, least-privilege access, and retained access/audit evidence.

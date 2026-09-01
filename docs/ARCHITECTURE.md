@@ -119,6 +119,12 @@ capture authority. The raw webhook endpoint verifies and binds
 identity while retaining the first receipt, and handles either event order. All
 of this has local fake-transport evidence only.
 
+Credentialed Python HTTP boundaries use fixed allowlisted API URLs, attach
+authorization with `add_unredirected_header`, and reject any response whose final
+URL differs from the exact request. This applies to model evaluation, GitHub run
+verification, Razorpay API execution, and the inline provider preflights; it does
+not replace TLS, provider trust, or a managed secret boundary.
+
 A synthetic passed-A fixture proves interface compatibility only. The actual A
 gate releases no B authority until it passes. Live evidence currently stops at
 Test authentication and order creation/fetch/idempotency; no provider payment

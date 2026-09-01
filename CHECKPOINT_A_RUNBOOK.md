@@ -11,6 +11,9 @@ The current GitHub Actions configuration uses Groq's OpenAI-compatible endpoint.
 `ECOCOMMIT_GROQ_API_KEY`
 
 Do **not** commit the key to the repository, issue, README, workflow, or benchmark artifact.
+The provider client stores the bearer value as an unredirected request header and
+rejects a changed final response URL as terminal `REDIRECT_REJECTED`; a redirect
+must never be treated as a provider result or retried as a transient failure.
 
 Current committed live configuration:
 
@@ -105,6 +108,7 @@ failures are also retried. Every attempted provider turn, including a transient
 failure that later recovers, remains in the redacted per-attempt chronology; no
 provider body or credential is retained. If one remains unavailable, that case
 records an infrastructure error without a semantic row and exits nonzero.
+Redirect rejection is non-transient and retains only the redacted failure code.
 
 Resume Candidate 2 by re-running only failed jobs in the same workflow run.
 Every attempt uses a unique artifact name. The runner accepts only rows with the

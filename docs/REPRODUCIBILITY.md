@@ -144,6 +144,10 @@ transient HTTP or transport retry that later succeeds. This preserves the actual
 attempt chronology without retaining provider bodies or credentials.
 Terminal candidate evidence also carries an explicit correction-attempt flag and
 uses different codes for failure before versus after a correction request.
+The model provider, GitHub verifier, Razorpay transport, and inline credential
+preflights attach authorization as an unredirected header and reject a changed
+final response URL. Preserve `REDIRECT_REJECTED` as terminal provider evidence;
+do not retry it as an outage or accept a redirected response.
 
 Never print or pass a provider key in a shell command that will be retained. Use
 the approved CI secret boundary.
@@ -160,7 +164,8 @@ credential value. Summary and upload steps run without either Razorpay credentia
 
 1. Dispatch **Razorpay Test Credential Preflight**. It refuses a non-test key ID,
    performs only a read-only order-list request, discards the provider response,
-   and publishes safe status fields. Record the successful run ID.
+   rejects redirects without forwarding Basic authorization, and publishes safe
+   status fields. Record the successful run ID.
 2. Inspect the preflight summary before continuing. It must say Test mode,
    authentication verified, and response discarded; it must contain no key value.
 3. From the same pushed source revision, dispatch **Razorpay Test Order Boundary

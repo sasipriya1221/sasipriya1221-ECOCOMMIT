@@ -45,8 +45,8 @@ inputs, and the E independent-reproduction receipt reject ambiguous or
 non-standard JSON before schema validation. The current tree additionally keeps
 recovered provider retries in Candidate 2's redacted attempt chronology and
 distinguishes terminal schema failure before versus after a correction request.
-It and a no-hardlink clone at `3651f04b9e5b0c8d9dfbddca6d80c80f3b8c92fd`
-pass **363 / 363**.
+It and a no-hardlink clone at `652cc68075854531780df501373f1c6a59704e07`
+pass **368 / 368**.
 
 The current Razorpay order-boundary workflow also confines both credentials to
 the provider-execution step. Its later redacted-summary and artifact-upload steps
@@ -57,7 +57,8 @@ source revision in a strict digest-checked receipt. This implementation has not
 been pushed or used to upgrade the historical order evidence. The credential
 factory and credential-backed redaction guard are reached only after that receipt
 validates; a rejected receipt is proven not to load credentials or construct a
-provider.
+provider. Every tracked credentialed Python HTTP boundary additionally marks its
+authorization value non-redirectable and rejects a changed final response URL.
 
 ## Frozen-boundary check
 
@@ -82,7 +83,7 @@ No competing provider run was started.
 | pytest | 8.4.2 |
 | Pydantic | 2.13.5 |
 | Node.js syntax check | v24.18.1 |
-| Latest fully validated code/test revision | `3651f04b9e5b0c8d9dfbddca6d80c80f3b8c92fd` |
+| Latest fully validated code/test revision | `652cc68075854531780df501373f1c6a59704e07` |
 | Public remote HEAD during validation | `6485d3b24f4967c178cce9b1a9b67cdf0230840c` |
 | Provider/payment mode | Current local run made no provider call; retained prior evidence proves Razorpay Test authentication and order creation only |
 
@@ -95,7 +96,7 @@ No competing provider run was started.
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
 | Reproducibility | Exact runtime, test, and build-backend distributions plus published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Published wheels must still be obtained; independent reproduction is absent |
-| Clean clone | Separate no-hardlink clone at `3651f04b9e5b0c8d9dfbddca6d80c80f3b8c92fd` passed 363/363 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
+| Clean clone | Separate no-hardlink clone at `652cc68075854531780df501373f1c6a59704e07` passed 368/368 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
 | Engineering log | Real provider, semantic, schema, harness, product, documentation, and portability failures remain recorded with fixes and limitations | **LOCAL PASS** | Log is repository evidence, not external attestation |
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
 | Demo/pitch | Runbook and five-minute outline distinguish local simulation from provider/final evidence | **LOCAL PASS** | No final screenshots or video were produced |
@@ -115,9 +116,11 @@ No competing provider run was started.
   **326/326 passed** in the working repository and in a separate no-hardlink
   clone at `fc63416d7e53455285d89837b17680ea2b9e65e7` using its hash-locked
   virtual environment.
-- Current preflight-authority and credential-ordering tree: **363/363 passed** in
-  the working repository and the no-hardlink clone at
-  `3651f04b9e5b0c8d9dfbddca6d80c80f3b8c92fd`.
+- Current preflight-authority, credential-ordering, and redirect-safety tree:
+  **368/368 passed** in the working repository and the no-hardlink clone at
+  `652cc68075854531780df501373f1c6a59704e07`.
+- Current Candidate 2/provider focused suite: **49/49 passed**; Checkpoint B:
+  **115/115 passed**; workflow security: **6/6 passed**.
 - Current Checkpoint E-focused readiness regression: **13/13 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.

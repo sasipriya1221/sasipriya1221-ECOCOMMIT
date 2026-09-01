@@ -125,6 +125,11 @@ The order validator initializes no credential values and does not invoke the
 credential factory until that receipt has passed. Its tampered-receipt regression
 installs credentials plus a factory trap and proves neither credential loading nor
 provider construction occurs on the rejected path.
+All tracked credentialed `urllib` clients now attach `Authorization` as an
+unredirected header and reject any response whose final URL differs from the
+fixed request URL. This covers Candidate 2/model calls, GitHub run verification,
+Razorpay API calls, and both inline credential preflights. The new regressions do
+not create provider evidence or retroactively upgrade the retained historical run.
 
 Locally, the order workflow now emits a digest-bound Test Checkout handoff and
 standalone page. A continuation validates the returned Checkout HMAC and exact

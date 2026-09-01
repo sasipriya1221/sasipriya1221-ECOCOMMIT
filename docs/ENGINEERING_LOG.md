@@ -820,6 +820,49 @@ This proves local control-flow ordering. It does not make the runner a secret
 manager, attest the GitHub-hosted environment, push the workflow, or create any
 new Razorpay provider evidence.
 
+## 2026-09-02 — Credentialed HTTP headers were redirectable
+
+### What broke or remained unsafe
+
+The model client, GitHub run verifier, Razorpay transport, and two inline
+preflights put `Authorization` in the ordinary `urllib.request.Request` header
+mapping. Python's documented behavior adds ordinary headers to redirected
+requests; only `add_unredirected_header` excludes them. Fixed/allowlisted starting
+URLs reduced exposure but did not make the redirect behavior fail closed. The
+clients also lacked a consistent exact-final-URL acceptance check.
+
+### How it was fixed
+
+- Attach bearer and Basic authorization through `add_unredirected_header` at all
+  five credentialed boundaries.
+- Require the final response URL to equal the exact requested URL; reject
+  cross-origin and same-origin changes.
+- Treat a model redirect as non-transient `REDIRECT_REJECTED`, so it is retained
+  without provider content and is never retried as an outage.
+- Add workflow policy coverage so any tracked inline credentialed preflight must
+  contain both the non-forwarding header control and final-URL check.
+
+The control follows the Python standard-library contract documented at
+<https://docs.python.org/3/library/urllib.request.html#urllib.request.Request.add_unredirected_header>.
+
+### Regression evidence and limitation
+
+Adversarial responses cover cross-origin and same-origin GitHub redirects,
+Razorpay redirect rejection, terminal model redirect classification, absence of
+authorization from the redirect-copyable header map, and both inline workflows.
+The first E documentation-regression rerun then failed on its own stale
+`363/363` literal after the report was correctly advanced to 368; the assertion
+was updated to the new authoritative total and the identical scope rerun.
+Candidate 2/provider passes **49/49**, B passes **115/115**, workflow security
+passes **6/6**, and the full suite passes **368/368** in both the working tree and
+a no-hardlink clone at `652cc68075854531780df501373f1c6a59704e07`. The clone also
+passes compilation, dependency consistency, JavaScript syntax, 8/8 local
+readiness, diff, and clean-status checks.
+
+These tests enforce client behavior but do not attest DNS, TLS, proxy, runner, or
+provider infrastructure. They made no credentialed network call and do not
+upgrade any checkpoint or historical provider artifact.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.
