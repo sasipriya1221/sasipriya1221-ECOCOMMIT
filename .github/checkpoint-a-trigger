@@ -1,2 +1,2 @@
-trigger: 2026-09-01T09:40:00Z
-reason: run frozen 50-clear + 30-ambiguous Checkpoint A as 80 independent fail-fast resumable case jobs after Qwen JSON transport passed; thresholds, prompts, model, dataset and scoring unchanged
+trigger: 2026-09-01T20:41:00Z
+reason: start corrected frozen Checkpoint A candidate after generic schema-recovery fix for provider-omitted materiality/confidence on exactly grounded EXPLICIT_USER clauses; frozen 80-case dataset, thresholds, model, prompt semantics, and scoring remain unchanged
