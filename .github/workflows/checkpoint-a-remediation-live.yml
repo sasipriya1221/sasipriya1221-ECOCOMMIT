@@ -1,0 +1,129 @@
+name: Checkpoint A - Remediation Live Evaluation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [checkpoint-a-schema-retry-remediation]
+    paths:
+      - '.github/checkpoint-a-remediation-trigger'
+
+concurrency:
+  group: checkpoint-a-remediation-live-gate
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Offline regression suite
+        run: pytest
+
+  case:
+    needs: regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79]
+    env:
+      ECOCOMMIT_LLM_BASE_URL: https://api.groq.com/openai/v1
+      ECOCOMMIT_LLM_MODEL: qwen/qwen3.6-27b
+      ECOCOMMIT_LLM_REASONING_EFFORT: none
+      ECOCOMMIT_LLM_JSON_SCHEMA: 'false'
+      ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS: '1024'
+      ECOCOMMIT_LLM_CASE_MAX_ATTEMPTS: '2'
+      ECOCOMMIT_LLM_CASE_MAX_RETRY_DELAY: '15'
+      ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Verify Groq secret exists
+        shell: bash
+        run: |
+          if [ -z "$ECOCOMMIT_LLM_API_KEY" ]; then
+            echo 'ECOCOMMIT_GROQ_API_KEY is not configured. Checkpoint A cannot be claimed with fixtures.' >&2
+            exit 3
+          fi
+      - name: Restore this case from an earlier attempt of the same run
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: checkpoint-a-remediation-case-${{ matrix.case }}
+          path: artifacts/resume
+      - name: Run one immutable frozen benchmark case
+        shell: bash
+        run: |
+          START=${{ matrix.case }}
+          END=$((START + 1))
+          python scripts/checkpoint_a_shard.py \
+            --start "$START" \
+            --end "$END" \
+            --output "artifacts/case-${START}.json" \
+            --resume "artifacts/resume/case-${START}.json"
+      - name: Upload this case result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoint-a-remediation-case-${{ matrix.case }}
+          path: artifacts/case-${{ matrix.case }}.json
+          if-no-files-found: warn
+          overwrite: true
+
+  aggregate:
+    needs: case
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install project
+        run: python -m pip install -e '.[dev]'
+      - name: Download completed case artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: checkpoint-a-remediation-case-*
+          path: artifacts/cases
+          merge-multiple: false
+      - name: Aggregate frozen Checkpoint A result
+        id: aggregate
+        continue-on-error: true
+        run: python scripts/checkpoint_a_aggregate.py --input-dir artifacts/cases --output artifacts/checkpoint_a_results.json
+      - name: Print compact live diagnostics
+        if: always()
+        run: python scripts/checkpoint_a_diagnostics.py artifacts/checkpoint_a_results.json
+      - name: Upload final evaluation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoint-a-remediation-results
+          path: artifacts/checkpoint_a_results.json
+          if-no-files-found: warn
+          overwrite: true
+      - name: Enforce frozen gate
+        if: steps.aggregate.outcome != 'success'
+        run: exit 2
