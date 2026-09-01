@@ -37,9 +37,7 @@ def _load_resume(path: Path | None, selected_ids: set[str]) -> list[dict]:
         case_id = row.get("id")
         if case_id not in selected_ids or case_id in seen:
             continue
-        # Old partial artifacts may contain a 429/5xx row that was previously
-        # treated as a benchmark failure. Infrastructure failures are never frozen
-        # semantic results, so drop them and retry that immutable case.
+        # Provider capacity errors are infrastructure, never frozen semantic results.
         if _is_transient_provider_error(row):
             continue
         rows.append(row)
@@ -94,7 +92,20 @@ def main() -> int:
     if not (0 <= args.start < args.end <= len(frozen)):
         raise SystemExit(f"invalid shard bounds {args.start}:{args.end} for {len(frozen)} frozen cases")
 
-    provider = OpenAICompatibleIntentProvider(args.base_url, args.api_key, args.model, timeout=60.0)
+    # CI intentionally fails fast on provider quota/capacity errors. A transient
+    # provider failure is retried later as its own immutable case rather than
+    # sleeping for many minutes while blocking every case behind it. This changes
+    # only execution scheduling; the frozen case, model prompt and scoring stay intact.
+    max_attempts = max(1, int(os.getenv("ECOCOMMIT_LLM_CASE_MAX_ATTEMPTS", "2")))
+    max_retry_delay = max(0.0, float(os.getenv("ECOCOMMIT_LLM_CASE_MAX_RETRY_DELAY", "15")))
+    provider = OpenAICompatibleIntentProvider(
+        args.base_url,
+        args.api_key,
+        args.model,
+        timeout=60.0,
+        max_attempts=max_attempts,
+        max_retry_delay=max_retry_delay,
+    )
     validator = FidelityValidator()
     selected = frozen[args.start:args.end]
     selected_ids = {gold.case_id for gold in selected}
@@ -106,8 +117,6 @@ def main() -> int:
     rows = _load_resume(resume_path, selected_ids)
     completed_ids = {row["id"] for row in rows if row.get("id")}
 
-    # Persist normalized resume state immediately so stale transient-error rows from
-    # an earlier attempt cannot accidentally survive into aggregation.
     _write_partial(
         output,
         base_url=args.base_url,
@@ -125,9 +134,6 @@ def main() -> int:
 
         row = _evaluate_one(gold, provider, validator)
         if _is_transient_provider_error(row):
-            # A provider quota/capacity failure is not evidence that the semantic
-            # case failed. Preserve prior completed cases and fail the job so a
-            # later retry resumes exactly at this frozen case.
             _write_partial(
                 output,
                 base_url=args.base_url,
