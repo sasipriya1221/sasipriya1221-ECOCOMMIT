@@ -68,7 +68,7 @@ matrix is in [Threat Model](docs/THREAT_MODEL.md).
 | B — deterministic economic safety | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | C — comparative benchmark harness | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | D — API/UI/audit/operations | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
-| E — repository/submission evidence | **BUILT; local validation pending** | **NOT PASSED** |
+| E — repository/submission evidence | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 
 See [PROGRESS.md](PROGRESS.md) for the live evidence board. These terms are not
 interchangeable:
@@ -132,6 +132,7 @@ Neither path is Razorpay evidence or a checkpoint pass.
 - [Checkpoint B validation](CHECKPOINT_B_VALIDATION.md)
 - [Checkpoint C validation](CHECKPOINT_C_VALIDATION.md)
 - [Checkpoint D validation](CHECKPOINT_D_VALIDATION.md)
+- [Checkpoint E validation](CHECKPOINT_E_VALIDATION.md)
 - [Reproducibility runbook](docs/REPRODUCIBILITY.md)
 - [Engineering failure/fix log](docs/ENGINEERING_LOG.md)
 - [Submission evidence framework](docs/SUBMISSION_EVIDENCE.md)

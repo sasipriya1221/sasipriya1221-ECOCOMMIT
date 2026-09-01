@@ -10,7 +10,7 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 | B — deterministic economic safety | 🟡 B1–B7 LOCALLY VALIDATED — BLOCKED / NOT PASSED | A pass, real A-to-B evidence, durability/security work, and Razorpay Test Mode evidence |
 | C — comparative benchmark | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Frozen real suite/plan, TEL weights and quantitative decision rule, real comparator outputs, validated A+B candidate, and separately gated final held-out run |
 | D — product/API/UI/operations | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Authoritative upstream evidence, real A/B/C integration, provider Test Mode boundary, durable operations, and final security/operational evidence |
-| E — architecture/reproducibility | 🟡 DOCUMENTATION SCAFFOLD — NOT PASSED | Reproduced end-to-end demo and complete retained evidence bundle |
+| E — repository/submission readiness | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Integrated A/B/C/D evidence, owner-selected license, independent reproduction, final media, intentional push, and retained public CI |
 
 Status vocabulary is strict: **BUILT** means the implementation or artifact
 exists; **LOCALLY VALIDATED** means deterministic local checks passed;
@@ -127,7 +127,7 @@ provider workflows, model configuration, or frozen thresholds.
 
 ## Parallel local implementation evidence
 
-The full deterministic regression suite passes **192/192 tests** in an isolated
+The full deterministic regression suite passes **197/197 tests** in an isolated
 local environment. This is local engineering evidence only; it does not substitute
 for any live or final checkpoint gate.
 
@@ -235,13 +235,41 @@ route has no execution adapter, and no authoritative gate-evidence loader,
 Razorpay Test Mode path, durable multi-process audit store, hosted deployment,
 or final security/operational review exists.
 
-### Checkpoint E scaffold
+### Checkpoint E — 5 focused tests
 
-Added architecture/trust-boundary documentation, threat model, and reproducibility
-runbook. They explicitly separate `implemented`, `locally verified`, `integrated`,
-and `passed`, and require retained live/Test Mode evidence before later claims.
+Implemented and locally validated:
 
-Checkpoint E is not passed.
+- a public-facing README with the problem, architecture, strict checkpoint truth,
+  reproducible setup, local demo, evidence map, limitations, and explicit license
+  state;
+- architecture and threat-model documentation aligned to the actual trust
+  boundaries, including residual durability, provider, secret, audit, UI, and
+  supply-chain risks;
+- a resolved validation dependency manifest, fresh-virtual-environment install,
+  dependency consistency check, and a separate clean-clone full-suite run;
+- a machine-readable readiness checker covering required public files, README
+  structure, blocked evidence markers, local links, portable paths, transient
+  tracked files, current-tree credential markers, truth vocabulary, repository
+  state, upstream state, remote configuration, and license presence;
+- a real failure/fix engineering log, deterministic demo runbook, submission
+  evidence manifest, and five-minute pitch outline; and
+- LF checkout enforcement for byte-digested Checkpoint C protocol fixtures after
+  a clean Windows clone exposed a CRLF-dependent SHA-256 failure.
+
+The implementation at `5a7aef7` passes 5/5 focused E tests and 197/197 full
+regression tests in the working repository. A separate clean clone at the same
+revision also passes 197/197 tests, all eight local readiness checks, and a clean
+status. The dependency manifest was installed in a fresh virtual environment and
+`pip check`, Python compilation, JavaScript syntax, Markdown link/portability,
+diff-whitespace, current-tree credential-marker, and Git-history credential-marker
+checks passed. The matrix and defects are retained in
+`CHECKPOINT_E_VALIDATION.md`.
+
+Checkpoint E is **blocked / not passed**. The final A/B/C/D evidence slots,
+Razorpay Test Mode proof, final economic comparison, hosted integrated product,
+screenshots, and video remain deliberately empty. No license has been selected,
+the validation was not independently reproduced on another machine, and the
+local commits have not been pushed or exercised by public CI.
 
 ## Payment truth
 

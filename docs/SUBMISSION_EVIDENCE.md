@@ -6,7 +6,8 @@ ECOCOMMIT evidence.
 
 ## Current verdict
 
-**Framework built; final evidence bundle BLOCKED; Checkpoint E NOT PASSED.**
+**Framework locally validated; final evidence bundle BLOCKED; Checkpoint E NOT
+PASSED.**
 
 No final ECOCOMMIT-versus-baseline numbers are available. No final screenshot is
 retained. No final video is recorded. No Razorpay request was made.
