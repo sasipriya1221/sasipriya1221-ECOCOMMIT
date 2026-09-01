@@ -96,7 +96,7 @@ were not relabeled as part of the earlier live run.
 | Fresh clone at `68d6798ecf1577529a07ef8585bea7d9999bd863` with a new virtual environment | **224 / 224 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 | Current Checkpoint B-focused suite | **112 / 112 passed** |
 | Current full deterministic suite | **363 / 363 passed** |
-| Current no-hardlink clone at `f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8` using its hash-locked virtual environment | **363 / 363 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
+| Current no-hardlink clone at `3651f04b9e5b0c8d9dfbddca6d80c80f3b8c92fd` using its hash-locked virtual environment | **363 / 363 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 
@@ -114,6 +114,12 @@ The clean clone was created without hardlinks, installed from
 environment check, not independent-machine reproduction. The Razorpay tests use
 deterministic fake transports to exercise binding and failure branches. They
 never count as live provider evidence.
+
+The current validator verifies the same-revision preflight receipt before it
+reads either Razorpay credential through the credential factory. The
+tampered-receipt regression supplies credential values, replaces that factory
+with a fail-on-access trap, and proves the rejected path reaches neither the
+credential loader nor provider construction.
 
 ## Gate results
 

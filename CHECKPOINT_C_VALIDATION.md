@@ -24,7 +24,7 @@ non-finite, invalid-Unicode, over-complex, and non-object plan/suite JSON before
 Pydantic validation. This closes parser-differential ambiguity without changing
 any frozen fixture or final decision rule. The current focused C suite passes
 **47/47** and the full deterministic suite passes **363/363**; a separate
-no-hardlink clone at `f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8`
+no-hardlink clone at `3651f04b9e5b0c8d9dfbddca6d80c80f3b8c92fd`
 passes the same suite and static/readiness checks. This remains same-host local
 evidence, not a final comparison or independent reproduction.
 

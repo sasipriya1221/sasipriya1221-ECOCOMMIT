@@ -121,6 +121,10 @@ uses GitHub's Actions API to require a successful `workflow_dispatch` preflight
 from the expected workflow, repository, and exact lifecycle source revision. A
 bounded strict-JSON receipt is digest-bound, retained, and consumed before
 Razorpay credentials are loaded.
+The order validator initializes no credential values and does not invoke the
+credential factory until that receipt has passed. Its tampered-receipt regression
+installs credentials plus a factory trap and proves neither credential loading nor
+provider construction occurs on the rejected path.
 
 Locally, the order workflow now emits a digest-bound Test Checkout handoff and
 standalone page. A continuation validates the returned Checkout HMAC and exact

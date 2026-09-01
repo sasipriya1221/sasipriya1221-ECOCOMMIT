@@ -784,6 +784,42 @@ The current verifier has only deterministic fake-API evidence. It does not
 retroactively upgrade the historical order artifact, push the new workflow,
 perform a new preflight/order run, or prove Checkout/capture/refund/webhooks.
 
+## 2026-09-02 — Razorpay secret values were read before receipt validation
+
+### What broke or remained unsafe
+
+The workflow placed the API verifier before the secret-bearing provider step,
+and the order validator verified the receipt before constructing credentials or
+a provider. However, the validator still read both Razorpay environment values
+at function entry so it could prepare its later evidence-redaction guard. An
+invalid locally supplied receipt therefore touched secret values even though it
+made no provider call and retained no secret. That contradicted the documented
+“before credentials are loaded” boundary.
+
+### How it was fixed
+
+- Initialize the redaction guard without reading either credential.
+- Verify the strict same-revision preflight receipt first.
+- Only then construct validated Test credentials and derive the in-memory
+  redaction guard from that validated object.
+- Extend the tampered-receipt regression with configured credential values and a
+  credential-factory trap; any credential load now fails the test before a
+  provider could be constructed.
+
+### Regression evidence and limitation
+
+The first targeted rerun used the host's default pytest temporary root and hit a
+Windows permission error during fixture setup; no product assertion ran or
+failed. The bounded rerun with a repository-local temporary root passed, as did
+the focused B suite **112/112** and full suite **363/363**. A separate no-hardlink
+clone at `3651f04b9e5b0c8d9dfbddca6d80c80f3b8c92fd` passed **363/363**, bytecode
+compilation, dependency consistency, JavaScript syntax, 8/8 local readiness,
+diff, and clean-status checks.
+
+This proves local control-flow ordering. It does not make the runner a secret
+manager, attest the GitHub-hosted environment, push the workflow, or create any
+new Razorpay provider evidence.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

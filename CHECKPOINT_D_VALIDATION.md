@@ -161,7 +161,7 @@ suite: **363 / 363 passed**. These additions are local fake-transport and
 same-host evidence, not provider or hosted evidence.
 
 A separate no-hardlink clone at
-`f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8` used the exact hash-locked
+`3651f04b9e5b0c8d9dfbddca6d80c80f3b8c92fd` used the exact hash-locked
 dependencies in its clean-environment virtual environment and passed **363 / 363**,
 compilation, dependency consistency, JavaScript syntax, readiness, diff, and
 clean-status checks. This is same-host clean-environment evidence, not an
