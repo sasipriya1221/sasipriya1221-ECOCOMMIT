@@ -157,12 +157,12 @@ Full regression:
 Result: **192 passed**.
 
 Current-tree focused D suite: **76 / 76 passed**. Current-tree full deterministic
-suite: **346 / 346 passed**. These additions are local fake-transport and
+suite: **363 / 363 passed**. These additions are local fake-transport and
 same-host evidence, not provider or hosted evidence.
 
 A separate no-hardlink clone at
-`813bc82c5ea1a726fc95bebe076a003f5a42a5c8` used the exact hash-locked
-dependencies in its clean-environment virtual environment and passed **346 / 346**,
+`f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8` used the exact hash-locked
+dependencies in its clean-environment virtual environment and passed **363 / 363**,
 compilation, dependency consistency, JavaScript syntax, readiness, diff, and
 clean-status checks. This is same-host clean-environment evidence, not an
 independent reproduction.

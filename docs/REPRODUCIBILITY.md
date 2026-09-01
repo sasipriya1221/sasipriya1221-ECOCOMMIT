@@ -163,8 +163,12 @@ credential value. Summary and upload steps run without either Razorpay credentia
    and publishes safe status fields. Record the successful run ID.
 2. Inspect the preflight summary before continuing. It must say Test mode,
    authentication verified, and response discarded; it must contain no key value.
-3. Dispatch **Razorpay Test Lifecycle Validation** with confirmation
-   `RUN_TEST_MODE_ORDER` and the numeric successful preflight run ID. This creates
+3. From the same pushed source revision, dispatch **Razorpay Test Order Boundary
+   Validation** with confirmation `RUN_TEST_MODE_ORDER` and the successful
+   preflight run ID. The workflow's read-only `GITHUB_TOKEN` calls the official
+   [Get a workflow run API](https://docs.github.com/en/rest/actions/workflow-runs#get-a-workflow-run)
+   and refuses a run from another repository, workflow, event, conclusion, or
+   source SHA. This creates
    one INR 1.00 Test Mode order, revalidates its transaction notes/amount/currency,
    replays the same ECOCOMMIT idempotency key, fetches the order's payments, and
    retains redacted order evidence plus a digest-bound Checkout handoff JSON and

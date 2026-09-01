@@ -44,7 +44,7 @@ alone cannot satisfy this rule.
 | Payment authorization/reservation | No genuine Checkout callback | **NOT RUN / EXTERNALLY BLOCKED** |
 | Capture, refund, webhook, reconciliation, settlement | No authorized payment or separately configured webhook endpoint/secret | **NOT RUN / BLOCKED** |
 
-The lifecycle workflow's successful conclusion means its truthful validation
+The historical order-boundary workflow's successful conclusion means its truthful validation
 script completed and retained the blocked result; it does **not** mean B8 or
 Checkpoint B passed. Its evidence field `checkpoint_b8_passed` remained `false`.
 
@@ -77,11 +77,11 @@ against the provider and is not added to the live evidence table above.
 
 The isolated live snapshot was used so the active frozen Checkpoint A retry and
 its main-branch inputs were not changed. The local implementation commit adds
-follow-up hardening: permanent manual-only preflight/lifecycle workflows, a
-required numeric preflight-run reference, current action majors, protected HTTP
-authentication headers, and coherent provider-result validation. Those follow-up
-changes have local test evidence but were not relabeled as part of the earlier
-live run.
+follow-up hardening: permanent manual-only preflight/order-boundary workflows,
+an API-verified same-repository/same-workflow/same-revision preflight receipt,
+commit-pinned actions, protected HTTP authentication headers, and coherent
+provider-result validation. Those follow-up changes have local test evidence but
+were not relabeled as part of the earlier live run.
 
 ## Local deterministic validation
 
@@ -94,9 +94,9 @@ live run.
 | Installed dependency consistency | **Passed** |
 | Current-tree credential-value marker scan | **Passed** |
 | Fresh clone at `68d6798ecf1577529a07ef8585bea7d9999bd863` with a new virtual environment | **224 / 224 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
-| Current Checkpoint B-focused suite after durability/webhook integration | **95 / 95 passed** |
-| Current full deterministic suite | **346 / 346 passed** |
-| Current no-hardlink clone at `813bc82c5ea1a726fc95bebe076a003f5a42a5c8` using its hash-locked virtual environment | **346 / 346 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
+| Current Checkpoint B-focused suite | **112 / 112 passed** |
+| Current full deterministic suite | **363 / 363 passed** |
+| Current no-hardlink clone at `f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8` using its hash-locked virtual environment | **363 / 363 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 
@@ -135,6 +135,10 @@ never count as live provider evidence.
 
 The Test Mode adapter:
 
+- verifies the referenced preflight through GitHub's bounded Actions API before
+  loading Razorpay credentials; repository, workflow path, `workflow_dispatch`
+  event, successful conclusion, run ID, attempt, and exact source SHA are bound
+  into a strict digest-checked receipt;
 - loads only `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` from the environment and
   refuses non-test key IDs;
 - rejects credential values before writing the redacted evidence object; the
@@ -176,6 +180,8 @@ replaced by provider behavior.
 2. **B8 payment execution is incomplete.** A genuine Test Checkout authorization
    and signature are required before the locally implemented continuation can be
    validated against Razorpay. Manual capture must be configured first.
+   After the current tree is pushed, a fresh same-revision credential preflight
+   and order-boundary run must precede that Checkout.
 3. **Webhook and asynchronous reconciliation evidence is absent.** The user
    supplied API credentials, not a webhook secret/endpoint or delivered events.
 4. **Live durability/recovery evidence is absent.** The SQLite implementation is

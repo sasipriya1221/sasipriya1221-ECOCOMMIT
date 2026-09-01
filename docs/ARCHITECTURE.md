@@ -104,7 +104,10 @@ capture. It is wired into D only through the separately enabled, startup-pinned
 Test operation boundary; the default D server still has no provider authority.
 
 The Test-order validator can generate a digest-bound public Checkout handoff and
-standalone page. Its callback continuation verifies the Checkout signature and
+standalone page. Before credentials are loaded, the order workflow queries the
+GitHub Actions API with read-only job authority and binds a successful preflight
+from the expected workflow/repository/exact source revision into a strict,
+digest-checked receipt. Its callback continuation verifies the Checkout signature and
 provider entities, captures behind the same certificate/freshness gate, performs
 an idempotent compensating refund, and reconciles the result. SQLite-backed
 payment, commitment, idempotency, and completed result state support restart

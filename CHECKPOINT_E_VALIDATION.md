@@ -45,13 +45,16 @@ inputs, and the E independent-reproduction receipt reject ambiguous or
 non-standard JSON before schema validation. The current tree additionally keeps
 recovered provider retries in Candidate 2's redacted attempt chronology and
 distinguishes terminal schema failure before versus after a correction request.
-It and a no-hardlink clone at `813bc82c5ea1a726fc95bebe076a003f5a42a5c8`
-pass **346 / 346**.
+It and a no-hardlink clone at `f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8`
+pass **363 / 363**.
 
 The current Razorpay order-boundary workflow also confines both credentials to
 the provider-execution step. Its later redacted-summary and artifact-upload steps
 receive neither credential; this narrows exposure without claiming a new live
-provider result.
+provider result. Before that provider step, a bounded GitHub Actions API check
+now binds a successful preflight to the expected workflow, repository, and exact
+source revision in a strict digest-checked receipt. This implementation has not
+been pushed or used to upgrade the historical order evidence.
 
 ## Frozen-boundary check
 
@@ -76,7 +79,7 @@ No competing provider run was started.
 | pytest | 8.4.2 |
 | Pydantic | 2.13.5 |
 | Node.js syntax check | v24.18.1 |
-| Latest fully validated code/test revision | `813bc82c5ea1a726fc95bebe076a003f5a42a5c8` |
+| Latest fully validated code/test revision | `f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8` |
 | Public remote HEAD during validation | `6485d3b24f4967c178cce9b1a9b67cdf0230840c` |
 | Provider/payment mode | Current local run made no provider call; retained prior evidence proves Razorpay Test authentication and order creation only |
 
@@ -89,7 +92,7 @@ No competing provider run was started.
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
 | Reproducibility | Exact runtime, test, and build-backend distributions plus published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Published wheels must still be obtained; independent reproduction is absent |
-| Clean clone | Separate no-hardlink clone at `813bc82c5ea1a726fc95bebe076a003f5a42a5c8` passed 346/346 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
+| Clean clone | Separate no-hardlink clone at `f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8` passed 363/363 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
 | Engineering log | Real provider, semantic, schema, harness, product, documentation, and portability failures remain recorded with fixes and limitations | **LOCAL PASS** | Log is repository evidence, not external attestation |
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
 | Demo/pitch | Runbook and five-minute outline distinguish local simulation from provider/final evidence | **LOCAL PASS** | No final screenshots or video were produced |
@@ -109,8 +112,8 @@ No competing provider run was started.
   **326/326 passed** in the working repository and in a separate no-hardlink
   clone at `fc63416d7e53455285d89837b17680ea2b9e65e7` using its hash-locked
   virtual environment.
-- Current correction-state tree: **346/346 passed** in the working repository and
-  the no-hardlink clone at `813bc82c5ea1a726fc95bebe076a003f5a42a5c8`.
+- Current preflight-authority tree: **363/363 passed** in the working repository
+  and the no-hardlink clone at `f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8`.
 - Current Checkpoint E-focused readiness regression: **13/13 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.

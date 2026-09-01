@@ -743,6 +743,47 @@ This narrows future workflow exposure. It does not revoke or inspect repository
 secrets, rerun the historical order boundary, execute Checkout, or prove the
 capture/refund/webhook lifecycle.
 
+## 2026-09-02 — Razorpay preflight reference was caller-asserted
+
+### What broke or remained unsafe
+
+The manual order-boundary workflow required a 6–20 digit preflight run ID, but it
+only validated the string shape and copied it into evidence. A caller could name
+an unrelated, failed, different-workflow, different-repository, or stale-revision
+run and still reach the Razorpay credentialed step. The historical retained run
+used the intended preflight, but its later local hardening did not enforce that
+relationship for future runs.
+
+### How it was fixed
+
+- Added a bounded, HTTPS-origin-checked GitHub Actions API client using the
+  current documented REST version and read-only `actions` job permission.
+- Require the run ID, repository and head repository, preflight workflow path,
+  `workflow_dispatch` event, completed/success conclusion, positive attempt, and
+  exact lifecycle source SHA.
+- Emit a bounded strict-JSON receipt with exact fields and a canonical SHA-256;
+  reject duplicates, non-standard JSON, unknown fields, tamper, symlinks,
+  oversized responses/receipts, and output overwrite.
+- Make the order validator consume that receipt before it loads Razorpay
+  credentials, and retain the receipt with the order artifact.
+- Renamed the workflow from “Lifecycle Validation” to truthful “Order Boundary
+  Validation.”
+
+### Regression evidence and limitation
+
+Adversarial tests cover wrong run/repository/head repository/workflow/event/
+status/conclusion/source/attempt, token and response bounds, duplicate JSON,
+receipt tamper, and proof that invalid receipts fail before provider construction.
+The focused B suite passes **112/112**, workflow security passes **5/5**, and the
+full suite passes **363/363** in both the working repository and a no-hardlink
+clone at `f10ef6594faf852e648bf4ff8ccd2f31f8ab76f8`. The clone also passes
+compilation, dependency consistency, JavaScript syntax, readiness, diff, and
+clean-status checks.
+
+The current verifier has only deterministic fake-API evidence. It does not
+retroactively upgrade the historical order artifact, push the new workflow,
+perform a new preflight/order run, or prove Checkout/capture/refund/webhooks.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

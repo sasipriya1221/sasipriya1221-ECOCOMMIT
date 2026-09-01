@@ -115,6 +115,13 @@ Live Razorpay evidence already retained:
 - artifact ID `9811456771`, archive SHA-256
   `6d8cdcabbc78093f2638c8fbefd2e7bcd4d566d1eb807cd6fa0abf709d700f4d`.
 
+That historical order run remains evidence for its original adapter snapshot; it
+is not retroactively upgraded. The current manual order-boundary workflow now
+uses GitHub's Actions API to require a successful `workflow_dispatch` preflight
+from the expected workflow, repository, and exact lifecycle source revision. A
+bounded strict-JSON receipt is digest-bound, retained, and consumed before
+Razorpay credentials are loaded.
+
 Locally, the order workflow now emits a digest-bound Test Checkout handoff and
 standalone page. A continuation validates the returned Checkout HMAC and exact
 provider order/payment, captures only behind ECOCOMMIT's certificate and TOCTOU
