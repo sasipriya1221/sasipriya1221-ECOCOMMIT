@@ -23,6 +23,9 @@ webhook delivery, reconciliation, or settlement was executed.
 - Status: **BLOCKED**
 - Required: one complete frozen 80/80 real-model run satisfying all four frozen
   thresholds together.
+- Retained failure: Candidate 1, run `33493409547` attempt 15, is mathematically
+  failed at a maximum 69/80. Its tracked failure manifest and aggregate/archive
+  digests are in `PROGRESS.md`; corrected Candidate 2 is not evaluated.
 - Do not insert: smoke results, partial aggregates, provider-deferred rows,
   synthetic fixtures, or metrics calculated from an incomplete set.
 - Final artifact reference: **BLOCKED — not available**
@@ -46,7 +49,9 @@ webhook delivery, reconciliation, or settlement was executed.
   `6d8cdcabbc78093f2638c8fbefd2e7bcd4d566d1eb807cd6fa0abf709d700f4d`.
 - Exact blocker: `RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`; the Payments API
   cannot collect a payment, and no genuine Test Checkout callback/signature was
-  available. Manual capture and webhook configuration also remain unverified.
+  available. A digest-bound Checkout page and capture/refund continuation now
+  exist locally, but have not run against Razorpay. Manual capture and webhook
+  configuration also remain unverified.
 - Promotion state: **BLOCKED — partial order evidence is not final B8 evidence**.
 
 ### Checkpoint C final economic comparison
@@ -57,6 +62,9 @@ webhook delivery, reconciliation, or settlement was executed.
 - Required: frozen real scenario manifests, final TEL weights and decision rule,
   authentic comparator outputs, validated A+B candidate, and the separately
   gated one-shot held-out run.
+- Framework state: a final preregistration/evidence contract now binds the
+  required hashes, upstream receipts, candidate/comparator, and quantitative
+  rule before outcomes; no real registration values or results exist.
 - Do not insert: the checked-in synthetic one-case fixture or preliminary harness
   output.
 - Final comparison table: **BLOCKED — deliberately absent**

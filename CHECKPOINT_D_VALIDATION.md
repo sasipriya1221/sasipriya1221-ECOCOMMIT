@@ -40,7 +40,7 @@ remain:
 | Area | Validation performed | Result | Acceptance boundary |
 |---|---|---|---|
 | API and product workflow | Route/method/body/content-type limits, deterministic JSON, correlation propagation, WSGI length/stream failures, health/readiness separation | **LOCAL PASS** | No hosted or production deployment claim |
-| Gate truth | Evidence required for `PASSED`, prerequisite ordering, immutable status snapshot, caller authority claims ignored | **LOCAL PASS** | No authoritative runtime gate-evidence loader installed |
+| Gate truth | Evidence required for `PASSED`, prerequisite ordering, immutable status snapshot, caller authority claims ignored; production A→B now requires a typed digest-bound Candidate 2 receipt | **LOCAL PASS** | No authoritative full A/B/C runtime bundle loader installed |
 | Real commit route | Default-deny with missing adapter, including a synthetic all-gates-passed status; simulation runner cannot be reached from `/v1/commit` | **LOCAL PASS** | Real A/B/C evidence and execution adapter absent |
 | A-to-B boundary | Current fidelity validator, closed policy mapping, exposure decision, certificate, and commitment transitions composed from a fixed synthetic fixture | **LOCAL PASS** | Synthetic A-pass evidence is interface evidence only |
 | Simulated end-to-end flow | `PROPOSED -> AUTHORIZED -> RESERVED -> CAPTURE_ALLOWED -> CAPTURED` through `SIMULATED_LOCAL` | **LOCAL PASS** | No Razorpay call and no real money |
@@ -126,12 +126,14 @@ development validation is promoted as final submission evidence.
 
 ## Remaining blockers
 
-- Checkpoint A's frozen full live gate has not passed.
+- Candidate 1's frozen A gate is mathematically failed; corrected Candidate 2 has
+  not been remotely evaluated.
 - Checkpoints B and C are locally validated but not passed.
 - The local server deliberately loads no authoritative checkpoint evidence.
 - `/v1/commit` has no execution adapter and always denies.
-- There is no Razorpay adapter, credential proof, Test Mode transaction, webhook,
-  timeout/reconciliation, or retained provider evidence.
+- A Razorpay Test adapter plus credential/order evidence exists, and a local
+  Checkout/capture/refund continuation is implemented. No genuine Checkout,
+  capture, refund, webhook delivery, or integrated D provider run exists.
 - Audit, status, metrics, and idempotency boundaries remain local/process-level;
   no production durability or high-availability claim is made.
 - Hosted UI/API execution, independent security review, operational alerting/SLO

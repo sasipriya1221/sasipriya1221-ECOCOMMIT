@@ -49,9 +49,9 @@ production-readiness claim.
 
 | Threat | Implemented local control | Local validation | Residual blocker |
 |---|---|---|---|
-| Model invents authority | Closed mapping, provenance/fidelity gate, trusted exposure config | Adversarial A/B tests | Real A gate incomplete |
-| Material ambiguity guessed | Clarification/rejection based on material risk | Ambiguity and live-failure regressions | Real full semantic gate incomplete |
-| Caller forges pass/readiness | Caller claims ignored; status supplied out of band; real commit adapter absent | D API tests | Authoritative status loader absent |
+| Model invents authority | Closed mapping, explicit provider candidate fields, bounded model correction, provenance/fidelity gate, trusted exposure config | Adversarial A/B tests | Candidate 2 real gate not evaluated |
+| Material ambiguity guessed | Clarification/rejection based on material risk | Ambiguity and live-failure regressions | Candidate 1 failed; Candidate 2 real gate not evaluated |
+| Caller forges pass/readiness | Caller claims ignored; A→B requires a typed digest-bound Candidate 2 receipt; real commit adapter absent | A/B/D boundary tests | Authoritative full A/B/C runtime bundle loader absent |
 | Unknown evidence source | Registered authority/issuer/kind/scope and subject checks | B evidence tests | Durable authority service absent |
 | Stale/revoked evidence | Freshness, expiry, revocation, version and observation-time checks | B tests | External evidence retrieval absent |
 | Negative approval interpreted positive | Exact claim value/digest predicates | B regression | External schema governance absent |
@@ -66,10 +66,10 @@ production-readiness claim.
 | HTTP parser abuse | 64 KiB bound, JSON object/media checks, WSGI length/stream checks | D negative tests | Production server/rate limits/auth absent |
 | Mode confusion | Explicit simulation/Test labels, non-test credential refusal, and permanently disabled real-money field | API/UI/browser checks plus redacted Test authentication/order evidence | Authorization/capture evidence absent; D route remains simulation-only |
 | Provider ambiguity | Exact provider bindings, ECOCOMMIT idempotency, receipt recovery, and capture re-fetch | Adapter adversarial tests plus live order replay | Genuine authorization, asynchronous refund, and webhook reconciliation evidence absent |
-| Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation | C artifact tests | Real preregistration/final run absent |
+| Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation, and pre-outcome final registration/decision contract | C artifact/final-gate tests | Real registration/inputs/final run absent |
 | Fabricated submission media | Blocked evidence markers and promotion rule | E readiness checks | Human review/final evidence still required |
 | Secret committed | CI secret references, ignored artifacts, current-tree/history pattern scan | E local scan | Dedicated secret-scanner service/history audit not retained |
-| Supply-chain drift | Resolved Python validation manifest and read-only CI permissions | Install/check commands | No hash-complete/offline build lock or provenance attestation |
+| Supply-chain drift | Hash-required binary wheels, commit-pinned actions, disabled checkout credentials, step-scoped secrets, read-only permissions | Lock dry-run and workflow-policy tests | No fully offline build bootstrap or provenance attestation |
 
 ## Key and credential boundary
 
@@ -102,8 +102,9 @@ access controls, clock discipline, backup, and recovery evidence.
 - No license has been selected, so open-source reuse rights are not asserted.
 - Generated artifacts, audit logs, virtual environments, and test temporary
   directories are ignored and must be reviewed before intentional retention.
-- CI actions are version-tag pinned and jobs use read-only `contents` permission,
-  but commit-SHA action pinning and supply-chain attestations are not implemented.
+- CI actions are commit-SHA pinned, checkout credentials are not persisted, jobs
+  use read-only `contents` permission, and secrets are step-scoped. Supply-chain
+  attestations and an offline trusted build bootstrap are not implemented.
 - Provider workflows require named secrets and must remain guarded/manual; pull
   requests must not receive provider credentials.
 
@@ -116,7 +117,7 @@ Before D/E or any payment integration passes:
 3. complete a genuine Razorpay Test Checkout authorization, manual capture,
    refund, webhook delivery, duplicate-event handling, and reconciliation run;
 4. replace local HMAC signing with an appropriate managed-key boundary;
-5. add dependency hashes/provenance and a dedicated secret/dependency scan;
+5. add build provenance/attestation and a dedicated secret/dependency scan;
 6. perform accessibility, cross-browser, hosted operational, backup/recovery, and
    incident-response validation; and
 7. retain an independent security review and all findings/fixes.

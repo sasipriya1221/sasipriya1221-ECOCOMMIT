@@ -15,7 +15,9 @@ backend, and a separate **`RAZORPAY_TEST_MODE`** adapter now sits behind the sam
 safety boundary. Redacted Actions evidence validates Test authentication and one
 bound Test order, but no payment authorization, capture, refund, webhook, or
 settlement ran. B8 and Checkpoint B therefore remain blocked/not passed; there is
-no live-money path.
+no live-money path. A digest-bound Test Checkout handoff and capture/refund
+continuation are implemented locally but have not been exercised against the
+provider.
 
 ## Why ECOCOMMIT
 
@@ -67,7 +69,7 @@ matrix is in [Threat Model](docs/THREAT_MODEL.md).
 | Checkpoint | Engineering state | Acceptance state |
 |---|---|---|
 | A — offline specification/contracts | **BUILT + PASSED (offline scope)** | Frozen invariants retained |
-| A — live intent/fidelity gate | **BUILT; frozen live evaluation incomplete** | **NOT PASSED** |
+| A — live intent/fidelity gate | **Candidate 1 failed; Candidate 2 built + locally validated, not evaluated** | **NOT PASSED** |
 | B — deterministic economic safety | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | C — comparative benchmark harness | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | D — API/UI/audit/operations | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
@@ -89,8 +91,8 @@ Requirements: Git and Python 3.11 or newer.
 git clone https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT.git
 Set-Location sasipriya1221-ECOCOMMIT
 python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements-dev.lock
-.venv\Scripts\python.exe -m pip install --no-deps -e .
+.venv\Scripts\python.exe -m pip install --require-hashes -r requirements-dev.lock
+.venv\Scripts\python.exe -m pip install --no-deps --no-build-isolation -e .
 .venv\Scripts\python.exe -m pytest -p no:cacheprovider --basetemp .test-tmp-readme
 ```
 
@@ -150,6 +152,9 @@ Run the repository-readiness checker with:
 It returns a local structural verdict separately from final submission readiness.
 Known evidence and legal blockers remain blockers rather than making the checker
 green by omission.
+
+After real evidence is installed, strict final validation uses
+`scripts/checkpoint_e_readiness.py --mode final --independent-reproduction <receipt>`.
 
 ## Submission evidence status
 

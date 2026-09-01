@@ -67,6 +67,58 @@ def test_readiness_checker_detects_broken_relative_markdown_link(tmp_path):
     assert broken == ["docs/guide.md: missing target: ../does-not-exist.md"]
 
 
+def test_evidence_slots_can_progress_to_passed_without_changing_checker_code():
+    module = load_readiness_module()
+    blocked = "\n".join(
+        f"<!-- EVIDENCE:{slot} status=BLOCKED -->" for slot in module.EVIDENCE_SLOTS
+    )
+    passed = blocked.replace("status=BLOCKED", "status=PASSED")
+
+    blocked_statuses, blocked_problems = module._evidence_slot_statuses(blocked)
+    passed_statuses, passed_problems = module._evidence_slot_statuses(passed)
+
+    assert not blocked_problems and set(blocked_statuses.values()) == {"BLOCKED"}
+    assert not passed_problems and set(passed_statuses.values()) == {"PASSED"}
+
+
+def test_independent_reproduction_receipt_is_revision_bound(tmp_path):
+    module = load_readiness_module()
+    revision = "a" * 40
+    receipt = tmp_path / "reproduction.json"
+    receipt.write_text(json.dumps({
+        "schema_version": "E.REPRODUCTION.1",
+        "source_revision": revision,
+        "independent_machine": True,
+        "clean_checkout": True,
+        "full_tests_passed": True,
+        "dependency_check_passed": True,
+        "readiness_local_checks_passed": True,
+        "artifact_sha256": "b" * 64,
+    }), encoding="utf-8")
+
+    assert module._independent_reproduction_status(
+        receipt, source_revision=revision
+    )[0] is True
+    assert module._independent_reproduction_status(
+        receipt, source_revision="c" * 40
+    )[0] is False
+
+
+def test_final_cli_mode_fails_while_real_evidence_is_blocked():
+    completed = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "--mode", "final"],
+        cwd=REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    report = json.loads(completed.stdout)
+
+    assert completed.returncode == 1
+    assert report["evaluation_mode"] == "final"
+    assert report["final_submission_ready"] is False
+
+
 def test_submission_evidence_contains_no_final_metric_or_media_claims():
     evidence = (REPOSITORY_ROOT / "docs" / "SUBMISSION_EVIDENCE.md").read_text(
         encoding="utf-8"

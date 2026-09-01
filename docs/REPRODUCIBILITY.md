@@ -42,8 +42,8 @@ Windows PowerShell:
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements-dev.lock
-.venv\Scripts\python.exe -m pip install --no-deps -e .
+.venv\Scripts\python.exe -m pip install --require-hashes -r requirements-dev.lock
+.venv\Scripts\python.exe -m pip install --no-deps --no-build-isolation -e .
 .venv\Scripts\python.exe -m pip check
 ```
 
@@ -51,15 +51,17 @@ POSIX shell:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements-dev.lock
-.venv/bin/python -m pip install --no-deps -e .
+.venv/bin/python -m pip install --require-hashes -r requirements-dev.lock
+.venv/bin/python -m pip install --no-deps --no-build-isolation -e .
 .venv/bin/python -m pip check
 ```
 
-`requirements-dev.lock` records the exact Python distributions used by the local
-validation environment. It does not contain artifact hashes and does not pin the
-isolated build bootstrap declared in `pyproject.toml`; therefore it is a resolved
-validation manifest, not a fully offline/hermetic supply-chain lock.
+`requirements-dev.lock` records exact distributions and accepted published
+SHA-256 artifact hashes for CPython 3.11 Linux x86_64 and CPython 3.11/3.14
+Windows x86_64. Binary-only installation and `--require-hashes` reject an
+unlisted wheel. The editable project install disables dependency resolution and
+build isolation; the already installed setuptools/wheel bootstrap is still an
+environment prerequisite, so this is not a fully offline build attestation.
 
 If validating the broad supported dependency ranges instead, use
 `python -m pip install -e ".[dev]"` and retain the complete resolved distribution
@@ -128,10 +130,11 @@ blocked gate reports. It is not hosted or provider evidence.
 
 ## Checkpoint A live evidence
 
-Follow `CHECKPOINT_A_RUNBOOK.md`. Do not start a competing run while the guarded
-provider-deferred retry is active. A full gate requires all 80 immutable cases and
-all four frozen thresholds passing together. Provider deferrals, smoke runs,
-fixtures, partial aggregates, and schema failures cannot become a pass.
+Follow `CHECKPOINT_A_RUNBOOK.md`. Candidate 1 is mathematically failed and must
+not be resumed. Candidate 2 starts a fresh, manifest-bound 80-case run. A full
+gate requires all 80 immutable cases and all four frozen thresholds passing
+together. Provider deferrals, smoke runs, fixtures, partial aggregates, and
+schema failures cannot become a pass.
 
 Never print or pass a provider key in a shell command that will be retained. Use
 the approved CI secret boundary.
@@ -139,9 +142,10 @@ the approved CI secret boundary.
 ## Razorpay Test Mode evidence
 
 The repository includes a dedicated `RAZORPAY_TEST_MODE` adapter and two
-manual-only workflows. Keep the API key ID and secret exclusively in GitHub
-Actions secrets named `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`; never place
-either value in a workflow input, shell command, artifact, or report.
+manual-only workflows. Keep the secret exclusively in the GitHub Actions secret
+`RAZORPAY_KEY_SECRET`; never place it in an input, command, artifact, or report.
+The Test key ID is intentionally public client configuration and appears only in
+the generated Checkout handoff, not in redacted server evidence.
 
 1. Dispatch **Razorpay Test Credential Preflight**. It refuses a non-test key ID,
    performs only a read-only order-list request, discards the provider response,
@@ -152,17 +156,29 @@ either value in a workflow input, shell command, artifact, or report.
    `RUN_TEST_MODE_ORDER` and the numeric successful preflight run ID. This creates
    one INR 1.00 Test Mode order, revalidates its transaction notes/amount/currency,
    replays the same ECOCOMMIT idempotency key, fetches the order's payments, and
-   retains a redacted JSON artifact.
+   retains redacted order evidence plus a digest-bound Checkout handoff JSON and
+   standalone Test Checkout HTML page.
 4. Treat `ORDER_API_VALIDATED_PAYMENT_LIFECYCLE_BLOCKED` and
    `checkpoint_b8_passed=false` literally. A successful workflow conclusion only
    means the validator retained this truthful partial result.
 5. Before testing payment authorization/capture, set the Razorpay account to
-   manual capture. Complete a genuine Test Checkout and pass its order ID,
-   payment ID, and signature into the adapter's authorization-binding boundary.
-6. Configure a separate `RAZORPAY_WEBHOOK_SECRET` and endpoint before claiming
+   manual capture. Download and open the retained Test Checkout page, complete
+   one genuine Test Checkout, and keep the downloaded callback JSON private.
+6. With the matching Test credentials in the environment, continue through the
+   signature/provider binding, capture, compensating refund, and reconciliation:
+
+   ```powershell
+   .venv\Scripts\python.exe scripts\checkpoint_b8_razorpay_continue.py `
+     --handoff artifacts\checkpoint-b8-checkout-handoff.json `
+     --callback ecocommit-razorpay-checkout-callback.json `
+     --output artifacts\checkpoint-b8-lifecycle.json
+   ```
+
+   A local/fake test of this command is not provider evidence.
+7. Configure a separate `RAZORPAY_WEBHOOK_SECRET` and endpoint before claiming
    webhook delivery/reconciliation. Retain signed raw-event evidence, duplicate
    delivery behavior, asynchronous refund state, and reconciliation results.
-7. Retain application denials and provider/transport failures and checksum the
+8. Retain application denials and provider/transport failures and checksum the
    complete redacted evidence bundle.
 
 The server-side Payments API cannot collect a payment, so step 5 requires an
@@ -184,6 +200,12 @@ For a retained clean-environment result:
 
 An independent reproduction must be performed by another machine/operator and
 retain the same provenance. This has not happened yet.
+
+For strict E final mode, also retain a JSON receipt with schema
+`E.REPRODUCTION.1`, the exact source revision, `independent_machine=true`, clean
+checkout/full-test/dependency/readiness pass flags, and the retained reproduction
+artifact SHA-256. Pass that file through `--independent-reproduction`; the local
+checker does not create or self-attest it.
 
 ## Evidence-bundle checklist
 

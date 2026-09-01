@@ -60,6 +60,15 @@ before representing the authorization as `RESERVED`. The account must also use
 the default auto-capture setting would bypass ECOCOMMIT's delayed capture gate
 and is rejected by the adapter.
 
+The current local tree closes the earlier software handoff gap. The order
+validator can emit a digest-bound Test Checkout JSON handoff and standalone HTML
+page. The page downloads a typed callback file after the human Test Checkout. A
+continuation command verifies the callback and exact provider entities, captures
+only behind ECOCOMMIT's certificate/TOCTOU boundary, issues an idempotent full
+refund through compensation, and reconciles the final state. This path has
+deterministic fake-transport regression evidence only; it has not been exercised
+against the provider and is not added to the live evidence table above.
+
 The isolated live snapshot was used so the active frozen Checkpoint A retry and
 its main-branch inputs were not changed. The local implementation commit adds
 follow-up hardening: permanent manual-only preflight/lifecycle workflows, a
@@ -101,7 +110,7 @@ never count as live provider evidence.
 
 | Gate | Evidence and result | Status |
 |---|---|---:|
-| A prerequisite | Current resumable run `33493409547` remains incomplete; the retained aggregate has 26/80 rows and no complete passing A artifact exists | **BLOCKED** |
+| A prerequisite | Candidate 1 in run `33493409547` is mathematically failed at attempt 15: 21 passes, 11 terminal contract failures, 48 provider deferrals, maximum 69/80. Candidate 2 is locally corrected but has not run. | **FAILED / NEW CANDIDATE NOT EVALUATED** |
 | B1 — Policy Class Mapper | Exhaustive mapping and fail-closed A admission tests pass | **LOCAL PASS** |
 | B2 — Evidence Registry | Authority, identity, version, time, freshness, revocation, subject, and exact-claim adversarial tests pass | **LOCAL PASS** |
 | B3 — Evidence-to-Exposure Policy | Only trusted caps and authoritative exact claims determine exposure | **LOCAL PASS** |
@@ -145,8 +154,8 @@ replaced by provider behavior.
 
 1. **Checkpoint A has not passed.** The real A-to-B admission path remains locked.
 2. **B8 payment execution is incomplete.** A genuine Test Checkout authorization
-   and signature are required before reserve/capture can be validated. Manual
-   capture must be configured first.
+   and signature are required before the locally implemented continuation can be
+   validated against Razorpay. Manual capture must be configured first.
 3. **Webhook and asynchronous reconciliation evidence is absent.** The user
    supplied API credentials, not a webhook secret/endpoint or delivered events.
 4. **Durability is not proven.** Evidence, payment state, and the ECOCOMMIT

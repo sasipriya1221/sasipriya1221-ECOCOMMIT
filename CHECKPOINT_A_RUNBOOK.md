@@ -1,6 +1,8 @@
 # Checkpoint A Live Evaluation Runbook
 
-Checkpoint A is intentionally blocked unless a real configured model is called. Mocked provider fixtures do not count.
+Checkpoint A is intentionally blocked unless a real configured model is called.
+Mocked provider fixtures do not count. Candidate 1 is permanently failed; this
+runbook now describes the fresh `A-CANDIDATE-2` evaluation.
 
 ## Secure credential setup
 
@@ -21,9 +23,14 @@ Current committed live configuration:
   jobs running in parallel
 - per-case provider retry bound: two attempts, with a 15-second delay ceiling
 
-The model, endpoint, reasoning effort, structured-output mode, and completion
-budget are frozen for the current 80-case evaluation. Changing any of them
-creates different provider evidence and is not a resume of the same evaluation.
+The model, endpoint, reasoning effort, structured-output mode, completion budget,
+prompt, schema, evaluator, runner, criteria, dataset, and source revision are
+bound into the Candidate 2 evidence manifest. Changing any of them creates a
+different candidate and conflicting artifacts are rejected.
+
+Candidate 2 is a fresh 80-case evaluation. Never place a Candidate 1 artifact in
+its resume directory. Candidate 1's attempt-15 failure is retained in
+`evidence/checkpoint-a-candidate-1-failure.json`.
 
 ## Preflight
 
@@ -44,8 +51,9 @@ The full workflow performs, in order:
 3. full offline pytest regression suite;
 4. Groq secret-presence check;
 5. live model run across 80 procurement cases (50 clear + 30 materially ambiguous);
-6. compact failure diagnostics;
-7. machine-readable artifact upload.
+6. manifest and row verification plus full semantic recomputation;
+7. compact failure diagnostics; and
+8. immutable result upload, with a typed A receipt emitted only if the full gate passes.
 
 A separate **Checkpoint A - Development Smoke** workflow runs a 10-clear + 10-ambiguous subset for development diagnostics. A smoke result can guide fixes but can never mark Checkpoint A passed.
 
@@ -66,18 +74,37 @@ This is the Checkpoint A development gate, not the final M8 held-out benchmark. 
 
 ## Result handling
 
-If the workflow fails the gate, Checkpoint A remains red. Retain the failed artifact, use its diagnostics to isolate implementation defects, add regression tests, and rerun. Do not delete difficult cases, change expected outcomes to fit the model, or lower thresholds to manufacture a pass.
+If the workflow fails the gate, Checkpoint A remains failed. Retain the artifact,
+use its diagnostics to isolate a general implementation defect, add regression
+tests, and create a separately versioned candidate only when the evidence
+justifies a general correction. Do not delete difficult cases, change expected
+outcomes to fit the model, hard-code benchmark answers, or lower thresholds.
+
+Every provider candidate must explicitly contain the complete top-level contract
+and every required clause field. The local runtime may recompute exact source
+offsets for model-supplied text, but it does not manufacture missing economic
+fields or graph edges. One schema-invalid candidate receives at most one bounded
+model correction request. A second invalid candidate is terminal. If the
+correction request itself ends in a provider error, both facts are retained and
+the row is terminal rather than misclassified as a pure provider deferral.
 
 Provider failures are evidence too. Groq's HTTP 429/5xx responses are retried
-with bounded backoff using the provider `Retry-After` window, including longer
-rolling token windows; transient transport failures are also retried. If one of
-those transient classes remains unavailable after bounded attempts, that
-single-case job records the infrastructure error without a semantic case row and
-exits nonzero. Resume by re-running only failed jobs in the same workflow run.
-Completed case artifacts are immutable inputs to later aggregation and must not
-be replayed. Do not start a new full workflow run to retry provider-deferred
-cases. Non-transient provider responses and local contract-validation failures
-are terminal failed case evidence and are not eligible for a provider-deferred
-retry. Provider failures are never replaced with fixtures.
+with bounded backoff using the provider `Retry-After` window; transient transport
+failures are also retried. If one remains unavailable, that case records an
+infrastructure error without a semantic row and exits nonzero.
+
+Resume Candidate 2 by re-running only failed jobs in the same workflow run.
+Every attempt uses a unique artifact name. The runner accepts only rows with the
+same manifest and case digests, skips pure transient provider deferrals, permits
+identical duplicate rows, and rejects conflicts. Completed terminal rows are
+immutable. Non-transient provider responses, interrupted corrections, and local
+contract-validation failures are terminal evidence. Provider failures are never
+replaced with fixtures.
+
+Aggregation must read every shard through the strict verifier. It recomputes
+contracts, validator reports, semantic decisions, metrics, missing IDs, and the
+exact frozen gate. A passing receipt binds the result artifact SHA-256, manifest,
+source revision, Candidate 2 identity, frozen dataset, and metrics; a partial or
+failed aggregate cannot emit that receipt.
 
 Free-tier token-per-day exhaustion can make a smoke artifact mostly operational rather than semantic evidence. Such an artifact must still be retained and reported, but it must not be presented as an estimate of model accuracy when most cases never received a model result.

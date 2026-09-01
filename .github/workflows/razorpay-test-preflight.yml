@@ -10,12 +10,12 @@ jobs:
   authenticate-without-retaining-provider-data:
     runs-on: ubuntu-latest
     timeout-minutes: 3
-    env:
-      RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
-      RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
     steps:
       - name: Verify redacted Test Mode authentication
         shell: python
+        env:
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
         run: |
           import base64
           import json

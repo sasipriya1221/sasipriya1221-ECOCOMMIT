@@ -61,7 +61,7 @@ They never grant authority.
 |---|---|---|
 | Intent provider | Propose structured clauses and source spans | Grant payment authority or choose an exposure cap |
 | Fidelity validator | Check structure, grounding, risk, ambiguity, and abstention | Repair material meaning by guessing |
-| A-to-B bridge | Recompute fidelity and release closed policy obligations after accepted A evidence | Trust a caller-supplied `VALIDATED` or `checkpoint_a_passed` flag |
+| A-to-B bridge | Recompute fidelity and release closed policy obligations only after a typed, digest-bound passing A receipt | Trust a caller-supplied `VALIDATED`, evidence string, test fixture, or `checkpoint_a_passed` flag |
 | Policy mapper | Map each current clause type to one fixed policy class | Execute model-generated free-form rules |
 | Evidence registry | Enforce registered authority/issuer/kind/subject, monotonic versions/time, freshness, revocation, and exact claims | Treat arbitrary request payloads as evidence |
 | Exposure policy | Compute a cap from trusted configuration and verified evidence | Accept a model- or evidence-supplied monetary ceiling |
@@ -77,23 +77,32 @@ They never grant authority.
 
 ### Live Checkpoint A path
 
-The live runner calls an OpenAI-compatible provider, parses a candidate contract,
-revalidates it locally, scores frozen cases, and writes retained artifacts. The
-guarded GitHub workflow runs immutable cases independently and retries only
-provider-deferred jobs after an active attempt finishes.
+The live runner calls an allowlisted HTTPS OpenAI-compatible provider, validates
+every model-supplied required field before defaults, permits one bounded schema
+correction, scores frozen cases, and writes redacted trace metadata. Candidate 2
+binds rows to dataset/case/prompt/schema/evaluator/runner/criteria/provider/source
+digests and recomputes semantic results during aggregation. Immutable attempt
+artifacts support resume of pure provider deferrals and reject conflicts.
 
-This path remains incomplete and has not passed the four frozen live thresholds.
+Candidate 1 is mathematically failed. Candidate 2 is locally validated but has
+not run remotely, so A has not passed the frozen gate.
 
 ### Deterministic B path
 
-The B integration boundary accepts a complete current contract plus an explicit
-Checkpoint A gate report. It recomputes fidelity, maps obligations, evaluates
+The B integration boundary accepts a complete current contract plus a matching
+typed Checkpoint A receipt. It recomputes fidelity, maps obligations, evaluates
 registered evidence and exposure, and may issue a transaction-bound certificate.
 The commitment engine and explicit `SIMULATED_LOCAL` adapter enforce the local
 reserve/capture sequence. A separate `RAZORPAY_TEST_MODE` adapter creates and
 validates bound orders, binds a genuine Checkout-authorized payment only after
 HMAC and provider checks, and preserves the same certificate/freshness gate before
 capture. It is not wired into the D endpoint.
+
+The Test-order validator can generate a digest-bound public Checkout handoff and
+standalone page. Its callback continuation verifies the Checkout signature and
+provider entities, captures behind the same certificate/freshness gate, performs
+an idempotent compensating refund, and reconciles the result. That continuation
+has local fake-transport evidence only and is not wired into D.
 
 A synthetic passed-A fixture proves interface compatibility only. The actual A
 gate releases no B authority until it passes. Live evidence currently stops at
@@ -107,8 +116,11 @@ revision and tree state, and required comparator roles. It retains every schedul
 row, including errors, computes deterministic loss/latency metrics, and validates
 the artifact by semantic recomputation.
 
-The checked-in fixture is synthetic and `PRELIMINARY_NOT_FINAL`. The runner rejects
-final-held-out scenarios and requires final A/B prerequisites that are unavailable.
+The checked-in fixture is synthetic and `PRELIMINARY_NOT_FINAL`. The runner
+rejects final-held-out scenarios. A separate final preregistration/evidence model
+binds A/B receipts, suite/case/cost/metric hashes, comparator/candidate identity,
+and quantitative acceptance rules before outcomes, and refuses fixtures or
+simulated final inputs. No real final registration or result exists.
 
 ### D local product path
 
@@ -194,10 +206,10 @@ an exact provider-side binding match.
 
 | Area | Implementation |
 |---|---|
-| A contracts/interpretation | `contracts.py`, `interpreter.py`, `validator.py`, `evaluation.py` |
-| A-to-B admission | `checkpoint_b_integration.py` |
-| B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `payments.py`, `razorpay.py`, `reconciliation.py` |
-| C benchmark | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py` |
+| A contracts/interpretation | `contracts.py`, `interpreter.py`, `validator.py`, `evaluation.py`, Candidate 2 protocol scripts |
+| A-to-B admission | `checkpoint_a_evidence.py`, `checkpoint_b_integration.py` |
+| B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `payments.py`, `razorpay.py`, `razorpay_checkout.py`, `reconciliation.py` |
+| C benchmark | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py`, `checkpoint_c_final.py` |
 | D product/operations | `checkpoint_status.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, `checkpoint_d_workflow.py`, `demo_server.py`, `ui/` |
 | E evidence discipline | `REPRODUCIBILITY.md`, `ENGINEERING_LOG.md`, `SUBMISSION_EVIDENCE.md`, `DEMO_RUNBOOK.md`, `PITCH_OUTLINE.md`, readiness checker |
 

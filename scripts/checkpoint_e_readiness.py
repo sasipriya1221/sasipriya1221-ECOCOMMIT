@@ -40,13 +40,19 @@ README_HEADINGS = (
     "## Safety and limitations",
     "## License",
 )
-EVIDENCE_MARKERS = (
-    "EVIDENCE:CHECKPOINT_A_FINAL_METRICS status=BLOCKED",
-    "EVIDENCE:CHECKPOINT_B_RAZORPAY_TEST status=BLOCKED",
-    "EVIDENCE:CHECKPOINT_C_FINAL_COMPARISON status=BLOCKED",
-    "EVIDENCE:CHECKPOINT_D_FINAL_INTEGRATION status=BLOCKED",
-    "EVIDENCE:FINAL_SCREENSHOTS status=BLOCKED",
-    "EVIDENCE:FINAL_VIDEO status=BLOCKED",
+EVIDENCE_SLOTS = (
+    "CHECKPOINT_A_FINAL_METRICS",
+    "CHECKPOINT_B_RAZORPAY_TEST",
+    "CHECKPOINT_C_FINAL_COMPARISON",
+    "CHECKPOINT_D_FINAL_INTEGRATION",
+    "FINAL_SCREENSHOTS",
+    "FINAL_VIDEO",
+)
+EVIDENCE_MARKERS = tuple(
+    f"EVIDENCE:{slot} status=BLOCKED" for slot in EVIDENCE_SLOTS
+)
+EVIDENCE_MARKER = re.compile(
+    r"<!--\s*EVIDENCE:([A-Z0-9_]+)\s+status=(BLOCKED|FAILED|PASSED)\s*-->"
 )
 TRANSIENT_PREFIXES = (
     ".pytest_cache/",
@@ -145,6 +151,52 @@ def _markdown_absolute_paths(root: Path, tracked: tuple[str, ...]) -> list[str]:
     return matches
 
 
+def _evidence_slot_statuses(text: str) -> tuple[dict[str, str], list[str]]:
+    discovered: dict[str, list[str]] = {}
+    for name, status in EVIDENCE_MARKER.findall(text):
+        discovered.setdefault(name, []).append(status)
+    problems: list[str] = []
+    statuses: dict[str, str] = {}
+    for slot in EVIDENCE_SLOTS:
+        values = discovered.get(slot, [])
+        if not values:
+            problems.append(f"missing:{slot}")
+        elif len(values) != 1:
+            problems.append(f"duplicate:{slot}")
+        else:
+            statuses[slot] = values[0]
+    unknown = sorted(set(discovered) - set(EVIDENCE_SLOTS))
+    problems.extend(f"unknown:{name}" for name in unknown)
+    return statuses, problems
+
+
+def _independent_reproduction_status(
+    path: Path | None,
+    *,
+    source_revision: str,
+) -> tuple[bool, str]:
+    if path is None:
+        return False, "receipt=missing"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False, "receipt=invalid_json"
+    required = {
+        "schema_version": "E.REPRODUCTION.1",
+        "source_revision": source_revision,
+        "independent_machine": True,
+        "clean_checkout": True,
+        "full_tests_passed": True,
+        "dependency_check_passed": True,
+        "readiness_local_checks_passed": True,
+    }
+    mismatches = [key for key, expected in required.items() if payload.get(key) != expected]
+    artifact_sha256 = payload.get("artifact_sha256")
+    if not isinstance(artifact_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", artifact_sha256):
+        mismatches.append("artifact_sha256")
+    return not mismatches, f"mismatches={sorted(set(mismatches))}"
+
+
 def _upstream_counts(root: Path) -> tuple[int | None, int | None]:
     completed = subprocess.run(
         ["git", "rev-list", "--left-right", "--count", "@{upstream}...HEAD"],
@@ -159,7 +211,11 @@ def _upstream_counts(root: Path) -> tuple[int | None, int | None]:
     return int(behind), int(ahead)
 
 
-def build_report(root: Path = REPOSITORY_ROOT) -> dict[str, object]:
+def build_report(
+    root: Path = REPOSITORY_ROOT,
+    *,
+    independent_reproduction: Path | None = None,
+) -> dict[str, object]:
     root = root.resolve()
     tracked = _tracked_files(root)
     tracked_set = set(tracked)
@@ -173,8 +229,12 @@ def build_report(root: Path = REPOSITORY_ROOT) -> dict[str, object]:
     checks.append(Check("readme_structure", not missing_headings, f"missing={missing_headings}"))
 
     evidence = _read_text(root, "docs/SUBMISSION_EVIDENCE.md") or ""
-    missing_markers = [marker for marker in EVIDENCE_MARKERS if marker not in evidence]
-    checks.append(Check("blocked_evidence_markers", not missing_markers, f"missing={missing_markers}"))
+    evidence_statuses, evidence_problems = _evidence_slot_statuses(evidence)
+    checks.append(Check(
+        "evidence_slot_markers",
+        not evidence_problems,
+        f"problems={evidence_problems}",
+    ))
 
     broken_links = _broken_markdown_links(root, tracked)
     checks.append(Check("local_markdown_links", not broken_links, f"broken={broken_links}"))
@@ -209,7 +269,11 @@ def build_report(root: Path = REPOSITORY_ROOT) -> dict[str, object]:
     revision = _git(root, "rev-parse", "HEAD")
     license_present = any(path in tracked_set for path in ("LICENSE", "LICENSE.md", "LICENSE.txt"))
 
-    blockers = list(EVIDENCE_MARKERS)
+    blockers = [
+        f"EVIDENCE:{slot} status={evidence_statuses.get(slot, 'MISSING')}"
+        for slot in EVIDENCE_SLOTS
+        if evidence_statuses.get(slot) != "PASSED"
+    ]
     if not license_present:
         blockers.append("LICENSE_OWNER_DECISION_REQUIRED")
     if not remote_url:
@@ -222,7 +286,12 @@ def build_report(root: Path = REPOSITORY_ROOT) -> dict[str, object]:
         blockers.append(f"LOCAL_COMMITS_NOT_PUSHED:{ahead}")
     if behind:
         blockers.append(f"LOCAL_BRANCH_BEHIND_UPSTREAM:{behind}")
-    blockers.append("INDEPENDENT_CLEAN_MACHINE_REPRODUCTION_NOT_RETAINED")
+    reproduction_passed, reproduction_detail = _independent_reproduction_status(
+        independent_reproduction,
+        source_revision=revision,
+    )
+    if not reproduction_passed:
+        blockers.append("INDEPENDENT_CLEAN_MACHINE_REPRODUCTION_NOT_RETAINED")
 
     return {
         "schema_version": "E.READINESS.1",
@@ -231,6 +300,11 @@ def build_report(root: Path = REPOSITORY_ROOT) -> dict[str, object]:
         "remote_url": remote_url,
         "upstream": {"behind": behind, "ahead": ahead},
         "license_present": license_present,
+        "evidence_slot_statuses": evidence_statuses,
+        "independent_reproduction": {
+            "verified": reproduction_passed,
+            "detail": reproduction_detail,
+        },
         "checks": [asdict(item) for item in checks],
         "local_repository_checks_pass": local_validation_pass,
         "final_submission_ready": local_validation_pass and not blockers,
@@ -249,14 +323,25 @@ def main() -> int:
     )
     parser.add_argument("--root", type=Path, default=REPOSITORY_ROOT)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--independent-reproduction", type=Path)
+    parser.add_argument("--mode", choices=("local", "final"), default="local")
     args = parser.parse_args()
-    report = build_report(args.root)
+    report = build_report(
+        args.root,
+        independent_reproduction=args.independent_reproduction,
+    )
+    report["evaluation_mode"] = args.mode
     encoded = json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(encoded + "\n", encoding="utf-8")
     print(encoded)
-    return 0 if report["local_repository_checks_pass"] else 1
+    required_pass = (
+        report["final_submission_ready"]
+        if args.mode == "final"
+        else report["local_repository_checks_pass"]
+    )
+    return 0 if required_pass else 1
 
 
 if __name__ == "__main__":

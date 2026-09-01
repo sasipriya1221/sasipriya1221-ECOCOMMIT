@@ -11,11 +11,25 @@ and evidence-framework checks at implementation commit
 `5a7aef7be2827c9af49d01ab949a08fb530e6619`. It does not claim that the final
 submission bundle exists or that Checkpoint A, B, C, D, or E passed.
 
+### Current-tree hardening addendum
+
+After that historical validation snapshot, the current tree upgraded the
+resolved dependency manifest into an install-time SHA-256 lock for the supported
+Linux CI and Windows validation wheels; pinned every third-party workflow action
+to a commit; disabled persisted checkout credentials; scoped provider/payment
+secrets to individual steps; removed provider-body printing; expanded offline CI
+to UI/workflow/protocol changes and static checks; and made the readiness checker
+capable of a real final transition. The checker now parses each evidence slot's
+state, validates a revision-bound independent-reproduction receipt, and supports
+`--mode final`. It still reports false today because the real slots, license,
+push, independent reproduction, and media are absent.
+
 ## Frozen-boundary check
 
-Checkpoint A was left on its existing guarded provider-deferred retry process.
-This E work did not change its workflows, frozen cases, model configuration,
-prompt semantics, schemas, or thresholds. The thresholds remain:
+The historical E snapshot left A on its guarded retry process. Subsequent
+forensics proved Candidate 1 mathematically failed at attempt 15; its failure
+manifest is retained. Candidate 2 changes the candidate/runtime/evidence protocol
+but not the frozen cases, evaluator criteria, or thresholds. The thresholds remain:
 
 - case pass rate >= 90%;
 - selective semantic reliability >= 95%;
@@ -45,7 +59,7 @@ No competing provider run was started.
 | README | Problem, architecture, checkpoint truth, quick start, demo, evidence, limitations, and license status are explicit | **LOCAL PASS** | Final metrics and media remain absent |
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
-| Reproducibility | Exact validation distributions recorded; fresh virtual environment install, dependency consistency, and full test run succeeded | **LOCAL PASS** | Manifest is not hash-locked or fully hermetic |
+| Reproducibility | Exact distributions and published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Build bootstrap is still environment-provided and independent reproduction is absent |
 | Clean clone | Separate clone at the validated SHA passed 197/197 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
 | Engineering log | Real provider, semantic, schema, harness, product, documentation, and portability failures remain recorded with fixes and limitations | **LOCAL PASS** | Log is repository evidence, not external attestation |
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
@@ -97,6 +111,16 @@ These are local engineering results. They are not final checkpoint evidence.
    to CRLF and failed their registered SHA-256 check. `.gitattributes` now forces
    LF for those files; the replacement clean clone passed all 197 tests with the
    registered digest intact.
+8. **Final readiness was structurally impossible.** The checker always inserted
+   blocked evidence strings and an independent-reproduction blocker even after
+   future evidence might exist. Evidence states and a typed reproduction receipt
+   are now data inputs, and strict final mode succeeds only when every real gate
+   is satisfied.
+9. **Workflow and package provenance were mutable.** Action majors, broad secret
+   scope, version-only dependencies, incomplete CI paths, and provider-body
+   printing were replaced with commit-pinned actions, step-scoped secrets,
+   hash-required wheels, expanded triggers/static checks, and redacted preflight
+   output.
 
 The failed clean-clone run is retained here as failure evidence; it was not
 discarded or described as a passing run.

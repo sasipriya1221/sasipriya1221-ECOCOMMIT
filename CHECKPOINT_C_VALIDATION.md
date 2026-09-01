@@ -9,6 +9,14 @@ on frozen real inputs, real comparator outputs, final preregistered economic-los
 weights and quantitative acceptance rule, a validated A+B candidate, and a
 separately gated held-out run.
 
+The current tree also contains a separate final preregistration/evidence contract.
+It requires upstream receipt hashes, held-out suite/case/cost/metric hashes,
+candidate revision, comparator choice, TEL margin, completion/reliability floors,
+latency/error/missing-data/irreversible-loss ceilings, tie handling, rationale,
+and statistical method before any outcome can validate. It structurally refuses
+fixture inputs and simulated cost or latency. No real values or outcomes have
+been filled into that contract.
+
 ## Validation boundary
 
 - Validation date: 2026-09-01.
@@ -115,6 +123,10 @@ one mutable factory.
     `pydantic-core`.
 14. Froze the local accounting treatment for error-row loss, reliability, and
     missing latency in the metric specification, with direct TEL assertions.
+15. Added a digest-bound final preregistration and decision contract that
+    recomputes the quantitative gate, binds A/B receipts and the candidate
+    revision, and makes post-outcome rule changes or fixture/simulation promotion
+    invalid.
 
 ## Remaining blockers
 
@@ -137,9 +149,9 @@ one mutable factory.
   legitimate-completion floor, latency ceiling, treatment of errored or
   missing-latency rows at the acceptance gate beyond their frozen accounting
   treatment, and the statistical method. None is currently frozen.
-- Retain a dependency lock or otherwise reproducible environment specification;
-  the complete installed-distribution manifest records the validation environment
-  but is not itself an installable lock.
+- Validate the current hash-locked dependency file on an independent machine;
+  its published artifact hashes cover the supported Linux CI and Windows
+  validation wheels, but this is not independent reproduction.
 - Obtain genuine passing A and B evidence and a version-bound integrated candidate.
 - After those criteria are frozen, execute the separately gated final-held-out
   comparison once, retain all error rows/artifacts, and apply the preregistered

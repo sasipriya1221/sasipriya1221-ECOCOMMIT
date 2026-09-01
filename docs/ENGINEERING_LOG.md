@@ -289,6 +289,107 @@ The owner must choose a license; local commits must be pushed intentionally; all
 final A/B/C/D metrics/provider/media slots remain blocked; and no independent
 machine reproduction has been retained.
 
+## 2026-09-01 — Candidate 1 terminal forensics and Candidate 2 protocol
+
+### What broke
+
+Attempt 15 of run `33493409547` retained 21 semantic passes and 11 terminal
+candidate-contract failures. Ten candidates appended a seventh `auth_01` clause
+without `materiality` or `confidence`; one omitted `clauses`. The other 48 cases
+were genuine provider deferrals. Candidate 1's best possible result was therefore
+69/80, below the frozen 72/80 minimum. The earlier resume/aggregate protocol also
+identified rows only by case ID, allowed mutable artifact names, trusted stored
+semantic detail, and did not bind candidate configuration/source components.
+
+### How it was fixed
+
+- Retained a tracked failure manifest with the run/source/artifact hashes, exact
+  case classes, all 48 provider-deferral IDs, and the mathematical upper bound.
+- Added a general all-fields prompt rule and provider-ingress presence checking
+  before Pydantic defaults; no missing economic value or graph edge is invented.
+- Added one bounded model correction, safe candidate/finish/request/usage traces,
+  and terminal mixed classification when correction is interrupted by a provider
+  error.
+- Restricted provider URLs to HTTPS allowlisted hosts, bounded response/error
+  reads, redacted failures, and removed command-line API keys.
+- Versioned a fresh `A-CANDIDATE-2` manifest binding the frozen dataset, case,
+  prompt, schema, evaluator, runner, thresholds, provider configuration, and
+  source revision. Resume/aggregate recompute rows, reject conflicts/mixing, use
+  immutable attempt artifacts, and emit a typed receipt only after a full pass.
+- Added regressions for every observed omission, default-masking risk, correction
+  boundary, URL/body safety boundary, manifest/row tampering, duplicate conflict,
+  exact threshold, secret scope, and workflow immutability.
+
+### Retained evidence and limitation
+
+Candidate 1 remains failed and is not resume-eligible. Candidate 2 is locally
+validated only; it has not been pushed or evaluated remotely and has no
+performance result.
+
+## 2026-09-01 — Typed A→B evidence and human Checkout continuation
+
+### What broke
+
+The B bridge accepted any non-empty evidence string in a caller-created passed A
+gate. The live B8 workflow could create an order but produced no executable
+handoff for the genuinely human-only Checkout step, leaving capture/refund
+continuation as a documentation claim rather than a tested software path.
+
+### How it was fixed
+
+- Added a typed A receipt bound to Candidate 2, frozen dataset/thresholds,
+  aggregate/manifest/source digests, metrics, and exact evidence reference.
+  Production rejects absent/mismatched receipts and explicit test fixtures.
+- Added a digest-bound Razorpay Test Checkout handoff containing only public
+  client configuration and exact transaction/order binding.
+- Added a standalone page that downloads the typed Checkout callback and a
+  continuation that verifies its HMAC and provider entities, captures only after
+  ECOCOMMIT certificate/TOCTOU checks, compensates with an idempotent refund, and
+  reconciles the final state.
+- Added processed-refund, tampering, expiry, wrong-order, secret-absence, and
+  provider call-sequence regressions.
+
+### Retained evidence and limitation
+
+The existing live evidence still stops at authentication/order creation. The new
+Checkout/capture/refund path has fake-transport tests only. A human must confirm
+manual capture and perform Test Checkout; webhook configuration/delivery remains
+external. No new provider lifecycle outcome is claimed.
+
+## 2026-09-01 — Final C/E contracts and release supply-chain hardening
+
+### What broke
+
+C had no final preregistration/evidence type, so the preliminary-only model could
+not represent a legitimate held-out decision without code changes. E's checker
+could never become final-ready because it unconditionally inserted blocked
+markers and the independent-reproduction blocker. Workflows used mutable action
+tags, broad secret environments, incomplete CI path coverage, and provider-body
+printing; dependencies were version-pinned but not artifact-hash enforced.
+
+### How it was fixed
+
+- Added a digest-bound, pre-outcome C registration for suite/case/metrics/weights/
+  cost hashes, A/B receipt hashes, candidate revision, comparator, TEL margin,
+  completion/reliability floors, latency/error/missing/irreversible-loss ceilings,
+  tie handling, rationale, and exact-census method. Final evidence recomputes the
+  decision and structurally rejects fixture/simulated inputs.
+- Changed E evidence slots into parsed states, added a revision-bound independent
+  reproduction receipt, and added strict final mode while preserving current
+  blocked truth.
+- Pinned every workflow action to a full SHA, disabled checkout credential
+  persistence, scoped secrets per step, stopped printing provider bodies,
+  expanded offline triggers/static checks, and added workflow-policy regressions.
+- Replaced the version-only dependency snapshot with binary-only published
+  artifact SHA-256 authorization for the supported Linux/Windows validation
+  environments and enforced `--require-hashes` in CI.
+
+### Retained evidence and limitation
+
+No final C plan values or results were invented. E remains blocked on real A–D
+evidence, license, push, independent reproduction, screenshots, and video. The
+hash lock is not a fully offline build bootstrap or provenance attestation.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.
