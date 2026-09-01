@@ -21,6 +21,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+import checkpoint_b8_razorpay_live as live_script
 from checkpoint_b8_razorpay_live import run as run_order_boundary
 
 
@@ -242,6 +243,17 @@ def test_checkpoint_b_order_boundary_rejects_tampered_preflight_before_provider_
     monkeypatch.setenv("B8_PREFLIGHT_RUN_ID", str(RUN_ID))
     monkeypatch.setenv("RAZORPAY_KEY_ID", "rzp_test_not_used")
     monkeypatch.setenv("RAZORPAY_KEY_SECRET", "secret-not-used")
+    credential_loads = []
+
+    def reject_credential_load(cls, environ=None):
+        credential_loads.append(environ)
+        raise AssertionError("credentials loaded before preflight receipt validation")
+
+    monkeypatch.setattr(
+        live_script.RazorpayTestCredentials,
+        "from_environment",
+        classmethod(reject_credential_load),
+    )
 
     output = tmp_path / "evidence.json"
     assert run_order_boundary(output, preflight_receipt=receipt_path) == 2
@@ -250,3 +262,4 @@ def test_checkpoint_b_order_boundary_rejects_tampered_preflight_before_provider_
     assert evidence["status"] == "BLOCKED_PREFLIGHT_REFERENCE"
     assert evidence["authentication"]["credential_preflight_run_verified"] is False
     assert evidence["provider_calls"] == []
+    assert credential_loads == []

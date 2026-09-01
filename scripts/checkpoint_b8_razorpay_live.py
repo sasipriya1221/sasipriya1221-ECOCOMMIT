@@ -98,9 +98,9 @@ def run(
     checkout_html: Path | None = None,
 ) -> int:
     evidence = _base_evidence()
-    key_id = os.environ.get("RAZORPAY_KEY_ID", "")
-    key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "")
-    secrets_to_reject = tuple(value for value in (key_id, key_secret) if value)
+    key_id = ""
+    key_secret = ""
+    secrets_to_reject: tuple[str, ...] = ()
     recorder: EvidenceTransport | None = None
     exit_code = 0
     try:
@@ -133,6 +133,11 @@ def run(
             verified_preflight["head_sha"]
         )
         credentials = RazorpayTestCredentials.from_environment()
+        key_id = credentials.key_id
+        key_secret = credentials.key_secret
+        secrets_to_reject = tuple(
+            value for value in (key_id, key_secret) if value
+        )
         evidence["credentials"]["injected_from_environment"] = True
         evidence["credentials"]["test_prefix_validated"] = True
         recorder = EvidenceTransport(RazorpayHTTPTransport(credentials))
