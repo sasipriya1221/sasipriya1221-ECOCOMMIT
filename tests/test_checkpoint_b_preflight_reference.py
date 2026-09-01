@@ -98,9 +98,12 @@ def test_checkpoint_b_preflight_rejects_wrong_run_identity(mutation, expected_co
 
 
 class _Response:
-    def __init__(self, raw: bytes):
+    def __init__(self, raw: bytes, *, final_url: str | None = None):
         self.raw = raw
         self.status = 200
+        self.final_url = final_url or (
+            "https://api.github.com/repos/owner/ecocommit/actions/runs/33535533432"
+        )
 
     def __enter__(self):
         return self
@@ -109,7 +112,7 @@ class _Response:
         return False
 
     def geturl(self):
-        return "https://api.github.com/repos/owner/ecocommit/actions/runs/33535533432"
+        return self.final_url
 
     def read(self, size=-1):
         return self.raw if size < 0 else self.raw[:size]
@@ -121,6 +124,7 @@ def test_checkpoint_b_preflight_fetch_uses_bounded_authenticated_github_api():
     def opener(api_request, timeout):
         seen["url"] = api_request.full_url
         seen["authorization"] = api_request.get_header("Authorization")
+        seen["redirectable_authorization"] = api_request.headers.get("Authorization")
         seen["api_version"] = api_request.get_header("X-github-api-version")
         seen["timeout"] = timeout
         return _Response(json.dumps(run_payload()).encode("utf-8"))
@@ -136,10 +140,39 @@ def test_checkpoint_b_preflight_fetch_uses_bounded_authenticated_github_api():
     assert seen == {
         "url": "https://api.github.com/repos/owner/ecocommit/actions/runs/33535533432",
         "authorization": "Bearer github-token-not-retained",
+        "redirectable_authorization": None,
         "api_version": "2026-03-10",
         "timeout": 20.0,
     }
     assert "github-token-not-retained" not in json.dumps(receipt)
+
+
+@pytest.mark.parametrize(
+    ("final_url", "expected_code"),
+    [
+        ("https://attacker.example/run", "UNEXPECTED_RESPONSE_ORIGIN"),
+        (
+            "https://api.github.com/repos/owner/ecocommit/actions/runs/1",
+            "UNEXPECTED_RESPONSE_URL",
+        ),
+    ],
+)
+def test_checkpoint_b_preflight_fetch_rejects_redirected_response(
+    final_url,
+    expected_code,
+):
+    with pytest.raises(GitHubRunVerificationError) as caught:
+        fetch_razorpay_preflight_run(
+            repository=REPOSITORY,
+            run_id=RUN_ID,
+            expected_sha=SOURCE_SHA,
+            token="github-token-not-retained",
+            opener=lambda *_args, **_kwargs: _Response(
+                json.dumps(run_payload()).encode("utf-8"),
+                final_url=final_url,
+            ),
+        )
+    assert caught.value.code == expected_code
 
 
 @pytest.mark.parametrize(

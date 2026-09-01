@@ -43,6 +43,20 @@ def test_secrets_are_step_scoped_and_provider_bodies_are_not_printed():
             assert "--no-deps --no-build-isolation -e ." in text
 
 
+def test_inline_credentialed_http_preflights_do_not_forward_auth_on_redirects():
+    credentialed = []
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        if '"Authorization"' not in text and "'Authorization'" not in text:
+            continue
+        credentialed.append(path.name)
+        assert ".add_unredirected_header(" in text, path.name
+        assert ".geturl()" in text, path.name
+        assert ".full_url" in text, path.name
+
+    assert credentialed == ["provider-preflight.yml", "razorpay-test-preflight.yml"]
+
+
 def test_offline_regression_covers_runtime_ui_workflows_and_static_checks():
     workflow = (WORKFLOWS / "offline-regression.yml").read_text(encoding="utf-8")
 

@@ -35,14 +35,16 @@ jobs:
           probe = request.Request(
               "https://api.razorpay.com/v1/orders?count=1",
               headers={
-                  "Authorization": f"Basic {token}",
                   "Accept": "application/json",
                   "User-Agent": "ECOCOMMIT-B8-Preflight/1.0",
               },
               method="GET",
           )
+          probe.add_unredirected_header("Authorization", f"Basic {token}")
           try:
               with request.urlopen(probe, timeout=30) as response:
+                  if response.geturl() != probe.full_url:
+                      raise SystemExit("PREFLIGHT_FAILED reason=redirect_rejected")
                   raw = response.read(2_000_001)
                   status = response.status
           except error.HTTPError as exc:

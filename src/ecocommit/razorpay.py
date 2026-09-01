@@ -158,7 +158,6 @@ class RazorpayHTTPTransport:
 
         encoded = None
         request_headers = {
-            "Authorization": self._authorization,
             "Accept": "application/json",
             "User-Agent": "ECOCOMMIT-Razorpay-Test/1.0",
         }
@@ -183,8 +182,16 @@ class RazorpayHTTPTransport:
             headers=request_headers,
             method=method,
         )
+        api_request.add_unredirected_header("Authorization", self._authorization)
         try:
             with request.urlopen(api_request, timeout=self.timeout_seconds) as response:
+                final_url = (
+                    response.geturl()
+                    if hasattr(response, "geturl")
+                    else api_request.full_url
+                )
+                if final_url != api_request.full_url:
+                    raise RazorpayTransportError("Razorpay response URL was redirected")
                 raw = response.read(2_000_001)
                 if len(raw) > 2_000_000:
                     raise RazorpayTransportError("Razorpay response exceeded the safety limit")

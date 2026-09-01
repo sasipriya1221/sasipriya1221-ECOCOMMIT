@@ -380,8 +380,12 @@ def test_http_transport_restricts_origin_and_never_exposes_credentials(monkeypat
         def read(self, _limit):
             return b'{"entity":"collection","count":0,"items":[]}'
 
+        def geturl(self):
+            return "https://api.razorpay.com/v1/orders?count=1"
+
     def fake_urlopen(api_request, *, timeout):
         seen["authorization"] = api_request.get_header("Authorization")
+        seen["redirectable_authorization"] = api_request.headers.get("Authorization")
         seen["timeout"] = timeout
         return Response()
 
@@ -389,6 +393,7 @@ def test_http_transport_restricts_origin_and_never_exposes_credentials(monkeypat
     transport = RazorpayHTTPTransport(credentials(), timeout_seconds=7)
     assert transport.request("GET", "/orders?count=1")["entity"] == "collection"
     assert seen["authorization"].startswith("Basic ")
+    assert seen["redirectable_authorization"] is None
     assert KEY_SECRET not in seen["authorization"]
     assert KEY_SECRET not in repr(transport)
     assert seen["timeout"] == 7
@@ -398,6 +403,35 @@ def test_http_transport_restricts_origin_and_never_exposes_credentials(monkeypat
         transport.request("GET", "https://example.invalid/orders")
     with pytest.raises(ValueError, match="cannot be overridden"):
         transport.request("GET", "/orders", headers={"Authorization": "Bearer attacker"})
+
+
+def test_http_transport_rejects_redirect_without_forwarding_authorization(monkeypatch):
+    seen = {}
+
+    class RedirectedResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def geturl(self):
+            return "https://attacker.example/orders"
+
+        def read(self, _limit):
+            return b'{"entity":"collection","count":0,"items":[]}'
+
+    def fake_urlopen(api_request, *, timeout):
+        seen["authorization"] = api_request.get_header("Authorization")
+        seen["redirectable_authorization"] = api_request.headers.get("Authorization")
+        return RedirectedResponse()
+
+    monkeypatch.setattr("ecocommit.razorpay.request.urlopen", fake_urlopen)
+    with pytest.raises(RazorpayTransportError, match="redirected"):
+        RazorpayHTTPTransport(credentials()).request("GET", "/orders")
+
+    assert seen["authorization"].startswith("Basic ")
+    assert seen["redirectable_authorization"] is None
 
 
 def test_adapter_credential_preflight_is_read_only_and_schema_checked():

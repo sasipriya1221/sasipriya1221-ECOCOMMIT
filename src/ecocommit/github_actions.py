@@ -141,12 +141,12 @@ def fetch_razorpay_preflight_run(
         url,
         headers={
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
             "User-Agent": "ECOCOMMIT/0.1",
             "X-GitHub-Api-Version": GITHUB_API_VERSION,
         },
         method="GET",
     )
+    api_request.add_unredirected_header("Authorization", f"Bearer {token}")
 
     try:
         with opener(api_request, timeout=timeout_seconds) as response:
@@ -154,6 +154,8 @@ def fetch_razorpay_preflight_run(
             parsed = urlsplit(final_url)
             if parsed.scheme != "https" or parsed.hostname != "api.github.com":
                 raise GitHubRunVerificationError("UNEXPECTED_RESPONSE_ORIGIN")
+            if final_url != api_request.full_url:
+                raise GitHubRunVerificationError("UNEXPECTED_RESPONSE_URL")
             status = getattr(response, "status", 200)
             if status != 200:
                 raise GitHubRunVerificationError("UNEXPECTED_HTTP_STATUS")

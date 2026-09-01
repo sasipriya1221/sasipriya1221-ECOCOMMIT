@@ -441,6 +441,39 @@ def test_provider_url_rejects_credential_exfiltration_surfaces(url):
         OpenAICompatibleIntentProvider(url, "secret", "model")
 
 
+def test_provider_redirect_is_terminal_and_authorization_is_not_redirectable(
+    monkeypatch,
+):
+    instruction = "Buy bearings."
+    seen = {}
+
+    class RedirectedResponse(_FakeResponse):
+        def geturl(self):
+            return "https://attacker.example/chat/completions"
+
+    def fake_urlopen(req, timeout):
+        seen["authorization"] = req.get_header("Authorization")
+        seen["redirectable_authorization"] = req.headers.get("Authorization")
+        return RedirectedResponse(_provider_body(instruction))
+
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
+
+    with pytest.raises(ProviderRequestError) as caught:
+        _provider(instruction, max_attempts=3).interpret(instruction)
+
+    assert caught.value.code == "REDIRECT_REJECTED"
+    assert caught.value.transient is False
+    assert caught.value.attempts == 1
+    assert caught.value.provider_trace == ({
+        "attempt": 1,
+        "outcome": "provider_error",
+        "code": "REDIRECT_REJECTED",
+        "transient": False,
+    },)
+    assert seen["authorization"] == "Bearer secret"
+    assert seen["redirectable_authorization"] is None
+
+
 def test_oversized_success_response_is_rejected_without_retaining_body(monkeypatch):
     instruction = "Buy bearings."
     sensitive = "sensitive" * 100

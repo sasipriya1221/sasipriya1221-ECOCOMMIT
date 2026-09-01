@@ -33,11 +33,14 @@ jobs:
           req = request.Request(
               'https://api.openai.com/v1/chat/completions',
               data=json.dumps(payload).encode(),
-              headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+              headers={'Content-Type': 'application/json'},
               method='POST',
           )
+          req.add_unredirected_header('Authorization', f'Bearer {key}')
           try:
               with request.urlopen(req, timeout=30) as r:
+                  if r.geturl() != req.full_url:
+                      raise SystemExit('PREFLIGHT_FAILED reason=redirect_rejected')
                   body = r.read(1_048_577)
                   if len(body) > 1_048_576:
                       raise SystemExit('PREFLIGHT_FAILED reason=response_too_large')

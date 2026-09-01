@@ -414,14 +414,23 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                 f"{self.base_url}/chat/completions",
                 data=json.dumps(payload).encode("utf-8"),
                 headers={
-                    "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
                     "User-Agent": "ECOCOMMIT/0.1 (+https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT)",
                 },
                 method="POST",
             )
+            req.add_unredirected_header("Authorization", f"Bearer {self.api_key}")
             try:
                 with request.urlopen(req, timeout=self.timeout) as resp:
+                    final_url = (
+                        resp.geturl() if hasattr(resp, "geturl") else req.full_url
+                    )
+                    if final_url != req.full_url:
+                        raise ProviderRequestError(
+                            "REDIRECT_REJECTED",
+                            attempts=attempt,
+                            transient=False,
+                        )
                     body = strict_json_loads(self._read_bounded(resp).decode("utf-8"))
                 if not isinstance(body, dict):
                     raise TypeError("response object required")
