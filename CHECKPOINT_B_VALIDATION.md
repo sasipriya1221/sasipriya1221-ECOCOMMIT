@@ -96,7 +96,7 @@ live run.
 | Fresh clone at `68d6798ecf1577529a07ef8585bea7d9999bd863` with a new virtual environment | **224 / 224 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 | Current Checkpoint B-focused suite after durability/webhook integration | **95 / 95 passed** |
 | Current full deterministic suite | **346 / 346 passed** |
-| Current no-hardlink clone at `e616ce47a86f91af9810f089bd4ed5ee0ebd7849` using its hash-locked virtual environment | **346 / 346 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
+| Current no-hardlink clone at `813bc82c5ea1a726fc95bebe076a003f5a42a5c8` using its hash-locked virtual environment | **346 / 346 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 
@@ -137,6 +137,8 @@ The Test Mode adapter:
 
 - loads only `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` from the environment and
   refuses non-test key IDs;
+- rejects credential values before writing the redacted evidence object; the
+  later summary and artifact-upload steps receive no Razorpay credentials;
 - fixes the provider origin to `https://api.razorpay.com/v1`, protects its
   authentication/host/content-length headers, emits only safe error metadata,
   and never logs credentials or provider bodies;

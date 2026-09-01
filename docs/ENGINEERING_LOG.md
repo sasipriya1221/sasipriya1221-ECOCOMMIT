@@ -711,6 +711,38 @@ The fix makes evidence truthful; it does not increase the configured provider
 request budget, promise that correction is always available during an outage,
 run Candidate 2, or change any checkpoint to passed.
 
+## 2026-09-02 — Razorpay credentials exposed to a non-provider summary step
+
+### What broke or remained unsafe
+
+The manual Razorpay order-boundary workflow correctly scoped secrets at step
+level, but it injected both the Test key ID and secret into two steps. The second
+step only rendered the redacted summary and repeated a credential-string check
+already enforced by `checkpoint_b8_razorpay_live.py` before evidence is written.
+That duplicate check unnecessarily enlarged the credential exposure surface.
+
+### How it was fixed
+
+- Removed both Razorpay credentials from the summary step.
+- Kept the credential-value rejection inside the one provider-execution step,
+  before the redacted evidence file is written.
+- Added a workflow regression requiring exactly one lifecycle reference to each
+  Razorpay secret. The subsequent artifact-upload action also receives neither
+  credential.
+
+### Regression evidence and limitation
+
+The red workflow test failed because each secret appeared twice. After the fix,
+the same test passes, the focused B suite passes **95/95**, and the full suite
+passes **346/346** in both the working repository and a no-hardlink clone at
+`813bc82c5ea1a726fc95bebe076a003f5a42a5c8`. The clone also passes compilation,
+dependency consistency, JavaScript syntax, readiness, diff, and clean-status
+checks.
+
+This narrows future workflow exposure. It does not revoke or inspect repository
+secrets, rerun the historical order boundary, execute Checkout, or prove the
+capture/refund/webhook lifecycle.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

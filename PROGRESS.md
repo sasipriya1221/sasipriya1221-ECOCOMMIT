@@ -197,7 +197,7 @@ All repository workflows now:
 
 - pin third-party actions to full commit SHAs;
 - disable persisted checkout credentials;
-- scope provider/payment secrets to individual steps;
+- scope provider/payment secrets only to steps that perform provider work;
 - avoid printing provider bodies; and
 - use the hash-locked validation dependency file.
 

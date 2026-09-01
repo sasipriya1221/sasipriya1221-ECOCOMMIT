@@ -155,6 +155,8 @@ manual-only workflows. Keep the secret exclusively in the GitHub Actions secret
 `RAZORPAY_KEY_SECRET`; never place it in an input, command, artifact, or report.
 The Test key ID is intentionally public client configuration and appears only in
 the generated Checkout handoff, not in redacted server evidence.
+The credentialed order producer refuses to write redacted evidence containing a
+credential value. Summary and upload steps run without either Razorpay credential.
 
 1. Dispatch **Razorpay Test Credential Preflight**. It refuses a non-test key ID,
    performs only a read-only order-list request, discards the provider response,

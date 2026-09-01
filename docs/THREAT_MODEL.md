@@ -71,7 +71,7 @@ production-readiness claim.
 | Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation, and pre-outcome final registration/decision contract | C artifact/final-gate tests | Real registration/inputs/final run absent |
 | Fabricated submission media | Blocked evidence markers and promotion rule | E readiness checks | Human review/final evidence still required |
 | Secret committed | CI secret references, ignored artifacts, current-tree/history pattern scan | E local scan | Dedicated secret-scanner service/history audit not retained |
-| Supply-chain drift | Hash-required binary wheels, commit-pinned actions, disabled checkout credentials, step-scoped secrets, read-only permissions | Lock dry-run and workflow-policy tests | No fully offline build bootstrap or provenance attestation |
+| Supply-chain drift | Hash-required binary wheels, commit-pinned actions, disabled checkout credentials, provider-step-only secrets, read-only permissions | Lock dry-run and workflow-policy tests | No fully offline build bootstrap or provenance attestation |
 
 ## Key and credential boundary
 
@@ -105,8 +105,9 @@ access controls, clock discipline, backup, and recovery evidence.
 - Generated artifacts, audit logs, virtual environments, and test temporary
   directories are ignored and must be reviewed before intentional retention.
 - CI actions are commit-SHA pinned, checkout credentials are not persisted, jobs
-  use read-only `contents` permission, and secrets are step-scoped. Supply-chain
-  attestations and an offline trusted build bootstrap are not implemented.
+  use read-only `contents` permission, and provider secrets are limited to actual
+  provider steps. Supply-chain attestations and an offline trusted build
+  bootstrap are not implemented.
 - Provider workflows require named secrets and must remain guarded/manual; pull
   requests must not receive provider credentials.
 
