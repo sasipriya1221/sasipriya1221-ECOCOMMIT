@@ -14,7 +14,7 @@ passed before its prerequisites and final integration evidence genuinely pass.
 - B: deterministic policy, evidence, exposure, commitment, and certificates —
   **B1–B7 locally validated; blocked/not passed**
 - C: deterministic benchmark/baseline harness — **locally validated; blocked/not passed**
-- D: fail-closed API/UI/audit/observability — **local scaffold only**
+- D: fail-closed API/UI/audit/observability — **locally validated; blocked/not passed**
 - E: architecture, threat model, and reproducibility — **documentation scaffold**
 
 Current local payment behavior is explicitly `SIMULATED_LOCAL`. There is no
@@ -40,3 +40,6 @@ The detailed local Checkpoint B gate matrix and remaining blockers are in
 
 The detailed local Checkpoint C gate matrix, synthetic-fixture boundary, and
 remaining blockers are in `CHECKPOINT_C_VALIDATION.md`.
+
+The detailed Checkpoint D local product/API/UI/operations matrix and final
+integration blockers are in `CHECKPOINT_D_VALIDATION.md`.

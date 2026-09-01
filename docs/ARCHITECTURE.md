@@ -69,14 +69,15 @@ describe decisions, but it never grants authority.
 | A-to-B admission | `checkpoint_b_integration.py` recomputes the current A fidelity report and keeps B locked unless the A gate is accepted |
 | B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `payments.py`, `reconciliation.py` |
 | C preliminary evaluation | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py` |
-| D product/operations scaffold | `checkpoint_status.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, and `ui/` |
+| D product/operations boundary | `checkpoint_status.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, `checkpoint_d_workflow.py`, `demo_server.py`, and `ui/` |
 | E evidence discipline | This document, `THREAT_MODEL.md`, and `REPRODUCIBILITY.md` |
 
 The A-to-B authorization boundary is wired and adversarially tested locally, but
-the actual failed A gate releases no obligations or certificate. It is not wired
-into Checkpoint D's real execution route: D's commit endpoint still always denies,
-and the only payment adapter is the explicit `SIMULATED_LOCAL` adapter exercised
-by Checkpoint B tests.
+the actual incomplete A gate releases no obligations or certificate. Checkpoint D
+now exercises that boundary through fixed synthetic local scenarios only. D's
+real commit endpoint still always denies, and the only payment adapter is the
+explicit `SIMULATED_LOCAL` adapter. Synthetic fixture success is never loaded as
+authoritative checkpoint evidence.
 
 ## Invariants
 
@@ -129,7 +130,7 @@ tested without trusting the prerequisite output.
 |---|---|---|
 | B | Policy/evidence/exposure kernel, state machine, certificates, local adversarial tests | Checkpoint A pass, full A-to-B integration, credentialed Razorpay Test Mode tests when applicable |
 | C | Harness, loss accounting, deterministic baselines, seeded preliminary runs | Frozen evaluation set/protocol and valid integrated system results |
-| D | API/UI/audit/observability scaffolding in default-deny simulated mode | Integrated product tests, security/operational review, upstream gates |
+| D | Locally validated API/UI/audit/observability and synthetic end-to-end workflow in default-deny simulated mode | Authoritative upstream evidence, real integrated product/provider tests, durable operations, and security/operational review |
 | E | Architecture, threat model, runbooks, reproducibility scaffold | Reproduced end-to-end demo and complete evidence bundle |
 
 ## Current non-goals

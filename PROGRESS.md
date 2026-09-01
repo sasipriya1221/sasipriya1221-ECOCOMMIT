@@ -9,7 +9,7 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 | A — M2/M3 intent intelligence and abstention | 🟠 RESUMABLE LIVE EVALUATION 14/80 RETAINED; ATTEMPT 6 RUNNING — NOT PASSED | Complete all 80 frozen cases, then satisfy every frozen A threshold together |
 | B — deterministic economic safety | 🟡 B1–B7 LOCALLY VALIDATED — BLOCKED / NOT PASSED | A pass, real A-to-B evidence, durability/security work, and Razorpay Test Mode evidence |
 | C — comparative benchmark | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Frozen real suite/plan, TEL weights and quantitative decision rule, real comparator outputs, validated A+B candidate, and separately gated final held-out run |
-| D — product/API/UI/operations | 🟡 LOCALLY VERIFIED SCAFFOLD — NOT PASSED | Upstream gates, integrated product/security/operational evidence, and no default-deny bypass |
+| D — product/API/UI/operations | 🟡 LOCALLY VALIDATED — BLOCKED / NOT PASSED | Authoritative upstream evidence, real A/B/C integration, provider Test Mode boundary, durable operations, and final security/operational evidence |
 | E — architecture/reproducibility | 🟡 DOCUMENTATION SCAFFOLD — NOT PASSED | Reproduced end-to-end demo and complete retained evidence bundle |
 
 ## Checkpoint A
@@ -121,7 +121,7 @@ provider workflows, model configuration, or frozen thresholds.
 
 ## Parallel local implementation evidence
 
-The full deterministic regression suite passes **167/167 tests** in an isolated
+The full deterministic regression suite passes **192/192 tests** in an isolated
 local environment. This is local engineering evidence only; it does not substitute
 for any live or final checkpoint gate.
 
@@ -193,24 +193,41 @@ not been selected by a preregistered study; no quantitative/statistical C
 acceptance rule is frozen; A and B are not both validated; and the integrated
 candidate and separately gated final held-out evaluation remain unrun.
 
-### Checkpoint D — 19 focused tests
+### Checkpoint D — 44 focused tests
 
-Implemented and locally verified:
+Implemented and locally validated:
 
 - prerequisite-aware A–E gate status reporting that requires evidence references
   for any pass;
 - health/readiness separation (health proves liveness only);
-- append-only local JSONL audit records with a verified SHA-256 chain;
-- structured metrics/logging and validated correlation IDs;
+- append-only local JSONL audit records with a verified SHA-256 chain, strict
+  record-shape validation, and shared in-process locking across log instances;
+- structured finite metrics/logging, audited parser-boundary denials, and
+  validated correlation IDs;
 - a dependency-light JSON/WSGI facade whose commit endpoint always denies because
   no execution adapter is installed;
 - explicit rejection/ignoring of caller-supplied authority claims such as
   `authorized`, `ai_validated`, or `checkpoint_a_passed`;
-- an unmistakably simulated endpoint and responsive safety-console UI.
+- deterministic synthetic A-to-B/exposure/certificate/commitment/payment workflow
+  scenarios for simulated capture, Checkpoint-A blocking, and injected capture
+  failure with reversible-hold cleanup;
+- a loopback-only local server with fixed static assets and browser security
+  headers; and
+- a responsive safety console with fail-closed stale-status behavior, economic
+  exposure/state visualization, and correlated failure feedback.
 
-Checkpoint D is not passed. Durable audit storage, authoritative gate-evidence
-loading, B integration, hosted UI/API execution, and operational/security review
-remain pending.
+The committed implementation at `b583299` passes 44/44 focused D tests and
+192/192 full regression tests. Python compilation, dependency consistency,
+JavaScript syntax, all three deterministic CLI scenarios, loopback browser flow,
+and 390 px responsive behavior were also checked. The full local matrix and the
+defects found during validation are in `CHECKPOINT_D_VALIDATION.md`.
+
+Checkpoint D is **blocked / not passed**. The local positive scenario uses a
+synthetic A-pass fixture and `SIMULATED_LOCAL`; it is interface-compatibility
+evidence only. The actual A, B, and C gates are not all passed, the real commit
+route has no execution adapter, and no authoritative gate-evidence loader,
+Razorpay Test Mode path, durable multi-process audit store, hosted deployment,
+or final security/operational review exists.
 
 ### Checkpoint E scaffold
 
