@@ -6,14 +6,19 @@
 
 ## Current Build Phase
 
-Checkpoint A only: M0 → M1 → M2 → M3.
+Checkpoint A's latest full live run failed its frozen gate. Independent B/C/D/E
+components are being built and locally verified in parallel, but none is marked
+passed before its prerequisites and final integration evidence genuinely pass.
 
-- M0 Specification Freeze
-- M1 Economic Contract Language
-- M2 AI Intent Intelligence
-- M3 Fidelity + Abstention
+- A: intent intelligence and fidelity/abstention live gate — **not passed**
+- B: deterministic policy, evidence, exposure, commitment, and certificates —
+  **local scaffold only**
+- C: deterministic benchmark/baseline harness — **preliminary only**
+- D: fail-closed API/UI/audit/observability — **local scaffold only**
+- E: architecture, threat model, and reproducibility — **documentation scaffold**
 
-No milestone is marked complete until its acceptance gate passes.
+Current local payment behavior is explicitly `SIMULATED_LOCAL`. There is no
+Razorpay adapter, credential use, Test Mode claim, or live-money path.
 
 ## Frozen Thesis
 
@@ -26,3 +31,6 @@ Probabilistic intent interpretation is treated as untrusted. Financial guarantee
 ## Status
 
 See `PROGRESS.md` for the live milestone board.
+
+Architecture and reproducibility scaffolding are in `docs/ARCHITECTURE.md`,
+`docs/THREAT_MODEL.md`, and `docs/REPRODUCIBILITY.md`.

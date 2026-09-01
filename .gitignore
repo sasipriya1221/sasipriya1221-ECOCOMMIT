@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.test-tmp*/
+.venv/
+dist/
+build/
+*.egg-info/
+
+# Generated local evidence and audit output must be reviewed before retention.
+artifacts/
+*.audit.jsonl

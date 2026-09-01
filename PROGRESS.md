@@ -1,20 +1,20 @@
 # ECOCOMMIT Progress
 
-| Milestone | Status | Acceptance gate |
+Implementation may proceed in parallel when it does not trust an unmet
+prerequisite. Acceptance remains sequential and evidence-gated.
+
+| Checkpoint | Status | Acceptance gate |
 |---|---|---|
-| M0 Specification Freeze | 🟢 PASSED | Scope, hypothesis and metrics frozen in repo |
-| M1 Economic Contract Language | 🟢 PASSED (offline acceptance) | 20 varied instructions fit one schema; authority invariant tested |
-| M2 AI Intent Intelligence | 🟡 IN PROGRESS | Real Groq provider is connected; latest Qwen development smoke is semantically clean; full frozen live gate is running |
-| M3 Fidelity + Abstention | 🟡 IN PROGRESS | Structural/ambiguity regressions pass offline; latest Qwen smoke clarified all sampled ambiguous cases; full frozen live gate is running |
-| M4 Policy Mapping | ⬜ NOT STARTED | Stop before Checkpoint B |
+| A — M0/M1 specification and contract language | 🟢 PASSED (offline scope) | Frozen specifications and authority invariants retained |
+| A — M2/M3 intent intelligence and abstention | 🔴 LATEST FULL LIVE GATE FAILED — NOT PASSED | One real full run must satisfy every frozen A threshold together |
+| B — deterministic economic safety | 🟡 LOCALLY VERIFIED SCAFFOLD — NOT PASSED | A pass, A-to-B integration, durability/security work, and applicable Razorpay Test Mode evidence |
+| C — comparative benchmark | 🟡 LOCALLY VERIFIED HARNESS — NOT PASSED | Frozen real suite/plan, valid integrated candidate, and separately gated final held-out run |
+| D — product/API/UI/operations | 🟡 LOCALLY VERIFIED SCAFFOLD — NOT PASSED | Upstream gates, integrated product/security/operational evidence, and no default-deny bypass |
+| E — architecture/reproducibility | 🟡 DOCUMENTATION SCAFFOLD — NOT PASSED | Reproduced end-to-end demo and complete retained evidence bundle |
 
 ## Checkpoint A
 
-**Status: 🟡 FULL FROZEN LIVE GATE RUNNING — NOT PASSED YET**
-
-The current offline core passes **54/54 tests** in the latest Qwen development-smoke workflow. Provider access is through the configured Groq OpenAI-compatible endpoint with the repository secret injected only through GitHub Actions.
-
-The frozen Checkpoint A benchmark contains 80 cases: 50 clear compositional procurement instructions and 30 materially ambiguous instructions. Failed cases remain evidence; fixture/mock results do not count.
+**Status: 🔴 LATEST FULL FROZEN LIVE GATE FAILED — NOT PASSED**
 
 Frozen Checkpoint A gate (all required in the same real-model full run):
 
@@ -23,9 +23,35 @@ Frozen Checkpoint A gate (all required in the same real-model full run):
 - autonomous coverage >= 55%
 - ambiguous clarification accuracy >= 80%
 
-## Live-run evidence retained
+The thresholds are unchanged.
 
-An earlier full Groq run (GitHub Actions run `33412737638`, head `37e78c93205e44c626b13e6bd694ca6c85d8c1ef`) completed against the real configured model and **failed** the frozen gate. Its aggregate metrics were:
+### Latest full run
+
+GitHub Actions run `33477953132`, head
+`c37da4fe1b1741de6d8e6a4bab53da56e5413b7e`, completed on 2026-09-01 with
+conclusion `failure`.
+
+Verified public job evidence:
+
+- the offline regression job succeeded;
+- all 16 live benchmark shards covering cases 0–79 succeeded;
+- aggregation, compact diagnostics, and final artifact upload succeeded;
+- the `Enforce frozen gate` step failed with exit code 2;
+- retained artifact: `checkpoint-a-results`, artifact ID `9789328621`.
+
+This establishes a genuine failed full gate rather than a provider/setup abort.
+The aggregate artifact requires authenticated download and was not available in
+this local checkout, so no new aggregate metric values are copied or inferred
+here. The run remains failed evidence and Checkpoint A remains unpassed.
+
+The earlier run `33431828865`, which this file previously described as running,
+was cancelled and did not produce a passing gate.
+
+### Earlier retained evidence
+
+An earlier full Groq run (GitHub Actions run `33412737638`, head
+`37e78c93205e44c626b13e6bd694ca6c85d8c1ef`) completed against the real configured
+model and failed the frozen gate. Its aggregate metrics were:
 
 - passed cases: 11 / 80
 - case pass rate: 13.75%
@@ -33,11 +59,20 @@ An earlier full Groq run (GitHub Actions run `33412737638`, head `37e78c93205e44
 - selective semantic reliability: 41.67%
 - ambiguous clarification accuracy: 13.33%
 
-The retained artifact from that failed run shows concrete failure classes: contract validation/source-span errors, missing negation/exception/dependency structure, uncovered numeric signals, and ambiguity handling that sometimes validated or rejected when clarification was required. Those results remain failed development evidence; they are not relabeled or discarded.
+The retained artifact from that failed run shows concrete failure classes:
+contract validation/source-span errors, missing negation/exception/dependency
+structure, uncovered numeric signals, and ambiguity handling that sometimes
+validated or rejected when clarification was required. Those results remain
+failed development evidence; they are not relabeled or discarded.
 
-A later 10-clear + 10-ambiguous real-model smoke (GitHub Actions run `33426475689`, head `45f4c0158d3917e3174741217f9a90bf5f496a6f`) also remained failed intermediate evidence because 16/20 cases hit Groq HTTP 429 token-per-day exhaustion and produced no usable model result.
+A later 10-clear + 10-ambiguous real-model smoke (GitHub Actions run
+`33426475689`, head `45f4c0158d3917e3174741217f9a90bf5f496a6f`) also
+remained failed intermediate evidence because 16/20 cases hit Groq HTTP 429
+token-per-day exhaustion and produced no usable model result.
 
-The newest Qwen development smoke (GitHub Actions run `33430987810`, head `b398be64a22006d601d0686549aaf2183a78acfe`) completed successfully against `qwen/qwen3.8-27b` after the M2/M3 repairs:
+The Qwen development smoke (GitHub Actions run `33430987810`, head
+`b398be64a22006d601d0686549aaf2183a78acfe`) completed successfully against
+`qwen/qwen3.8-27b` after the M2/M3 repairs:
 
 - passed cases: 20 / 20
 - case pass rate: 100.00%
@@ -46,25 +81,109 @@ The newest Qwen development smoke (GitHub Actions run `33430987810`, head `b398b
 - autonomous coverage: 50.00%
 - failed cases: 0
 
-The 50% autonomous-coverage value is expected for this deliberately balanced 10-clear + 10-ambiguous smoke: even perfect behavior can validate at most the 10 clear cases, so the smoke cannot satisfy the frozen >=55% full-dataset coverage threshold. The threshold is unchanged; this smoke is only a development signal and does **not** pass Checkpoint A.
+The 50% autonomous-coverage value is expected for that deliberately balanced
+10-clear + 10-ambiguous smoke: even perfect behavior can validate at most the 10
+clear cases. A smoke never passes the frozen full gate.
 
-## Corrections now on `main`
+This parallel change set does not alter Checkpoint A's benchmark cases, schemas,
+provider workflows, model configuration, or frozen thresholds.
 
-Implementation changes remain constrained to justified M2/M3 defects and provider reliability; the frozen gate is unchanged:
+## Parallel local implementation evidence
 
-- exact source-span offset repair and case-preserving grounding;
-- deterministic `EXPLICIT_USER` provenance repair only when an exact source span proves it, with an explicit regression that ungrounded clauses receive no such repair;
-- word-boundary dependency detection so text such as `certified` cannot create a fake `if` condition;
-- clarification-class handling for material inference, unresolved dependency structure, and economically material open-textured language;
-- supplier-selection vagueness coverage for terms such as `good`, `trustworthy`, `reputable`, and `clearly better`;
-- corrected negation classification so `not too much` is vagueness while genuine `not recurring` authority remains a strict negation requirement;
-- certified-product composition matching in the benchmark scorer without changing expected outcomes;
-- normalized confidence/risk handling and explicit exception/dependency-edge validation repairs;
-- compact failure diagnostics in both smoke and full workflows;
-- low reasoning effort for this structured extraction workload;
-- provider retries for HTTP 429/5xx and transient transport failures, respecting long `Retry-After` windows with a bounded ceiling;
-- Groq JSON Schema structured outputs enabled for live workflows so required contract fields are provider-constrained rather than repaired by guesswork;
-- a 2,048-token completion ceiling to bound provider token consumption while leaving room for multi-clause contracts;
-- serialized live requests and CI concurrency/time bounds.
+The full deterministic regression suite passes **126/126 tests** in an isolated
+local environment. This is local engineering evidence only; it does not substitute
+for any live or final checkpoint gate.
 
-The successful Qwen smoke configuration has now been promoted to the full frozen Checkpoint A workflow without changing any acceptance threshold. Full real-model run `33431828865` is evaluating all 50 clear + 30 ambiguous cases. **M4 / Checkpoint B must not begin unless that run (or a subsequent full frozen run after justified M2/M3 fixes) satisfies every frozen threshold in the same run.**
+### Checkpoint B — 32 focused tests
+
+Implemented and locally verified:
+
+- closed deterministic policy-class mapping;
+- registered authority/issuer/kind/scope, freshness, version, revocation, and
+  subject checks for evidence;
+- trusted-config-only exposure tiers (contract/evidence payloads cannot raise a
+  monetary cap);
+- transaction-, merchant-, amount-, currency-, contract-, evidence-, policy-,
+  expiry-, and nonce-bound HMAC commit certificates;
+- trusted-policy recomputation before signing, so a self-consistent forged cap is
+  rejected;
+- strict progressive commitment state transitions;
+- certificate reverification at capture authorization and at the simulated
+  irreversible capture boundary;
+- thread-safe process-local idempotency, collision rejection, compensation, and
+  reconciliation;
+- an explicitly labelled `SIMULATED_LOCAL` payment adapter.
+
+Checkpoint B is not passed. The registries/ledgers are process-local scaffolding,
+the HMAC key is a local-test boundary rather than a KMS claim, A-to-B integration
+has not run, and no Razorpay adapter or credentialed Test Mode evidence exists.
+
+### Checkpoint C — 21 focused tests
+
+Implemented and locally verified:
+
+- pre-registered-style plan, suite, scenario, evidence, cost, result, metric, and
+  artifact schemas;
+- static-rule, dynamic policy/risk/evidence-aware, and conservative-abstain
+  deterministic baselines;
+- seeded deterministic ordering;
+- Total Economic Loss, incorrect irreversible amount, selective reliability,
+  coverage, legitimate completion, and nearest-rank p95 latency accounting;
+- artifact integrity checks for plan/suite hashes and exact baseline×case result
+  coverage;
+- compulsory `PRELIMINARY_NOT_FINAL`/not-passed labeling;
+- rejection of live Checkpoint A outputs and all `FINAL_HELD_OUT` cases by the
+  preliminary runner.
+
+No final comparison numbers were generated or published. Checkpoint C is not
+passed; the real suite/plan and final candidate evaluation remain unfrozen and
+unrun.
+
+### Checkpoint D — 19 focused tests
+
+Implemented and locally verified:
+
+- prerequisite-aware A–E gate status reporting that requires evidence references
+  for any pass;
+- health/readiness separation (health proves liveness only);
+- append-only local JSONL audit records with a verified SHA-256 chain;
+- structured metrics/logging and validated correlation IDs;
+- a dependency-light JSON/WSGI facade whose commit endpoint always denies because
+  no execution adapter is installed;
+- explicit rejection/ignoring of caller-supplied authority claims such as
+  `authorized`, `ai_validated`, or `checkpoint_a_passed`;
+- an unmistakably simulated endpoint and responsive safety-console UI.
+
+Checkpoint D is not passed. Durable audit storage, authoritative gate-evidence
+loading, B integration, hosted UI/API execution, and operational/security review
+remain pending.
+
+### Checkpoint E scaffold
+
+Added architecture/trust-boundary documentation, threat model, and reproducibility
+runbook. They explicitly separate `implemented`, `locally verified`, `integrated`,
+and `passed`, and require retained live/Test Mode evidence before later claims.
+
+Checkpoint E is not passed.
+
+## Payment truth
+
+- Current payment behavior is only `SIMULATED_LOCAL`.
+- No Razorpay credentials were present or used.
+- No Razorpay API request was made.
+- No Test Mode or live-money outcome is claimed.
+
+Real Razorpay Test Mode work begins only when a dedicated adapter, verified test
+credentials, secret handling, webhook/reconciliation paths, and retained end-to-end
+evidence are available. Live money remains out of scope.
+
+## Gate discipline
+
+Parallel coding does not relax dependencies:
+
+1. B cannot pass before A passes and A-to-B integration succeeds.
+2. C cannot publish final comparisons before its evaluation protocol, suite, and
+   integrated candidate are frozen and the separately gated held-out run executes.
+3. D cannot pass from process health or scaffold tests.
+4. E cannot pass from documentation alone.
+5. No frozen threshold is lowered and no simulation is presented as real evidence.
