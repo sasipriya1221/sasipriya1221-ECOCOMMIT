@@ -1,2 +1,2 @@
-2026-09-01T13:08:00+05:30
-Purpose: rerun the frozen 10-clear + 10-ambiguous Qwen development smoke using Groq-compatible json_object transport with unchanged client-side EconomicIntentContract validation, Qwen 3.6 default reasoning, and a 2048-token completion budget. Same frozen cases, scorer, and acceptance thresholds; diagnostic only and cannot pass Checkpoint A by itself.
+2026-09-01T14:07:23+05:30
+Purpose: verify the live Groq Qwen 3.6 JSON Object Mode transport with non-thinking reasoning_effort=none, one bounded real request, unchanged client-side EconomicIntentContract validation, and no relaxed Checkpoint A thresholds. This diagnostic cannot pass Checkpoint A by itself; it only gates the next frozen 80-case rerun.
