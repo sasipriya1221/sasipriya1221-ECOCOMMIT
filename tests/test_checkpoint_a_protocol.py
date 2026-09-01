@@ -12,13 +12,16 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+import checkpoint_a_protocol
 from checkpoint_a_aggregate import compute_gate, main as aggregate_main
 from checkpoint_a_constants import CRITERIA, FROZEN_DATASET_SHA256
 from checkpoint_a_live import _ambiguous_cases, _clear_cases, _evaluate_one, semantic_case_pass
 from checkpoint_a_protocol import (
     bind_row,
     build_manifest,
+    canonical_sha256,
     dataset_sha256,
+    load_evidence_object,
     verify_manifest,
     verify_row,
 )
@@ -105,6 +108,7 @@ def test_manifest_and_semantics_are_recomputed_from_bound_evidence():
     row = _passing_row(gold, manifest)
 
     verify_manifest(manifest, deepcopy(manifest))
+    assert len(manifest["runner_sha256"]) == 64
     assert verify_row(row, gold, manifest, FidelityValidator()) == row
 
     tampered = deepcopy(row)
@@ -122,6 +126,75 @@ def test_manifest_mismatch_is_rejected():
 
     with pytest.raises(ValueError, match="manifest mismatch"):
         verify_manifest(supplied, expected)
+
+    supplied = deepcopy(expected)
+    supplied["runner_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="manifest mismatch"):
+        verify_manifest(supplied, expected)
+
+
+def test_manifest_directly_hashes_candidate_runtime_and_evidence_code(monkeypatch):
+    captured: list[set[str]] = []
+    original = checkpoint_a_protocol._files_sha256
+
+    def capture(paths):
+        paths = tuple(paths)
+        captured.append({
+            path.resolve().relative_to(checkpoint_a_protocol.ROOT).as_posix()
+            for path in paths
+        })
+        return original(paths)
+
+    monkeypatch.setattr(checkpoint_a_protocol, "_files_sha256", capture)
+    build_manifest(_clear_cases() + _ambiguous_cases(), _provider())
+
+    required_runtime = {
+        "scripts/checkpoint_a_protocol.py",
+        "scripts/checkpoint_a_shard.py",
+        "scripts/checkpoint_a_aggregate.py",
+        "src/ecocommit/_canonical.py",
+        "src/ecocommit/checkpoint_a_evidence.py",
+        "src/ecocommit/interpreter.py",
+    }
+    assert any(required_runtime <= group for group in captured)
+
+
+@pytest.mark.parametrize("raw", [
+    '{"manifest":{},"manifest":{},"cases":[]}',
+    '{"manifest":{},"cases":[],"score":NaN}',
+    '{"manifest":{},"cases":[],"text":"\\ud800"}',
+    '[{"manifest":{},"cases":[]}]',
+])
+def test_a_evidence_loader_rejects_non_strict_or_non_object_json(tmp_path, raw):
+    artifact = tmp_path / "attempt.json"
+    artifact.write_text(raw, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Checkpoint A evidence"):
+        load_evidence_object(artifact)
+
+
+def test_a_evidence_hashes_forbid_non_finite_json_numbers():
+    with pytest.raises(ValueError):
+        canonical_sha256({"metric": float("nan")})
+
+
+def test_resume_rejects_duplicate_key_artifact_before_manifest_verification(tmp_path):
+    frozen = _clear_cases() + _ambiguous_cases()
+    manifest = build_manifest(frozen, _provider())
+    gold = frozen[0]
+    artifact = tmp_path / "attempt.json"
+    artifact.write_text(
+        '{"manifest":{},"manifest":{},"cases":[]}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="invalid resume artifact"):
+        _load_resume(
+            artifact,
+            {gold.case_id: gold},
+            manifest,
+            FidelityValidator(),
+        )
 
 
 def test_resume_accepts_identical_duplicates_but_rejects_conflicts(tmp_path):

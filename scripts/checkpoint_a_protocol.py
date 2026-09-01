@@ -15,12 +15,19 @@ from checkpoint_a_constants import (
     FROZEN_DATASET_SHA256,
 )
 from checkpoint_a_live import GoldCase, semantic_case_pass
+from ecocommit._canonical import (
+    DuplicateJSONKeyError,
+    InvalidJSONValueError,
+    NonFiniteJSONValueError,
+    strict_json_loads,
+)
 from ecocommit.contracts import EconomicIntentContract
 from ecocommit.interpreter import OpenAICompatibleIntentProvider
 from ecocommit.validator import FidelityValidator
 
 
 ROOT = Path(__file__).resolve().parents[1]
+MAX_EVIDENCE_FILE_BYTES = 8 * 1024 * 1024
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -29,11 +36,38 @@ def _canonical_bytes(value: Any) -> bytes:
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
+        allow_nan=False,
     ).encode("utf-8")
 
 
 def canonical_sha256(value: Any) -> str:
     return sha256(_canonical_bytes(value)).hexdigest()
+
+
+def load_evidence_object(path: Path) -> dict[str, Any]:
+    """Load one bounded, nonsymlinked, strict-JSON Checkpoint A artifact."""
+
+    if path.is_symlink():
+        raise ValueError("symlinked Checkpoint A evidence is forbidden")
+    try:
+        raw = path.resolve().read_bytes()
+    except OSError as exc:
+        raise ValueError("Checkpoint A evidence is unavailable") from exc
+    if not raw or len(raw) > MAX_EVIDENCE_FILE_BYTES:
+        raise ValueError("Checkpoint A evidence file size is invalid")
+    try:
+        payload = strict_json_loads(raw.decode("utf-8"))
+    except (
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        DuplicateJSONKeyError,
+        InvalidJSONValueError,
+        NonFiniteJSONValueError,
+    ) as exc:
+        raise ValueError("Checkpoint A evidence is not strict UTF-8 JSON") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("Checkpoint A evidence must contain one JSON object")
+    return payload
 
 
 def frozen_case_payload(gold: GoldCase) -> dict[str, Any]:
@@ -100,8 +134,12 @@ def build_manifest(
     ]
     runner_files = [
         ROOT / "scripts" / "checkpoint_a_constants.py",
+        ROOT / "scripts" / "checkpoint_a_protocol.py",
         ROOT / "scripts" / "checkpoint_a_shard.py",
         ROOT / "scripts" / "checkpoint_a_aggregate.py",
+        ROOT / "src" / "ecocommit" / "_canonical.py",
+        ROOT / "src" / "ecocommit" / "checkpoint_a_evidence.py",
+        ROOT / "src" / "ecocommit" / "interpreter.py",
     ]
     manifest: dict[str, Any] = {
         "evidence_schema_version": EVIDENCE_SCHEMA_VERSION,

@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "checkpoint_e_readiness.py"
@@ -118,6 +120,24 @@ def test_independent_reproduction_receipt_is_revision_bound(tmp_path):
     assert module._independent_reproduction_status(
         receipt, source_revision="c" * 40
     )[0] is False
+
+
+@pytest.mark.parametrize("raw", [
+    '{"schema_version":"E.REPRODUCTION.1","schema_version":"E.REPRODUCTION.1"}',
+    '{"schema_version":"E.REPRODUCTION.1","score":NaN}',
+    '[]',
+])
+def test_independent_reproduction_receipt_requires_strict_object_json(tmp_path, raw):
+    receipt = tmp_path / "reproduction.json"
+    receipt.write_text(raw, encoding="utf-8")
+
+    verified, detail = load_readiness_module()._independent_reproduction_status(
+        receipt,
+        source_revision="a" * 40,
+    )
+
+    assert verified is False
+    assert detail in {"receipt=invalid_json", "receipt=object_required"}
 
 
 def test_final_cli_mode_fails_while_real_evidence_is_blocked():

@@ -8,8 +8,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from urllib.parse import unquote
 
+from ecocommit._canonical import strict_json_loads
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+MAX_REPRODUCTION_RECEIPT_BYTES = 256 * 1024
 REQUIRED_FILES = (
     ".gitattributes",
     "README.md",
@@ -186,10 +189,17 @@ def _independent_reproduction_status(
 ) -> tuple[bool, str]:
     if path is None:
         return False, "receipt=missing"
+    if path.is_symlink():
+        return False, "receipt=symlink_forbidden"
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        raw = path.resolve().read_bytes()
+        if not raw or len(raw) > MAX_REPRODUCTION_RECEIPT_BYTES:
+            return False, "receipt=invalid_size"
+        payload = strict_json_loads(raw.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError):
         return False, "receipt=invalid_json"
+    if not isinstance(payload, dict):
+        return False, "receipt=object_required"
     required = {
         "schema_version": "E.REPRODUCTION.1",
         "source_revision": source_revision,
@@ -203,6 +213,9 @@ def _independent_reproduction_status(
     artifact_sha256 = payload.get("artifact_sha256")
     if not isinstance(artifact_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", artifact_sha256):
         mismatches.append("artifact_sha256")
+    expected_fields = set(required) | {"artifact_sha256"}
+    if set(payload) != expected_fields:
+        mismatches.append("receipt_fields")
     return not mismatches, f"mismatches={sorted(set(mismatches))}"
 
 

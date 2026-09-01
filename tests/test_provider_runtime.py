@@ -25,6 +25,20 @@ class _FakeResponse:
         return self._payload if size < 0 else self._payload[:size]
 
 
+class _RawResponse:
+    def __init__(self, payload: bytes):
+        self._payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self, size=-1):
+        return self._payload if size < 0 else self._payload[:size]
+
+
 def _provider_body(instruction: str) -> dict:
     candidate = {
         "instruction": instruction,
@@ -217,6 +231,67 @@ def test_missing_top_level_clauses_is_corrected_without_inventing_locally(monkey
 
     assert result.provider_trace[0]["issues"] == [{"location": "clauses", "code": "missing"}]
     assert result.provider_trace[1]["outcome"] == "accepted"
+
+
+@pytest.mark.parametrize(
+    ("original", "replacement", "expected_code"),
+    [
+        (
+            '"confidence": 1.0',
+            '"confidence": 0.25, "confidence": 1.0',
+            "duplicate_json_key",
+        ),
+        ('"materiality": 0.9', '"materiality": NaN', "non_finite_number"),
+        (
+            '"normalized_value": "bearings"',
+            '"normalized_value": "\\ud800"',
+            "invalid_json_value",
+        ),
+    ],
+)
+def test_non_strict_candidate_json_requires_bounded_model_correction(
+    original,
+    replacement,
+    expected_code,
+    monkeypatch,
+):
+    instruction = "Buy bearings."
+    malformed = _provider_body(instruction)
+    content = malformed["choices"][0]["message"]["content"]
+    malformed["choices"][0]["message"]["content"] = content.replace(
+        original,
+        replacement,
+        1,
+    )
+    responses = iter([_FakeResponse(malformed), _FakeResponse(_provider_body(instruction))])
+    monkeypatch.setattr(
+        "ecocommit.interpreter.request.urlopen",
+        lambda req, timeout: next(responses),
+    )
+
+    result = _provider(instruction, max_attempts=2).interpret_with_metadata(instruction)
+
+    assert result.provider_trace[0]["issues"] == [{
+        "location": "root",
+        "code": expected_code,
+    }]
+    assert result.provider_trace[1]["outcome"] == "accepted"
+
+
+def test_duplicate_provider_envelope_keys_are_malformed_not_candidate_evidence(monkeypatch):
+    instruction = "Buy bearings."
+    encoded = json.dumps(_provider_body(instruction))
+    duplicate = encoded.replace('"choices":', '"choices": [], "choices":', 1)
+    monkeypatch.setattr(
+        "ecocommit.interpreter.request.urlopen",
+        lambda req, timeout: _RawResponse(duplicate.encode("utf-8")),
+    )
+
+    with pytest.raises(ProviderRequestError) as caught:
+        _provider(instruction, max_attempts=1).interpret(instruction)
+
+    assert caught.value.code == "MALFORMED_RESPONSE"
+    assert caught.value.provider_trace[-1]["outcome"] == "provider_error"
 
 
 @pytest.mark.parametrize("missing_field", [

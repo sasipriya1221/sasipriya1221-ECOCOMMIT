@@ -6,7 +6,11 @@ import random
 from datetime import UTC, datetime, timedelta
 from importlib.metadata import distributions
 from pathlib import Path
+from typing import TypeVar
 
+from pydantic import BaseModel
+
+from ._canonical import strict_json_loads
 from .checkpoint_c_baselines import build_baseline, evaluate_with_error_retention
 from .checkpoint_c_metrics import aggregate_metrics, score_case
 from .checkpoint_c_models import (
@@ -24,6 +28,23 @@ from .checkpoint_c_models import (
     PromptGuardrailReplayRegistration,
     combine_input_provenance_flags,
 )
+
+
+_BenchmarkInput = TypeVar("_BenchmarkInput", bound=BaseModel)
+MAX_BENCHMARK_INPUT_BYTES = 8 * 1024 * 1024
+
+
+def _load_benchmark_input(path: str | Path, model: type[_BenchmarkInput]) -> _BenchmarkInput:
+    source = Path(path)
+    if source.is_symlink():
+        raise ValueError("symlinked benchmark input is forbidden")
+    raw = source.resolve().read_bytes()
+    if not raw or len(raw) > MAX_BENCHMARK_INPUT_BYTES:
+        raise ValueError("benchmark input file size is invalid")
+    payload = strict_json_loads(raw.decode("utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("benchmark input must contain one JSON object")
+    return model.model_validate(payload)
 
 
 def _dependency_versions() -> dict[str, str]:
@@ -185,11 +206,11 @@ def write_artifact(artifact: BenchmarkArtifact, path: str | Path) -> Path:
 
 
 def load_plan(path: str | Path) -> BenchmarkPlan:
-    return BenchmarkPlan.model_validate_json(Path(path).read_text(encoding="utf-8"))
+    return _load_benchmark_input(path, BenchmarkPlan)
 
 
 def load_suite(path: str | Path) -> BenchmarkSuite:
-    return BenchmarkSuite.model_validate_json(Path(path).read_text(encoding="utf-8"))
+    return _load_benchmark_input(path, BenchmarkSuite)
 
 
 def artifact_receipt(artifact: BenchmarkArtifact, path: str | Path) -> str:

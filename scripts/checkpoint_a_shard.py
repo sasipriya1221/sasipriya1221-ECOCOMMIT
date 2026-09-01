@@ -6,7 +6,13 @@ import os
 from pathlib import Path
 
 from checkpoint_a_live import _clear_cases, _ambiguous_cases, _evaluate_one
-from checkpoint_a_protocol import bind_row, build_manifest, verify_manifest, verify_row
+from checkpoint_a_protocol import (
+    bind_row,
+    build_manifest,
+    load_evidence_object,
+    verify_manifest,
+    verify_row,
+)
 from ecocommit.interpreter import OpenAICompatibleIntentProvider
 from ecocommit.validator import FidelityValidator
 
@@ -42,8 +48,8 @@ def _load_resume(
     by_id: dict[str, dict] = {}
     for candidate in files:
         try:
-            payload = json.loads(candidate.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
+            payload = load_evidence_object(candidate)
+        except ValueError as exc:
             raise ValueError(f"invalid resume artifact: {candidate.name}") from exc
         verify_manifest(payload.get("manifest", {}), manifest)
         for row in payload.get("cases", []):

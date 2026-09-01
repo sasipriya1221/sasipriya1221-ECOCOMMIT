@@ -15,6 +15,8 @@ from ecocommit.checkpoint_c_models import (
 )
 from ecocommit.checkpoint_c_runner import (
     artifact_receipt,
+    load_plan,
+    load_suite,
     run_benchmark,
     write_artifact,
 )
@@ -73,6 +75,22 @@ def test_runner_refuses_suite_changed_after_plan_registration():
 
     with pytest.raises(ValueError, match="hash frozen"):
         _run(plan, changed)
+
+
+@pytest.mark.parametrize("kind", ["plan", "suite"])
+def test_benchmark_input_loader_rejects_duplicate_json_keys(tmp_path, kind):
+    suite = make_suite()
+    value = make_plan(suite) if kind == "plan" else suite
+    payload = value.model_dump(mode="json")
+    encoded = json.dumps(payload)
+    first_key = next(iter(payload))
+    duplicate = "{" + json.dumps(first_key) + ":" + json.dumps(payload[first_key]) + "," + encoded[1:]
+    path = tmp_path / f"{kind}.json"
+    path.write_text(duplicate, encoding="utf-8")
+
+    loader = load_plan if kind == "plan" else load_suite
+    with pytest.raises(ValueError, match="duplicate JSON keys"):
+        loader(path)
 
 
 def test_runner_and_artifact_reject_run_time_before_plan_or_suite_freeze():

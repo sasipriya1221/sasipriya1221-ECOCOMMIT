@@ -6,7 +6,13 @@ from hashlib import sha256
 from pathlib import Path
 
 from checkpoint_a_live import _clear_cases, _ambiguous_cases
-from checkpoint_a_protocol import CRITERIA, build_manifest, verify_manifest, verify_row
+from checkpoint_a_protocol import (
+    CRITERIA,
+    build_manifest,
+    load_evidence_object,
+    verify_manifest,
+    verify_row,
+)
 from ecocommit.checkpoint_a_evidence import CheckpointAEvidenceReceipt
 from ecocommit.contracts import DecisionStatus
 from ecocommit.interpreter import OpenAICompatibleIntentProvider
@@ -74,7 +80,7 @@ def main() -> int:
 
     frozen = _clear_cases() + _ambiguous_cases()
     frozen_by_id = {gold.case_id: gold for gold in frozen}
-    first_payload = json.loads(files[0].read_text(encoding="utf-8"))
+    first_payload = load_evidence_object(files[0])
     supplied_manifest = first_payload.get("manifest", {})
     provider_config = supplied_manifest.get("provider", {})
     provider = OpenAICompatibleIntentProvider(
@@ -93,7 +99,7 @@ def main() -> int:
 
     by_id: dict[str, dict] = {}
     for path in files:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = load_evidence_object(path)
         verify_manifest(payload.get("manifest", {}), expected_manifest)
         for row in payload.get("cases", []):
             case_id = row.get("id")

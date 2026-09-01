@@ -12,6 +12,12 @@ from urllib.parse import urlsplit
 
 from pydantic import ValidationError
 
+from ._canonical import (
+    DuplicateJSONKeyError,
+    InvalidJSONValueError,
+    NonFiniteJSONValueError,
+    strict_json_loads,
+)
 from .contracts import EconomicIntentContract
 
 
@@ -272,6 +278,12 @@ class OpenAICompatibleIntentProvider(IntentProvider):
             return issues[:32] or [{"location": "root", "code": "invalid_contract"}]
         if isinstance(exc, json.JSONDecodeError):
             return [{"location": "root", "code": "invalid_json"}]
+        if isinstance(exc, DuplicateJSONKeyError):
+            return [{"location": "root", "code": "duplicate_json_key"}]
+        if isinstance(exc, NonFiniteJSONValueError):
+            return [{"location": "root", "code": "non_finite_number"}]
+        if isinstance(exc, InvalidJSONValueError):
+            return [{"location": "root", "code": "invalid_json_value"}]
         return [{"location": "root", "code": "malformed_provider_response"}]
 
     @classmethod
@@ -398,7 +410,7 @@ class OpenAICompatibleIntentProvider(IntentProvider):
             )
             try:
                 with request.urlopen(req, timeout=self.timeout) as resp:
-                    body = json.loads(self._read_bounded(resp).decode("utf-8"))
+                    body = strict_json_loads(self._read_bounded(resp).decode("utf-8"))
                 if not isinstance(body, dict):
                     raise TypeError("response object required")
                 choices = body.get("choices")
@@ -410,13 +422,22 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                     raise TypeError("candidate content required")
                 candidate_meta = self._candidate_metadata(body, content, attempt)
                 try:
-                    raw = json.loads(content)
+                    raw = strict_json_loads(content)
                     shape_issues = self._candidate_shape_issues(raw, instruction)
                     if shape_issues:
                         raise _CandidateShapeError(shape_issues)
                     repaired = self._repair_source_spans(raw, instruction)
                     contract = EconomicIntentContract.model_validate(repaired)
-                except (json.JSONDecodeError, ValidationError, _CandidateShapeError, TypeError, KeyError) as exc:
+                except (
+                    json.JSONDecodeError,
+                    DuplicateJSONKeyError,
+                    InvalidJSONValueError,
+                    NonFiniteJSONValueError,
+                    ValidationError,
+                    _CandidateShapeError,
+                    TypeError,
+                    KeyError,
+                ) as exc:
                     issues = self._validation_issues(exc)
                     provider_trace.append({**candidate_meta, "outcome": "schema_invalid", "issues": issues})
                     if not correction_used and attempt < self.max_attempts:
@@ -428,7 +449,15 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                     raise CandidateContractError(issues, provider_trace) from exc
                 provider_trace.append({**candidate_meta, "outcome": "accepted"})
                 return InterpretationResult(contract=contract, provider_trace=tuple(provider_trace))
-            except (json.JSONDecodeError, TypeError, KeyError, IndexError) as exc:
+            except (
+                json.JSONDecodeError,
+                DuplicateJSONKeyError,
+                InvalidJSONValueError,
+                NonFiniteJSONValueError,
+                TypeError,
+                KeyError,
+                IndexError,
+            ) as exc:
                 trace = provider_trace + [{
                     "attempt": attempt,
                     "outcome": "provider_error",
