@@ -311,6 +311,8 @@ def test_duplicate_provider_envelope_keys_are_malformed_not_candidate_evidence(m
 
 
 @pytest.mark.parametrize("missing_field", [
+    "materiality",
+    "confidence",
     "source_span",
     "hardness",
     "policy_class",

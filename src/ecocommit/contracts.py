@@ -65,35 +65,6 @@ class EconomicClause(BaseModel):
     depends_on: list[str] = Field(default_factory=list)
     exception_to: list[str] = Field(default_factory=list)
 
-    @model_validator(mode="before")
-    @classmethod
-    def recover_grounded_explicit_scores(cls, value):
-        """Repair omitted scoring metadata only for already-grounded explicit clauses.
-
-        Some JSON-object providers occasionally omit `materiality` and `confidence`
-        even when they return an otherwise complete clause.  A clause that already
-        declares EXPLICIT_USER provenance and carries a non-empty source span can be
-        repaired conservatively without inventing a new constraint: the parent
-        contract still verifies that span exactly against the original instruction.
-        We intentionally do not repair ungrounded or inferred clauses.
-        """
-        if not isinstance(value, dict):
-            return value
-
-        repaired = dict(value)
-        span = repaired.get("source_span")
-        provenance = repaired.get("provenance")
-        grounded_explicit = (
-            provenance in {Provenance.EXPLICIT_USER, Provenance.EXPLICIT_USER.value}
-            and isinstance(span, dict)
-            and isinstance(span.get("text"), str)
-            and bool(span["text"].strip())
-        )
-        if grounded_explicit:
-            repaired.setdefault("materiality", 1.0)
-            repaired.setdefault("confidence", 1.0)
-        return repaired
-
     @model_validator(mode="after")
     def inference_cannot_expand_authority(self):
         if (
