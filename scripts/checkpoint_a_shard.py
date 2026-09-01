@@ -6,11 +6,14 @@ import os
 from pathlib import Path
 
 from checkpoint_a_live import _clear_cases, _ambiguous_cases, _evaluate_one
+from checkpoint_a_protocol import bind_row, build_manifest, verify_manifest, verify_row
 from ecocommit.interpreter import OpenAICompatibleIntentProvider
 from ecocommit.validator import FidelityValidator
 
 
 def _is_transient_provider_error(row: dict) -> bool:
+    if row.get("error_kind") == "transient_provider_error":
+        return True
     error_text = str(row.get("error", ""))
     transient_markers = (
         "provider HTTP 429",
@@ -23,26 +26,39 @@ def _is_transient_provider_error(row: dict) -> bool:
     return any(marker in error_text for marker in transient_markers)
 
 
-def _load_resume(path: Path | None, selected_ids: set[str]) -> list[dict]:
+def _load_resume(
+    path: Path | None,
+    selected_by_id: dict[str, object],
+    manifest: dict,
+    validator: FidelityValidator,
+) -> list[dict]:
     if path is None or not path.exists():
         return []
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+
+    files = sorted(path.rglob("*.json")) if path.is_dir() else [path]
+    if not files:
         return []
 
-    rows: list[dict] = []
-    seen: set[str] = set()
-    for row in payload.get("cases", []):
-        case_id = row.get("id")
-        if case_id not in selected_ids or case_id in seen:
-            continue
-        # Provider capacity errors are infrastructure, never frozen semantic results.
-        if _is_transient_provider_error(row):
-            continue
-        rows.append(row)
-        seen.add(case_id)
-    return rows
+    by_id: dict[str, dict] = {}
+    for candidate in files:
+        try:
+            payload = json.loads(candidate.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"invalid resume artifact: {candidate.name}") from exc
+        verify_manifest(payload.get("manifest", {}), manifest)
+        for row in payload.get("cases", []):
+            case_id = row.get("id")
+            gold = selected_by_id.get(case_id)
+            if gold is None:
+                raise ValueError(f"unexpected case in resume artifact: {case_id}")
+            verified = verify_row(row, gold, manifest, validator)
+            if _is_transient_provider_error(verified):
+                continue
+            previous = by_id.get(case_id)
+            if previous is not None and previous.get("row_sha256") != verified.get("row_sha256"):
+                raise ValueError(f"conflicting resume rows for {case_id}")
+            by_id[case_id] = verified
+    return list(by_id.values())
 
 
 def _write_partial(
@@ -54,10 +70,13 @@ def _write_partial(
     end: int,
     rows: list[dict],
     frozen_index_by_id: dict[str, int],
-    infrastructure_error: str | None = None,
+    manifest: dict,
+    infrastructure_error: dict | None = None,
 ) -> None:
     completed_indices = [frozen_index_by_id[r["id"]] for r in rows if r.get("id") in frozen_index_by_id]
     payload = {
+        "evidence_schema_version": manifest["evidence_schema_version"],
+        "manifest": manifest,
         "provider": {"base_url": base_url, "model": model},
         "shard": {
             "start": start,
@@ -80,13 +99,13 @@ def main() -> int:
     parser.add_argument("--resume", default=None, help="optional previous shard JSON to resume from")
     parser.add_argument("--base-url", default=os.getenv("ECOCOMMIT_LLM_BASE_URL", "https://api.openai.com/v1"))
     parser.add_argument("--model", default=os.getenv("ECOCOMMIT_LLM_MODEL"))
-    parser.add_argument("--api-key", default=os.getenv("ECOCOMMIT_LLM_API_KEY"))
     args = parser.parse_args()
 
     if not args.model:
         raise SystemExit("ECOCOMMIT_LLM_MODEL (or --model) is required")
-    if not args.api_key:
-        raise SystemExit("ECOCOMMIT_LLM_API_KEY (or --api-key) is required")
+    api_key = os.getenv("ECOCOMMIT_LLM_API_KEY")
+    if not api_key:
+        raise SystemExit("ECOCOMMIT_LLM_API_KEY is required; command-line credentials are not accepted")
 
     frozen = _clear_cases() + _ambiguous_cases()
     if not (0 <= args.start < args.end <= len(frozen)):
@@ -100,21 +119,22 @@ def main() -> int:
     max_retry_delay = max(0.0, float(os.getenv("ECOCOMMIT_LLM_CASE_MAX_RETRY_DELAY", "15")))
     provider = OpenAICompatibleIntentProvider(
         args.base_url,
-        args.api_key,
+        api_key,
         args.model,
         timeout=60.0,
         max_attempts=max_attempts,
         max_retry_delay=max_retry_delay,
     )
     validator = FidelityValidator()
+    manifest = build_manifest(frozen, provider)
     selected = frozen[args.start:args.end]
-    selected_ids = {gold.case_id for gold in selected}
+    selected_by_id = {gold.case_id: gold for gold in selected}
     frozen_index_by_id = {gold.case_id: i for i, gold in enumerate(frozen)}
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
 
     resume_path = Path(args.resume) if args.resume else None
-    rows = _load_resume(resume_path, selected_ids)
+    rows = _load_resume(resume_path, selected_by_id, manifest, validator)
     completed_ids = {row["id"] for row in rows if row.get("id")}
 
     _write_partial(
@@ -125,6 +145,7 @@ def main() -> int:
         end=args.end,
         rows=rows,
         frozen_index_by_id=frozen_index_by_id,
+        manifest=manifest,
     )
 
     for gold in selected:
@@ -142,12 +163,18 @@ def main() -> int:
                 end=args.end,
                 rows=rows,
                 frozen_index_by_id=frozen_index_by_id,
-                infrastructure_error=row.get("error"),
+                manifest=manifest,
+                infrastructure_error={
+                    "case_id": gold.case_id,
+                    "kind": row.get("error_kind"),
+                    "code": row.get("error_code"),
+                    "message": row.get("error"),
+                },
             )
             print(json.dumps({"deferred": gold.case_id, "reason": "transient_provider_error"}), flush=True)
             return 75
 
-        rows.append(row)
+        rows.append(bind_row(row, gold, manifest))
         completed_ids.add(gold.case_id)
         _write_partial(
             output,
@@ -157,6 +184,7 @@ def main() -> int:
             end=args.end,
             rows=rows,
             frozen_index_by_id=frozen_index_by_id,
+            manifest=manifest,
         )
         print(json.dumps({"completed": gold.case_id, "passed": row.get("passed", False)}), flush=True)
 

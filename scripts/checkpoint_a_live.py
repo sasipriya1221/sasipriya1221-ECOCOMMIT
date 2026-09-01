@@ -9,8 +9,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ecocommit.contracts import ClauseType, DecisionStatus, EconomicIntentContract
-from ecocommit.interpreter import OpenAICompatibleIntentProvider
+from ecocommit.interpreter import (
+    CandidateContractError,
+    OpenAICompatibleIntentProvider,
+    ProviderRequestError,
+)
 from ecocommit.validator import FidelityValidator
+
+from checkpoint_a_constants import CRITERIA
 
 
 @dataclass(frozen=True)
@@ -221,18 +227,60 @@ def semantic_case_pass(contract: EconomicIntentContract, gold: GoldCase, validat
 
 def _evaluate_one(gold: GoldCase, provider: OpenAICompatibleIntentProvider, validator: FidelityValidator) -> dict:
     try:
-        contract = provider.interpret(gold.instruction)
+        interpreted = provider.interpret_with_metadata(gold.instruction)
+        contract = interpreted.contract
         passed, detail = semantic_case_pass(contract, gold, validator)
-        return {"id": gold.case_id, "instruction": gold.instruction, "passed": passed, "detail": detail, "contract": contract.model_dump(mode="json")}
+        return {
+            "id": gold.case_id,
+            "instruction": gold.instruction,
+            "passed": passed,
+            "detail": detail,
+            "contract": contract.model_dump(mode="json"),
+            "provider_trace": list(interpreted.provider_trace),
+        }
+    except CandidateContractError as exc:
+        return {
+            "id": gold.case_id,
+            "instruction": gold.instruction,
+            "passed": False,
+            "error_kind": "candidate_contract_error",
+            "error_code": "SCHEMA_INVALID_AFTER_CORRECTION",
+            "error": str(exc),
+            "provider_trace": list(exc.provider_trace),
+        }
+    except ProviderRequestError as exc:
+        provider_trace = list(exc.provider_trace)
+        correction_interrupted = any(
+            item.get("outcome") == "schema_invalid" for item in provider_trace
+        )
+        return {
+            "id": gold.case_id,
+            "instruction": gold.instruction,
+            "passed": False,
+            "error_kind": (
+                "candidate_contract_correction_interrupted"
+                if correction_interrupted
+                else ("transient_provider_error" if exc.transient else "provider_error")
+            ),
+            "error_code": "CORRECTION_PROVIDER_ERROR" if correction_interrupted else exc.code,
+            "error": str(exc),
+            "provider_trace": provider_trace,
+        }
     except Exception as exc:
-        return {"id": gold.case_id, "instruction": gold.instruction, "passed": False, "error": type(exc).__name__ + ": " + str(exc)}
+        return {
+            "id": gold.case_id,
+            "instruction": gold.instruction,
+            "passed": False,
+            "error_kind": "internal_error",
+            "error_code": type(exc).__name__,
+            "error": "local evaluation failed; inspect protected job logs",
+        }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run ECOCOMMIT live Checkpoint A evaluation")
     parser.add_argument("--base-url", default=os.getenv("ECOCOMMIT_LLM_BASE_URL", "https://api.openai.com/v1"))
     parser.add_argument("--model", default=os.getenv("ECOCOMMIT_LLM_MODEL"))
-    parser.add_argument("--api-key", default=os.getenv("ECOCOMMIT_LLM_API_KEY"))
     parser.add_argument("--output", default="artifacts/checkpoint_a_results.json")
     parser.add_argument("--clear-limit", type=int, default=50)
     parser.add_argument("--ambiguous-limit", type=int, default=30)
@@ -241,10 +289,11 @@ def main() -> int:
 
     if not args.model:
         raise SystemExit("ECOCOMMIT_LLM_MODEL (or --model) is required")
-    if not args.api_key:
-        raise SystemExit("ECOCOMMIT_LLM_API_KEY (or --api-key) is required; no mocked credential is accepted")
+    api_key = os.getenv("ECOCOMMIT_LLM_API_KEY")
+    if not api_key:
+        raise SystemExit("ECOCOMMIT_LLM_API_KEY is required; command-line credentials are not accepted")
 
-    provider = OpenAICompatibleIntentProvider(args.base_url, args.api_key, args.model, timeout=60.0)
+    provider = OpenAICompatibleIntentProvider(args.base_url, api_key, args.model, timeout=60.0)
     validator = FidelityValidator()
     all_cases = _clear_cases()[:max(0, args.clear_limit)] + _ambiguous_cases()[:max(0, args.ambiguous_limit)]
 
@@ -294,12 +343,7 @@ def main() -> int:
         "dataset": {"total": total, "clear": clear_count, "ambiguous": ambiguous_count, "full_frozen_gate_run": full_run},
         "metrics": metrics,
         "checkpoint_a_gate": {
-            "criteria": {
-                "case_pass_rate_min": 0.90,
-                "selective_semantic_reliability_min": 0.95,
-                "autonomous_coverage_min": 0.55,
-                "ambiguous_clarification_accuracy_min": 0.80,
-            },
+            "criteria": dict(CRITERIA),
         },
         "cases": rows,
     }

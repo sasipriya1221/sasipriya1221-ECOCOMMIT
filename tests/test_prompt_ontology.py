@@ -13,8 +13,8 @@ class _FakeResponse:
     def __exit__(self, exc_type, exc, tb):
         return False
 
-    def read(self):
-        return self._payload
+    def read(self, size=-1):
+        return self._payload if size < 0 else self._payload[:size]
 
 
 def _provider_body(instruction: str) -> dict:
@@ -52,7 +52,12 @@ def test_provider_prompt_disambiguates_deadlines_confidence_and_gating(monkeypat
     monkeypatch.delenv("ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS", raising=False)
     monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
 
-    provider = OpenAICompatibleIntentProvider("https://example.invalid/v1", "secret", "model")
+    provider = OpenAICompatibleIntentProvider(
+        "https://example.invalid/v1",
+        "secret",
+        "model",
+        allowed_hosts={"example.invalid"},
+    )
     provider.interpret(instruction)
 
     system = captured["messages"][0]["content"]
@@ -61,3 +66,6 @@ def test_provider_prompt_disambiguates_deadlines_confidence_and_gating(monkeypat
     assert "confidence means certainty that this clause faithfully extracts" in system
     assert "unless/otherwise/only if/provided that/in which case" in system
     assert "preserve the gating relationship with depends_on or a DEPENDENCY clause" in system
+    assert "every emitted clause explicitly include" in system
+    assert "Never emit a partial clause" in system
+    assert "Omit a redundant AUTHORIZATION clause" in system

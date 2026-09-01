@@ -2,7 +2,13 @@ import io
 import json
 from urllib import error
 
-from ecocommit.interpreter import OpenAICompatibleIntentProvider
+import pytest
+
+from ecocommit.interpreter import (
+    CandidateContractError,
+    OpenAICompatibleIntentProvider,
+    ProviderRequestError,
+)
 
 
 class _FakeResponse:
@@ -15,8 +21,8 @@ class _FakeResponse:
     def __exit__(self, exc_type, exc, tb):
         return False
 
-    def read(self):
-        return self._payload
+    def read(self, size=-1):
+        return self._payload if size < 0 else self._payload[:size]
 
 
 def _provider_body(instruction: str) -> dict:
@@ -38,7 +44,21 @@ def _provider_body(instruction: str) -> dict:
             "exception_to": [],
         }],
     }
-    return {"choices": [{"message": {"content": json.dumps(candidate)}}]}
+    return {
+        "id": "req_test",
+        "choices": [{"finish_reason": "stop", "message": {"content": json.dumps(candidate)}}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
+    }
+
+
+def _provider(instruction: str, **kwargs):
+    return OpenAICompatibleIntentProvider(
+        "https://example.invalid/v1",
+        "secret",
+        "model",
+        allowed_hosts={"example.invalid"},
+        **kwargs,
+    )
 
 
 def test_runtime_reasoning_effort_is_sent_when_configured(monkeypatch):
@@ -54,7 +74,7 @@ def test_runtime_reasoning_effort_is_sent_when_configured(monkeypatch):
     monkeypatch.delenv("ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS", raising=False)
     monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
 
-    provider = OpenAICompatibleIntentProvider("https://example.invalid/v1", "secret", "model")
+    provider = _provider(instruction)
     contract = provider.interpret(instruction)
 
     assert captured["reasoning_effort"] == "low"
@@ -74,7 +94,7 @@ def test_strict_schema_and_completion_budget_are_sent_when_enabled(monkeypatch):
     monkeypatch.delenv("ECOCOMMIT_LLM_REASONING_EFFORT", raising=False)
     monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
 
-    provider = OpenAICompatibleIntentProvider("https://example.invalid/v1", "secret", "model")
+    provider = _provider(instruction)
     provider.interpret(instruction)
 
     assert captured["max_completion_tokens"] == 2048
@@ -109,10 +129,8 @@ def test_http_429_respects_retry_after_with_hard_ceiling(monkeypatch):
     monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
     monkeypatch.setattr("ecocommit.interpreter.time.sleep", sleeps.append)
 
-    provider = OpenAICompatibleIntentProvider(
-        "https://example.invalid/v1",
-        "secret",
-        "model",
+    provider = _provider(
+        instruction,
         max_attempts=2,
         max_retry_delay=65,
     )
@@ -140,13 +158,219 @@ def test_transport_error_is_retried(monkeypatch):
     monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
     monkeypatch.setattr("ecocommit.interpreter.time.sleep", sleeps.append)
 
-    provider = OpenAICompatibleIntentProvider(
-        "https://example.invalid/v1",
-        "secret",
-        "model",
+    provider = _provider(
+        instruction,
         max_attempts=2,
     )
     provider.interpret(instruction)
 
     assert calls == 2
     assert sleeps == [1.0]
+
+
+def test_schema_invalid_candidate_gets_one_bounded_correction(monkeypatch):
+    instruction = "Buy bearings from Vendor A."
+    malformed = _provider_body(instruction)
+    raw = json.loads(malformed["choices"][0]["message"]["content"])
+    raw["clauses"].append({
+        "clause_id": "auth_01",
+        "clause_type": "AUTHORIZATION",
+        "normalized_value": "Buy",
+        "source_span": {"text": "Buy", "start": 0, "end": 3},
+        "provenance": "EXPLICIT_USER",
+    })
+    malformed["choices"][0]["message"]["content"] = json.dumps(raw)
+    valid = _provider_body(instruction)
+    requests = []
+    responses = iter([_FakeResponse(malformed), _FakeResponse(valid)])
+
+    def fake_urlopen(req, timeout):
+        requests.append(json.loads(req.data.decode("utf-8")))
+        return next(responses)
+
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
+    result = _provider(instruction, max_attempts=2).interpret_with_metadata(instruction)
+
+    assert len(requests) == 2
+    correction = requests[1]["messages"][-1]["content"]
+    assert "clauses.1.materiality (missing)" in correction
+    assert "clauses.1.confidence (missing)" in correction
+    assert [item["outcome"] for item in result.provider_trace] == ["schema_invalid", "accepted"]
+    assert result.provider_trace[0]["candidate_sha256"]
+    assert result.provider_trace[1]["finish_reason"] == "stop"
+    assert result.provider_trace[1]["usage"]["total_tokens"] == 30
+
+
+def test_missing_top_level_clauses_is_corrected_without_inventing_locally(monkeypatch):
+    instruction = "Purchase parts with reasonable protection."
+    malformed = {
+        "id": "req_bad",
+        "choices": [{"finish_reason": "stop", "message": {"content": json.dumps({
+            "instruction": instruction,
+            "schema_version": "0.1",
+        })}}],
+    }
+    responses = iter([_FakeResponse(malformed), _FakeResponse(_provider_body(instruction))])
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", lambda req, timeout: next(responses))
+
+    result = _provider(instruction, max_attempts=2).interpret_with_metadata(instruction)
+
+    assert result.provider_trace[0]["issues"] == [{"location": "clauses", "code": "missing"}]
+    assert result.provider_trace[1]["outcome"] == "accepted"
+
+
+@pytest.mark.parametrize("missing_field", [
+    "source_span",
+    "hardness",
+    "policy_class",
+    "negated",
+    "depends_on",
+    "exception_to",
+])
+def test_model_default_fields_must_still_be_explicit(missing_field, monkeypatch):
+    instruction = "Buy bearings."
+    malformed = _provider_body(instruction)
+    raw = json.loads(malformed["choices"][0]["message"]["content"])
+    del raw["clauses"][0][missing_field]
+    malformed["choices"][0]["message"]["content"] = json.dumps(raw)
+    responses = iter([_FakeResponse(malformed), _FakeResponse(_provider_body(instruction))])
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", lambda req, timeout: next(responses))
+
+    result = _provider(instruction, max_attempts=3).interpret_with_metadata(instruction)
+
+    assert result.provider_trace[0]["issues"] == [{
+        "location": f"clauses.0.{missing_field}",
+        "code": "missing",
+    }]
+    assert result.provider_trace[1]["outcome"] == "accepted"
+
+
+def test_only_one_schema_correction_is_attempted_even_with_larger_retry_budget(monkeypatch):
+    instruction = "Buy bearings."
+    malformed = _provider_body(instruction)
+    raw = json.loads(malformed["choices"][0]["message"]["content"])
+    del raw["clauses"][0]["confidence"]
+    malformed["choices"][0]["message"]["content"] = json.dumps(raw)
+    calls = 0
+
+    def fake_urlopen(req, timeout):
+        nonlocal calls
+        calls += 1
+        return _FakeResponse(malformed)
+
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
+
+    with pytest.raises(CandidateContractError) as caught:
+        _provider(instruction, max_attempts=5).interpret(instruction)
+
+    assert calls == 2
+    assert len(caught.value.provider_trace) == 2
+
+
+def test_original_instruction_mismatch_requires_model_correction(monkeypatch):
+    instruction = "Buy bearings."
+    malformed = _provider_body(instruction)
+    raw = json.loads(malformed["choices"][0]["message"]["content"])
+    raw["instruction"] = "Buy a different product."
+    malformed["choices"][0]["message"]["content"] = json.dumps(raw)
+    responses = iter([_FakeResponse(malformed), _FakeResponse(_provider_body(instruction))])
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", lambda req, timeout: next(responses))
+
+    result = _provider(instruction, max_attempts=2).interpret_with_metadata(instruction)
+
+    assert result.provider_trace[0]["issues"] == [{
+        "location": "instruction",
+        "code": "original_mismatch",
+    }]
+
+
+def test_repeated_schema_failure_is_terminal_and_redacted(monkeypatch):
+    instruction = "Buy bearings."
+    sensitive = "private-provider-content"
+    malformed = {
+        "id": "req_bad",
+        "choices": [{"finish_reason": "length", "message": {"content": json.dumps({
+            "instruction": instruction,
+            "schema_version": "0.1",
+            "debug": sensitive,
+        })}}],
+    }
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", lambda req, timeout: _FakeResponse(malformed))
+
+    with pytest.raises(CandidateContractError) as caught:
+        _provider(instruction, max_attempts=2).interpret(instruction)
+
+    assert sensitive not in str(caught.value)
+    assert len(caught.value.provider_trace) == 2
+    assert all(item["finish_reason"] == "length" for item in caught.value.provider_trace)
+    assert all("candidate_sha256" in item for item in caught.value.provider_trace)
+
+
+@pytest.mark.parametrize("url", [
+    "http://api.groq.com/openai/v1",
+    "https://user:secret@api.groq.com/openai/v1",
+    "https://api.groq.com/openai/v1?redirect=evil",
+    "https://api.groq.com/openai/v1#fragment",
+    "https://attacker.example/v1",
+])
+def test_provider_url_rejects_credential_exfiltration_surfaces(url):
+    with pytest.raises(ValueError):
+        OpenAICompatibleIntentProvider(url, "secret", "model")
+
+
+def test_oversized_success_response_is_rejected_without_retaining_body(monkeypatch):
+    instruction = "Buy bearings."
+    sensitive = "sensitive" * 100
+    monkeypatch.setattr(
+        "ecocommit.interpreter.request.urlopen",
+        lambda req, timeout: _FakeResponse({"oversized": sensitive}),
+    )
+
+    with pytest.raises(ProviderRequestError) as caught:
+        _provider(instruction, max_attempts=1, max_response_bytes=32).interpret(instruction)
+
+    assert caught.value.code == "RESPONSE_TOO_LARGE"
+    assert sensitive not in str(caught.value)
+
+
+def test_http_error_body_is_not_retained(monkeypatch):
+    instruction = "Buy bearings."
+    sensitive = b'{"error":{"message":"account-private-detail"}}'
+
+    def fake_urlopen(req, timeout):
+        raise error.HTTPError(req.full_url, 400, "Bad Request", {}, io.BytesIO(sensitive))
+
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
+
+    with pytest.raises(ProviderRequestError) as caught:
+        _provider(instruction, max_attempts=1).interpret(instruction)
+
+    assert caught.value.code == "HTTP_400"
+    assert "account-private-detail" not in str(caught.value)
+
+
+def test_schema_failure_then_provider_deferral_retains_both_facts(monkeypatch):
+    instruction = "Buy bearings."
+    malformed = _provider_body(instruction)
+    raw = json.loads(malformed["choices"][0]["message"]["content"])
+    del raw["clauses"][0]["confidence"]
+    malformed["choices"][0]["message"]["content"] = json.dumps(raw)
+    calls = 0
+
+    def fake_urlopen(req, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return _FakeResponse(malformed)
+        raise error.HTTPError(req.full_url, 429, "Too Many Requests", {}, io.BytesIO(b"private"))
+
+    monkeypatch.setattr("ecocommit.interpreter.request.urlopen", fake_urlopen)
+
+    with pytest.raises(ProviderRequestError) as caught:
+        _provider(instruction, max_attempts=2).interpret(instruction)
+
+    assert caught.value.transient is True
+    assert [item["outcome"] for item in caught.value.provider_trace] == [
+        "schema_invalid",
+        "provider_error",
+    ]

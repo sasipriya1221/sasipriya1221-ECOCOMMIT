@@ -1,0 +1,134 @@
+{
+  "schema_version": "A.CANDIDATE_FAILURE.1",
+  "candidate_version": "A-CANDIDATE-1",
+  "status": "MATHEMATICALLY_FAILED",
+  "frozen_source_revision": "6485d3b24f4967c178cce9b1a9b67cdf0230840c",
+  "github": {
+    "repository": "sasipriya1221/sasipriya1221-ECOCOMMIT",
+    "run_id": "33493409547",
+    "run_attempt": 15,
+    "run_url": "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33493409547"
+  },
+  "aggregate_artifact": {
+    "artifact_id": "9813043400",
+    "archive_sha256": "6f0052ddf1152f7e25ba13d0a3f9dbea52d6c0a994b0d526d1c2de3ee72b183a",
+    "checkpoint_a_results_json_sha256": "1cb8eb4ae722ea77b02a2a2b10891b86f3b2b5c40b3df753b93e8bb0f8c1f4a7"
+  },
+  "frozen_gate": {
+    "total_cases": 80,
+    "case_pass_rate_min": 0.9,
+    "selective_semantic_reliability_min": 0.95,
+    "autonomous_coverage_min": 0.55,
+    "ambiguous_clarification_accuracy_min": 0.8
+  },
+  "attempt_15": {
+    "terminal_rows": 32,
+    "semantic_passes": 21,
+    "terminal_candidate_contract_failures": 11,
+    "provider_deferred": 48,
+    "maximum_possible_passes": 69,
+    "maximum_possible_case_pass_rate": 0.8625,
+    "can_satisfy_case_pass_rate": false
+  },
+  "terminal_failure_classes": [
+    {
+      "class": "INCOMPLETE_TRAILING_AUTHORIZATION_CLAUSE",
+      "case_ids": [
+        "C002",
+        "C005",
+        "C011",
+        "C012",
+        "C014",
+        "C015",
+        "C016",
+        "C017",
+        "C023",
+        "C024"
+      ],
+      "facts": {
+        "clause_index": 6,
+        "clause_id": "auth_01",
+        "missing_required_fields": [
+          "materiality",
+          "confidence"
+        ],
+        "reached_semantic_scoring": false
+      }
+    },
+    {
+      "class": "MISSING_TOP_LEVEL_CLAUSES",
+      "case_ids": [
+        "A026"
+      ],
+      "facts": {
+        "missing_required_fields": [
+          "clauses"
+        ],
+        "reached_semantic_scoring": false
+      }
+    }
+  ],
+  "provider_deferrals": {
+    "classification": "TRANSIENT_PROVIDER_ERROR",
+    "all_latest_failed_job_logs_individually_verified": true,
+    "verified_log_count": 48,
+    "case_ids": [
+      "A001",
+      "A004",
+      "A005",
+      "A007",
+      "A009",
+      "A011",
+      "A012",
+      "A013",
+      "A014",
+      "A015",
+      "A016",
+      "A017",
+      "A019",
+      "A020",
+      "A022",
+      "A023",
+      "A024",
+      "A027",
+      "A028",
+      "A029",
+      "A030",
+      "C013",
+      "C018",
+      "C019",
+      "C020",
+      "C021",
+      "C022",
+      "C025",
+      "C026",
+      "C027",
+      "C028",
+      "C029",
+      "C030",
+      "C031",
+      "C032",
+      "C033",
+      "C034",
+      "C035",
+      "C036",
+      "C038",
+      "C040",
+      "C044",
+      "C045",
+      "C046",
+      "C047",
+      "C048",
+      "C049",
+      "C050"
+    ]
+  },
+  "non_claims": {
+    "provider_deferrals_count_as_semantic_failures": false,
+    "terminal_contract_failures_count_as_provider_deferrals": false,
+    "candidate_1_may_be_resumed_to_a_pass": false,
+    "thresholds_changed": false,
+    "frozen_cases_changed": false,
+    "evaluator_changed_for_candidate_1": false
+  }
+}

@@ -18,15 +18,26 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
           cache: pip
       - name: Install project
-        run: python -m pip install -e '.[dev]'
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e .
+          python -m pip check
       - name: Offline regression suite
         run: pytest
+      - name: Static runtime checks
+        shell: bash
+        run: |
+          python -m compileall -q src scripts tests
+          node --check ui/app.js
+          git diff --check
 
   case:
     needs: regression
@@ -47,46 +58,54 @@ jobs:
       ECOCOMMIT_LLM_MAX_COMPLETION_TOKENS: '1024'
       ECOCOMMIT_LLM_CASE_MAX_ATTEMPTS: '2'
       ECOCOMMIT_LLM_CASE_MAX_RETRY_DELAY: '15'
-      ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
           cache: pip
       - name: Install project
-        run: python -m pip install -e '.[dev]'
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e .
+          python -m pip check
       - name: Verify Groq secret exists
         shell: bash
+        env:
+          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
         run: |
           if [ -z "$ECOCOMMIT_LLM_API_KEY" ]; then
             echo 'ECOCOMMIT_GROQ_API_KEY is not configured. Checkpoint A cannot be claimed with fixtures.' >&2
             exit 3
           fi
-      - name: Restore this case from an earlier attempt of the same run
+      - name: Restore this Candidate 2 case from an earlier attempt of the same run
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: checkpoint-a-case-${{ matrix.case }}
+          pattern: checkpoint-a-candidate-2-case-${{ matrix.case }}-attempt-*
           path: artifacts/resume
-      - name: Run one immutable frozen benchmark case
+          merge-multiple: false
+      - name: Run one immutable frozen Candidate 2 benchmark case
         shell: bash
+        env:
+          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
         run: |
           START=${{ matrix.case }}
           END=$((START + 1))
           python scripts/checkpoint_a_shard.py \
             --start "$START" \
             --end "$END" \
-            --output "artifacts/case-${START}.json" \
-            --resume "artifacts/resume/case-${START}.json"
+            --output "artifacts/case-${START}-attempt-${GITHUB_RUN_ATTEMPT}.json" \
+            --resume "artifacts/resume"
       - name: Upload this case result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: checkpoint-a-case-${{ matrix.case }}
-          path: artifacts/case-${{ matrix.case }}.json
+          name: checkpoint-a-candidate-2-case-${{ matrix.case }}-attempt-${{ github.run_attempt }}
+          path: artifacts/case-${{ matrix.case }}-attempt-${{ github.run_attempt }}.json
           if-no-files-found: warn
-          overwrite: true
 
   aggregate:
     needs: case
@@ -96,34 +115,46 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
           cache: pip
       - name: Install project
-        run: python -m pip install -e '.[dev]'
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e .
+          python -m pip check
       - name: Download completed case artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: checkpoint-a-case-*
+          pattern: checkpoint-a-candidate-2-case-*-attempt-*
           path: artifacts/cases
           merge-multiple: false
       - name: Aggregate frozen Checkpoint A result
         id: aggregate
         continue-on-error: true
-        run: python scripts/checkpoint_a_aggregate.py --input-dir artifacts/cases --output artifacts/checkpoint_a_results.json
+        shell: bash
+        run: |
+          python scripts/checkpoint_a_aggregate.py \
+            --input-dir artifacts/cases \
+            --output "artifacts/checkpoint_a_candidate_2_results_attempt_${GITHUB_RUN_ATTEMPT}.json" \
+            --receipt-output "artifacts/checkpoint_a_candidate_2_receipt_attempt_${GITHUB_RUN_ATTEMPT}.json" \
+            --evidence-reference "github-actions://${GITHUB_REPOSITORY}/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/checkpoint-a-candidate-2-results-attempt-${GITHUB_RUN_ATTEMPT}"
       - name: Print compact live diagnostics
         if: always()
-        run: python scripts/checkpoint_a_diagnostics.py artifacts/checkpoint_a_results.json
+        run: python scripts/checkpoint_a_diagnostics.py "artifacts/checkpoint_a_candidate_2_results_attempt_${GITHUB_RUN_ATTEMPT}.json"
       - name: Upload final evaluation artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: checkpoint-a-results
-          path: artifacts/checkpoint_a_results.json
+          name: checkpoint-a-candidate-2-results-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/checkpoint_a_candidate_2_results_attempt_${{ github.run_attempt }}.json
+            artifacts/checkpoint_a_candidate_2_receipt_attempt_${{ github.run_attempt }}.json
           if-no-files-found: warn
-          overwrite: true
       - name: Enforce frozen gate
         if: steps.aggregate.outcome != 'success'
         run: exit 2

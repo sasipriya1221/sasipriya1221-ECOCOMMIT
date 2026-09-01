@@ -1,7 +1,7 @@
 from ecocommit.interpreter import OpenAICompatibleIntentProvider
 
 
-def test_exception_target_is_mirrored_as_dependency_without_inventing_target():
+def test_exception_target_is_not_silently_mirrored_into_dependency():
     instruction = "Buy from an approved supplier unless another option is clearly better."
     raw = {
         "instruction": instruction,
@@ -42,4 +42,4 @@ def test_exception_target_is_mirrored_as_dependency_without_inventing_target():
 
     exception = next(c for c in repaired["clauses"] if c["clause_id"] == "exception")
     assert exception["exception_to"] == ["supplier"]
-    assert exception["depends_on"] == ["supplier"]
+    assert exception["depends_on"] == []

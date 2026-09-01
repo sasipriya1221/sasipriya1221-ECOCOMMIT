@@ -1,3 +1,6 @@
+import pytest
+from pydantic import ValidationError
+
 from ecocommit.contracts import ClauseType, DecisionStatus, EconomicClause, EconomicIntentContract, Provenance
 from ecocommit.interpreter import OpenAICompatibleIntentProvider
 from ecocommit.validator import FidelityValidator
@@ -70,7 +73,7 @@ def test_source_offsets_are_recomputed_from_exact_text():
     assert instruction[contract.clauses[0].source_span.start:contract.clauses[0].source_span.end] == "ISO-9001 pressure valves"
 
 
-def test_verified_exact_span_can_repair_omitted_explicit_user_provenance():
+def test_verified_exact_span_does_not_invent_omitted_provenance():
     instruction = "Buy 40 fire-rated network cabinets."
     raw = {
         "instruction": instruction,
@@ -91,10 +94,10 @@ def test_verified_exact_span_can_repair_omitted_explicit_user_provenance():
     }
 
     repaired = OpenAICompatibleIntentProvider._repair_source_spans(raw, instruction)
-    contract = EconomicIntentContract.model_validate(repaired)
 
-    assert contract.clauses[0].provenance == Provenance.EXPLICIT_USER
-    assert contract.clauses[0].source_span.text == "fire-rated network cabinets"
+    assert "provenance" not in repaired["clauses"][0]
+    with pytest.raises(ValidationError):
+        EconomicIntentContract.model_validate(repaired)
 
 
 def test_ungrounded_clause_does_not_get_explicit_provenance_repair():

@@ -2,39 +2,18 @@ from __future__ import annotations
 
 import argparse
 import json
+from hashlib import sha256
 from pathlib import Path
 
 from checkpoint_a_live import _clear_cases, _ambiguous_cases
+from checkpoint_a_protocol import CRITERIA, build_manifest, verify_manifest, verify_row
+from ecocommit.checkpoint_a_evidence import CheckpointAEvidenceReceipt
 from ecocommit.contracts import DecisionStatus
-
-CRITERIA = {
-    "case_pass_rate_min": 0.90,
-    "selective_semantic_reliability_min": 0.95,
-    "autonomous_coverage_min": 0.55,
-    "ambiguous_clarification_accuracy_min": 0.80,
-}
+from ecocommit.interpreter import OpenAICompatibleIntentProvider
+from ecocommit.validator import FidelityValidator
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Aggregate frozen ECOCOMMIT Checkpoint A shards")
-    parser.add_argument("--input-dir", required=True)
-    parser.add_argument("--output", required=True)
-    args = parser.parse_args()
-
-    files = sorted(Path(args.input_dir).rglob("*.json"))
-    if not files:
-        raise SystemExit("no shard JSON files found")
-
-    rows: list[dict] = []
-    provider = None
-    for path in files:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        provider = provider or payload.get("provider")
-        rows.extend(payload.get("cases", []))
-
-    # Deduplicate by immutable case id, then restore frozen order.
-    by_id = {row["id"]: row for row in rows if "id" in row}
-    frozen = _clear_cases() + _ambiguous_cases()
+def compute_gate(frozen: list, by_id: dict[str, dict]) -> tuple[list[dict], list[str], dict, bool, bool]:
     ordered = [by_id[g.case_id] for g in frozen if g.case_id in by_id]
     expected_ids = {g.case_id for g in frozen}
     missing = sorted(expected_ids - set(by_id))
@@ -53,11 +32,14 @@ def main() -> int:
             validated += 1
             if row.get("passed"):
                 correct_validated += 1
-        if gold.expected_status == DecisionStatus.CLARIFICATION_REQUIRED and detail["validator_status"] == DecisionStatus.CLARIFICATION_REQUIRED.value:
+        if (
+            gold.expected_status == DecisionStatus.CLARIFICATION_REQUIRED
+            and detail["validator_status"] == DecisionStatus.CLARIFICATION_REQUIRED.value
+        ):
             clarification_correct += 1
 
     total = len(ordered)
-    passed_total = sum(1 for r in ordered if r.get("passed"))
+    passed_total = sum(1 for row in ordered if row.get("passed"))
     metrics = {
         "passed_cases": passed_total,
         "case_pass_rate": passed_total / 80 if total == 80 else 0.0,
@@ -73,17 +55,93 @@ def main() -> int:
         and metrics["autonomous_coverage"] >= CRITERIA["autonomous_coverage_min"]
         and metrics["ambiguous_clarification_accuracy"] >= CRITERIA["ambiguous_clarification_accuracy_min"]
     )
+    return ordered, missing, metrics, full_run, passed
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Aggregate frozen ECOCOMMIT Checkpoint A shards")
+    parser.add_argument("--input-dir", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--receipt-output")
+    parser.add_argument("--evidence-reference")
+    args = parser.parse_args()
+    if bool(args.receipt_output) != bool(args.evidence_reference):
+        raise SystemExit("--receipt-output and --evidence-reference must be supplied together")
+
+    files = sorted(Path(args.input_dir).rglob("*.json"))
+    if not files:
+        raise SystemExit("no shard JSON files found")
+
+    frozen = _clear_cases() + _ambiguous_cases()
+    frozen_by_id = {gold.case_id: gold for gold in frozen}
+    first_payload = json.loads(files[0].read_text(encoding="utf-8"))
+    supplied_manifest = first_payload.get("manifest", {})
+    provider_config = supplied_manifest.get("provider", {})
+    provider = OpenAICompatibleIntentProvider(
+        provider_config.get("base_url", ""),
+        "manifest-validation-only",
+        provider_config.get("model", ""),
+        reasoning_effort=provider_config.get("reasoning_effort"),
+        max_completion_tokens=provider_config.get("max_completion_tokens"),
+        use_json_schema=provider_config.get("json_schema"),
+        max_attempts=provider_config.get("max_attempts", 1),
+        max_retry_delay=provider_config.get("max_retry_delay_seconds", 0),
+        max_response_bytes=provider_config.get("max_response_bytes", 1_048_576),
+    )
+    expected_manifest = build_manifest(frozen, provider)
+    validator = FidelityValidator()
+
+    by_id: dict[str, dict] = {}
+    for path in files:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        verify_manifest(payload.get("manifest", {}), expected_manifest)
+        for row in payload.get("cases", []):
+            case_id = row.get("id")
+            gold = frozen_by_id.get(case_id)
+            if gold is None:
+                raise ValueError(f"unknown Checkpoint A case id: {case_id}")
+            verified = verify_row(row, gold, expected_manifest, validator)
+            previous = by_id.get(case_id)
+            if previous is not None and previous.get("row_sha256") != verified.get("row_sha256"):
+                raise ValueError(f"conflicting duplicate rows for {case_id}")
+            by_id[case_id] = verified
+
+    # Identical duplicates across immutable attempts are allowed; conflicts are not.
+    ordered, missing, metrics, full_run, passed = compute_gate(frozen, by_id)
 
     summary = {
-        "provider": provider,
-        "dataset": {"total": total, "clear": 50 if full_run else None, "ambiguous": 30 if full_run else None, "full_frozen_gate_run": full_run, "missing_case_ids": missing},
+        "evidence_schema_version": expected_manifest["evidence_schema_version"],
+        "manifest": expected_manifest,
+        "provider": expected_manifest["provider"],
+        "dataset": {"total": len(ordered), "clear": 50 if full_run else None, "ambiguous": 30 if full_run else None, "full_frozen_gate_run": full_run, "missing_case_ids": missing},
         "metrics": metrics,
         "checkpoint_a_gate": {"criteria": CRITERIA, "passed": passed},
         "cases": ordered,
     }
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+    encoded = json.dumps(summary, indent=2, ensure_ascii=False).encode("utf-8")
+    output.write_bytes(encoded)
+    if passed and args.receipt_output:
+        receipt = CheckpointAEvidenceReceipt(
+            verification_mode="FROZEN_AGGREGATE",
+            evidence_reference=args.evidence_reference,
+            aggregate_sha256=sha256(encoded).hexdigest(),
+            manifest_sha256=expected_manifest["manifest_sha256"],
+            source_revision=expected_manifest["source_revision"],
+            candidate_version=expected_manifest["candidate_version"],
+            dataset_sha256=expected_manifest["dataset"]["sha256"],
+            total_cases=len(ordered),
+            full_frozen_gate_run=full_run,
+            gate_passed=passed,
+            metrics=metrics,
+        )
+        receipt_path = Path(args.receipt_output)
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        receipt_path.write_text(
+            receipt.model_dump_json(indent=2) + "\n",
+            encoding="utf-8",
+        )
     print(json.dumps({"metrics": metrics, "checkpoint_a_gate": summary["checkpoint_a_gate"], "full_run": full_run, "missing": missing}, indent=2))
     return 0 if passed else 2
 
