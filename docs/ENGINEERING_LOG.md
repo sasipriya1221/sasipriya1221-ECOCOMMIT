@@ -515,6 +515,13 @@ adapter request authority, authentication/rate limiting, strict/canonical JSON,
 pending-to-processed refund polling, expiry authority, raw webhook signatures,
 late redelivery/collisions/order, and redacted export.
 
+The committed implementation at
+`6f72d9bf2b7dcdc0abfc8aff282cdbbc989bf43e` was then cloned without hardlinks,
+installed into a new virtual environment from the exact hash lock, and passed
+the same 325 tests plus compilation, `pip check`, JavaScript syntax, readiness,
+diff, and clean-status checks. That is same-host clean-environment validation,
+not independent reproduction.
+
 This is local fake-transport and same-host evidence. No genuine Candidate 2 A
 receipt, complete B receipt, final C evidence, provider Checkout/capture/refund,
 webhook delivery, public TLS host, managed key, backup/restore, HA, hosted

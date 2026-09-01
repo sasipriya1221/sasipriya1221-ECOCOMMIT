@@ -96,6 +96,7 @@ live run.
 | Fresh clone at `68d6798ecf1577529a07ef8585bea7d9999bd863` with a new virtual environment | **224 / 224 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 | Current Checkpoint B-focused suite after durability/webhook integration | **95 / 95 passed** |
 | Current full deterministic suite | **325 / 325 passed** |
+| Current no-hardlink clone at `6f72d9bf2b7dcdc0abfc8aff282cdbbc989bf43e` with a new hash-locked virtual environment | **325 / 325 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 

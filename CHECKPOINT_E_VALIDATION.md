@@ -92,8 +92,9 @@ No competing provider run was started.
 - Current no-hardlink clone with a new virtual environment, hash-locked runtime,
   test, and build-backend wheels, plus editable local install: **271/271 passed**.
 - Current authoritative-evidence/durability/provider-Test integration tree:
-  **325/325 passed** in the working repository; fresh-clone rerun pending the
-  current commit.
+  **325/325 passed** in the working repository and in a separate no-hardlink
+  clone at `6f72d9bf2b7dcdc0abfc8aff282cdbbc989bf43e` with a new hash-locked
+  virtual environment.
 - Current Checkpoint E-focused readiness regression: **9/9 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.
@@ -105,6 +106,8 @@ No competing provider run was started.
   **no matches** for the defined Groq/OpenAI/Razorpay/private-key patterns.
 
 These are local engineering results. They are not final checkpoint evidence.
+The current clean clone used the same host and operator, so the separate
+independent-machine reproduction slot remains blocked.
 
 ## Defects found and fixed
 

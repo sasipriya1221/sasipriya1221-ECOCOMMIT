@@ -160,6 +160,13 @@ Current-tree focused D suite: **76 / 76 passed**. Current-tree full deterministi
 suite: **325 / 325 passed**. These additions are local fake-transport and
 same-host evidence, not provider or hosted evidence.
 
+A separate no-hardlink clone at
+`6f72d9bf2b7dcdc0abfc8aff282cdbbc989bf43e` installed the exact hash-locked
+dependencies into a new virtual environment and also passed **325 / 325**,
+compilation, dependency consistency, JavaScript syntax, readiness, diff, and
+clean-status checks. This is same-host clean-environment evidence, not an
+independent reproduction.
+
 Additional checks:
 
 ```powershell
