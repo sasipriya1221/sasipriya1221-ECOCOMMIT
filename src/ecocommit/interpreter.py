@@ -6,6 +6,8 @@ import time
 from abc import ABC, abstractmethod
 from urllib import error, request
 
+from pydantic import ValidationError
+
 from .contracts import EconomicIntentContract
 
 
@@ -202,13 +204,14 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         if not self.use_json_schema:
             user_content["contract_shape"] = self.COMPACT_SCHEMA
 
+        base_messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": json.dumps(user_content, separators=(",", ":"))},
+        ]
         payload = {
             "model": self.model,
             "temperature": 0,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": json.dumps(user_content, separators=(",", ":"))},
-            ],
+            "messages": list(base_messages),
             "response_format": (
                 {
                     "type": "json_schema",
@@ -244,6 +247,25 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                 raw = json.loads(body["choices"][0]["message"]["content"])
                 repaired = self._repair_source_spans(raw, instruction)
                 return EconomicIntentContract.model_validate(repaired)
+            except ValidationError:
+                if attempt < self.max_attempts:
+                    # A syntactically valid provider response can still omit required
+                    # contract fields. That is generation-format failure, not semantic
+                    # evidence. Ask the same frozen model/instruction for one complete
+                    # replacement object; never synthesize missing economic meaning.
+                    payload["messages"] = base_messages + [{
+                        "role": "user",
+                        "content": (
+                            "The previous JSON candidate did not validate against the required contract schema. "
+                            "Regenerate the entire object for the exact same instruction. The top-level object must "
+                            "include instruction, schema_version, and clauses. Every clause must include clause_id, "
+                            "clause_type, normalized_value, source_span, provenance, materiality, confidence, hardness, "
+                            "policy_class, negated, depends_on, and exception_to. Do not invent, omit, or change any "
+                            "economic meaning just to satisfy the schema. Return only the complete JSON object."
+                        ),
+                    }]
+                    continue
+                raise
             except error.HTTPError as exc:
                 try:
                     provider_body = exc.read().decode("utf-8", errors="replace")
