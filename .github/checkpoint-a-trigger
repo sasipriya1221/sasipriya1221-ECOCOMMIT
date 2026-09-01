@@ -1,2 +1,2 @@
-trigger: 2026-08-31T19:39:00Z
-reason: run full frozen 50-clear + 30-ambiguous Checkpoint A benchmark on Groq Qwen after 20/20 semantic smoke; thresholds unchanged
+trigger: 2026-09-01T02:25:00Z
+reason: rerun full frozen 50-clear + 30-ambiguous Checkpoint A benchmark using four resumable 20-case shards; thresholds unchanged
