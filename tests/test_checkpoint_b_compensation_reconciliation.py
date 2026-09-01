@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from ecocommit.certificates import CertificateSigner, CertificateVerifier
 from ecocommit.commitment import (
     CommitmentEvent,
@@ -11,13 +13,19 @@ from ecocommit.commitment import (
 from ecocommit.exposure import TransactionBinding
 from ecocommit.evidence import EvidenceAuthority, EvidenceKind, EvidenceRecord, EvidenceRegistry
 from ecocommit.exposure import (
+    EvidenceClaimRequirement,
     EvidenceRequirement,
     ExposureCalculator,
     ExposurePolicy,
     ExposureTier,
 )
 from ecocommit.payments import PaymentOperation, PaymentState, SimulatedPaymentAdapter
-from ecocommit.reconciliation import CompensationCoordinator, Reconciler, ReconciliationSeverity
+from ecocommit.reconciliation import (
+    CompensationCoordinator,
+    CompensationError,
+    Reconciler,
+    ReconciliationSeverity,
+)
 
 
 NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
@@ -117,6 +125,7 @@ def captured_payment(tx: TransactionBinding):
                     EvidenceRequirement(
                         kind=EvidenceKind.USER_AUTHORIZATION,
                         authority_ids={"comp-auth"},
+                        claims=(EvidenceClaimRequirement(key="approved", expected_value=True),),
                     ),
                 ),
                 max_irreversible_minor=tx.amount_minor,
@@ -135,9 +144,32 @@ def captured_payment(tx: TransactionBinding):
     )
     verifier = CertificateVerifier({"comp-key": SECRET})
     payments = SimulatedPaymentAdapter()
-    payments.reserve(tx, idempotency_key="reserve")
+    reservation = payments.reserve(tx, idempotency_key="reserve")
+    engine = ProgressiveCommitmentEngine()
+    authorized = engine.authorize(
+        engine.propose(tx, at=NOW),
+        authorization_reference="authz",
+        event_id="payment-authorize",
+        at=NOW,
+    )
+    reserved = engine.reserve(
+        authorized,
+        reservation_reference=reservation.provider_reference,
+        reversible=True,
+        event_id="payment-reserve",
+        at=NOW,
+    )
+    capture_allowed = engine.allow_capture(
+        reserved,
+        certificate=certificate,
+        verifier=verifier,
+        registry=registry,
+        event_id="payment-allow",
+        at=NOW + timedelta(seconds=1),
+    )
     payments.capture(
         tx,
+        commitment=capture_allowed,
         certificate=certificate,
         verifier=verifier,
         registry=registry,
@@ -202,6 +234,77 @@ def test_failed_compensation_stays_pending_and_same_key_can_retry():
     assert payments.snapshot(tx.transaction_id).state == PaymentState.REFUNDED
 
 
+def test_completed_compensation_cannot_issue_a_second_refund():
+    tx = transaction()
+    payments = captured_payment(tx)
+    coordinator = CompensationCoordinator(
+        engine=ProgressiveCommitmentEngine(),
+        payments=payments,
+    )
+    completed = coordinator.compensate(
+        captured_state(tx),
+        reason_reference="first-recovery",
+        idempotency_key="refund-first",
+        at=NOW + timedelta(seconds=5),
+    )
+
+    with pytest.raises(CompensationError, match="requires CAPTURED"):
+        coordinator.compensate(
+            completed.state,
+            reason_reference="duplicate-recovery",
+            idempotency_key="refund-second",
+            at=NOW + timedelta(seconds=6),
+        )
+
+    assert payments.snapshot(tx.transaction_id).state == PaymentState.REFUNDED
+
+
+def test_compensation_reconciles_a_refund_completed_before_state_journaling():
+    tx = transaction()
+    payments = captured_payment(tx)
+    refund = payments.refund(tx, idempotency_key="provider-finished-first")
+    coordinator = CompensationCoordinator(
+        engine=ProgressiveCommitmentEngine(),
+        payments=payments,
+    )
+
+    outcome = coordinator.compensate(
+        captured_state(tx),
+        reason_reference="ambiguous-provider-outcome",
+        idempotency_key="reconcile-refund",
+        at=NOW + timedelta(seconds=5),
+    )
+
+    assert outcome.succeeded is True
+    assert outcome.reconciled_existing_refund is True
+    assert outcome.payment_result is None
+    assert outcome.state.stage == CommitmentStage.COMPENSATED
+    assert outcome.state.compensation_reference == refund.provider_reference
+
+
+def test_pending_compensation_retry_cannot_change_its_recorded_reason():
+    tx = transaction()
+    engine = ProgressiveCommitmentEngine()
+    pending = engine.begin_compensation(
+        captured_state(tx),
+        reason_reference="original-reason",
+        event_id="begin-original",
+        at=NOW + timedelta(seconds=5),
+    )
+    coordinator = CompensationCoordinator(
+        engine=engine,
+        payments=captured_payment(tx),
+    )
+
+    with pytest.raises(CompensationError, match="reason must match"):
+        coordinator.compensate(
+            pending,
+            reason_reference="changed-reason",
+            idempotency_key="retry",
+            at=NOW + timedelta(seconds=6),
+        )
+
+
 def test_reconciliation_reports_captured_pair_in_sync():
     tx = transaction()
     state = captured_state(tx)
@@ -239,6 +342,41 @@ def test_reconciliation_flags_unexpected_capture_for_compensation():
     finding = next(item for item in report.findings if item.code == "UNEXPECTED_CAPTURE")
     assert finding.severity == ReconciliationSeverity.CRITICAL
     assert finding.requires_compensation is True
+
+
+def test_capture_side_effect_before_state_journal_is_reconciled_then_compensated():
+    tx = transaction()
+    full_state = captured_state(tx)
+    stale_state = CommitmentState(
+        transaction=tx,
+        stage=CommitmentStage.CAPTURE_ALLOWED,
+        proposed_at=full_state.proposed_at,
+        authorization_reference=full_state.authorization_reference,
+        reservation_reference=full_state.reservation_reference,
+        certificate_id=full_state.certificate_id,
+        transitions=full_state.transitions[:3],
+    )
+    payments = captured_payment(tx)
+    coordinator = CompensationCoordinator(
+        engine=ProgressiveCommitmentEngine(),
+        payments=payments,
+    )
+
+    outcome = coordinator.compensate(
+        stale_state,
+        reason_reference="capture-journal-crash",
+        idempotency_key="recover-unexpected-capture",
+        at=NOW + timedelta(seconds=5),
+    )
+
+    assert outcome.succeeded is True
+    assert outcome.state.stage == CommitmentStage.COMPENSATED
+    assert any(
+        transition.event == CommitmentEvent.CAPTURE
+        and transition.event_id.endswith("reconcile-capture")
+        for transition in outcome.state.transitions
+    )
+    assert payments.snapshot(tx.transaction_id).state == PaymentState.REFUNDED
 
 
 def test_reconciliation_flags_missing_refund_and_missing_void():

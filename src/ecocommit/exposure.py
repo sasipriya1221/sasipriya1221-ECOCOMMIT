@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
 from ._canonical import sha256_hex
 from .evidence import EvidenceKind, EvidenceSnapshot
@@ -33,11 +33,41 @@ class TransactionBinding(BaseModel):
         return sha256_hex(self)
 
 
+class EvidenceClaimRequirement(BaseModel):
+    """Exact authoritative claim value required by trusted exposure policy."""
+
+    model_config = ConfigDict(frozen=True)
+
+    key: str = Field(min_length=1)
+    expected_value: JsonValue
+
+    @field_validator("expected_value")
+    @classmethod
+    def finite_json_value(cls, value: JsonValue):
+        if isinstance(value, (dict, list)):
+            raise ValueError("evidence claim expectations must be immutable JSON scalars")
+        # Canonicalization rejects NaN/Infinity.
+        sha256_hex(value)
+        return value
+
+    @property
+    def expected_digest(self) -> str:
+        return sha256_hex(self.expected_value)
+
+
 class EvidenceRequirement(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     kind: EvidenceKind
     authority_ids: frozenset[str] = Field(min_length=1)
+    claims: tuple[EvidenceClaimRequirement, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_claim_keys(self):
+        keys = [claim.key for claim in self.claims]
+        if len(keys) != len(set(keys)):
+            raise ValueError("an evidence requirement may contain each claim key only once")
+        return self
 
 
 class ExposureTier(BaseModel):
@@ -134,7 +164,8 @@ class ExposureCalculator:
     """
 
     def __init__(self, policy: ExposurePolicy):
-        self.policy = policy
+        # Do not retain mutable nested values from the caller's configuration.
+        self.policy = policy.model_copy(deep=True)
 
     def calculate(
         self,
@@ -187,6 +218,14 @@ class ExposureCalculator:
             any(
                 binding.kind == requirement.kind
                 and binding.authority_id in requirement.authority_ids
+                and all(
+                    any(
+                        claim.key == expected.key
+                        and claim.value_digest == expected.expected_digest
+                        for claim in binding.claims
+                    )
+                    for expected in requirement.claims
+                )
                 for binding in snapshot.bindings
             )
             for requirement in tier.requirements

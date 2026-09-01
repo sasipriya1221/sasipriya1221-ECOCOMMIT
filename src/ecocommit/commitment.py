@@ -85,6 +85,17 @@ class CommitmentState(BaseModel):
         if not self.transitions:
             if self.stage != CommitmentStage.PROPOSED:
                 raise ValueError("a commitment without history must be PROPOSED")
+            if any(
+                reference is not None
+                for reference in (
+                    self.authorization_reference,
+                    self.reservation_reference,
+                    self.certificate_id,
+                    self.payment_reference,
+                    self.compensation_reference,
+                )
+            ):
+                raise ValueError("a proposed commitment cannot contain transition references")
             return self
         if self.transitions[-1].to_stage != self.stage:
             raise ValueError("last transition does not match commitment stage")
@@ -93,11 +104,84 @@ class CommitmentState(BaseModel):
         for transition in self.transitions:
             if transition.from_stage != previous_stage:
                 raise ValueError("commitment transition history is discontinuous")
+            if not self._transition_is_legal(transition):
+                raise ValueError(
+                    f"illegal commitment history transition: {transition.event.value} "
+                    f"{transition.from_stage.value}->{transition.to_stage.value}"
+                )
             if transition.occurred_at < previous_time:
                 raise ValueError("commitment transition times must be monotonic")
             previous_stage = transition.to_stage
             previous_time = transition.occurred_at
+
+        references = {
+            CommitmentEvent.AUTHORIZE: self.authorization_reference,
+            CommitmentEvent.RESERVE: self.reservation_reference,
+            CommitmentEvent.ALLOW_CAPTURE: self.certificate_id,
+            CommitmentEvent.CAPTURE: self.payment_reference,
+            CommitmentEvent.COMPLETE_COMPENSATION: self.compensation_reference,
+        }
+        for event, stored_reference in references.items():
+            matching = [item for item in self.transitions if item.event == event]
+            if matching and stored_reference != matching[-1].reference:
+                raise ValueError(f"{event.value} reference does not match commitment history")
+            if not matching and stored_reference is not None:
+                raise ValueError(f"{event.value} reference exists without a matching transition")
         return self
+
+    @staticmethod
+    def _transition_is_legal(transition: TransitionRecord) -> bool:
+        exact = {
+            CommitmentEvent.AUTHORIZE: (
+                CommitmentStage.PROPOSED,
+                CommitmentStage.AUTHORIZED,
+            ),
+            CommitmentEvent.RESERVE: (
+                CommitmentStage.AUTHORIZED,
+                CommitmentStage.RESERVED,
+            ),
+            CommitmentEvent.ALLOW_CAPTURE: (
+                CommitmentStage.RESERVED,
+                CommitmentStage.CAPTURE_ALLOWED,
+            ),
+            CommitmentEvent.CAPTURE: (
+                CommitmentStage.CAPTURE_ALLOWED,
+                CommitmentStage.CAPTURED,
+            ),
+            CommitmentEvent.BEGIN_COMPENSATION: (
+                CommitmentStage.CAPTURED,
+                CommitmentStage.COMPENSATION_PENDING,
+            ),
+            CommitmentEvent.COMPLETE_COMPENSATION: (
+                CommitmentStage.COMPENSATION_PENDING,
+                CommitmentStage.COMPENSATED,
+            ),
+        }
+        if transition.event in exact:
+            return (transition.from_stage, transition.to_stage) == exact[transition.event]
+        if transition.event == CommitmentEvent.CANCEL:
+            return (
+                transition.from_stage
+                in {
+                    CommitmentStage.PROPOSED,
+                    CommitmentStage.AUTHORIZED,
+                    CommitmentStage.RESERVED,
+                    CommitmentStage.CAPTURE_ALLOWED,
+                }
+                and transition.to_stage == CommitmentStage.CANCELLED
+            )
+        if transition.event == CommitmentEvent.FAIL:
+            return (
+                transition.from_stage
+                in {
+                    CommitmentStage.PROPOSED,
+                    CommitmentStage.AUTHORIZED,
+                    CommitmentStage.RESERVED,
+                    CommitmentStage.CAPTURE_ALLOWED,
+                }
+                and transition.to_stage == CommitmentStage.FAILED
+            )
+        return False
 
 
 class ProgressiveCommitmentEngine:
@@ -273,6 +357,10 @@ class ProgressiveCommitmentEngine:
     ) -> CommitmentState:
         if state.stage in self._TERMINAL:
             raise CommitmentTransitionError("terminal commitment cannot transition to FAILED")
+        if state.stage in {CommitmentStage.CAPTURED, CommitmentStage.COMPENSATION_PENDING}:
+            raise CommitmentTransitionError(
+                "captured funds cannot transition to FAILED; compensation must remain actionable"
+            )
         return self._transition(
             state,
             expected=state.stage,
@@ -320,6 +408,7 @@ class ProgressiveCommitmentEngine:
             occurred_at=at,
             reference=reference,
         )
-        values = {"stage": target, "transitions": (*state.transitions, record)}
+        values = state.model_dump(mode="python")
+        values.update({"stage": target, "transitions": (*state.transitions, record)})
         values.update(updates or {})
-        return state.model_copy(update=values, deep=True)
+        return CommitmentState.model_validate(values)

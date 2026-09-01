@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ._canonical import sha256_hex
 from .certificates import CertificateVerifier, CommitCertificate
+from .commitment import CommitmentStage, CommitmentState
 from .evidence import EvidenceRegistry
 from .exposure import TransactionBinding
 from .idempotency import IdempotencyLedger, request_fingerprint
@@ -89,6 +90,7 @@ class SimulatedPaymentAdapter:
         self,
         transaction: TransactionBinding,
         *,
+        commitment: CommitmentState,
         certificate: CommitCertificate,
         verifier: CertificateVerifier,
         registry: EvidenceRegistry,
@@ -99,6 +101,7 @@ class SimulatedPaymentAdapter:
             PaymentOperation.CAPTURE,
             transaction,
             idempotency_key,
+            commitment=commitment,
             certificate=certificate,
             verifier=verifier,
             registry=registry,
@@ -124,6 +127,7 @@ class SimulatedPaymentAdapter:
         transaction: TransactionBinding,
         idempotency_key: str,
         *,
+        commitment: CommitmentState | None = None,
         certificate: CommitCertificate | None = None,
         verifier: CertificateVerifier | None = None,
         registry: EvidenceRegistry | None = None,
@@ -133,19 +137,43 @@ class SimulatedPaymentAdapter:
             {
                 "operation": operation.value,
                 "transaction": transaction,
-                "certificate_id": certificate.certificate_id if certificate else None,
+                "commitment": commitment,
+                # The complete signed request is part of idempotency identity.
+                # A tampered signature with the same certificate id must collide,
+                # not replay an earlier successful result.
+                "certificate": certificate,
             }
         )
 
-        def perform() -> SimulatedPaymentResult:
+        def perform_locked() -> SimulatedPaymentResult:
             with self._lock:
                 if operation in self._fail_operations:
                     raise SimulatedPaymentFailure(
                         f"injected SIMULATED_LOCAL failure for {operation.value}"
                     )
                 if operation == PaymentOperation.CAPTURE:
-                    if certificate is None or verifier is None or registry is None or now is None:
-                        raise PaymentStateError("CAPTURE requires a transaction-bound commit certificate")
+                    if (
+                        commitment is None
+                        or certificate is None
+                        or verifier is None
+                        or registry is None
+                        or now is None
+                    ):
+                        raise PaymentStateError(
+                            "CAPTURE requires CAPTURE_ALLOWED commitment and commit certificate"
+                        )
+                    self._assert_capture_authority(
+                        commitment,
+                        transaction=transaction,
+                        certificate=certificate,
+                        current=self._payments.get(
+                            transaction.transaction_id,
+                            PaymentSnapshot(
+                                transaction_id=transaction.transaction_id,
+                                state=PaymentState.NONE,
+                            ),
+                        ),
+                    )
                     verifier.verify(
                         certificate,
                         expected_transaction=transaction,
@@ -193,6 +221,27 @@ class SimulatedPaymentAdapter:
                 )
                 return result
 
+        def perform() -> SimulatedPaymentResult:
+            if operation != PaymentOperation.CAPTURE:
+                return perform_locked()
+            if (
+                commitment is None
+                or certificate is None
+                or verifier is None
+                or registry is None
+                or now is None
+            ):
+                raise PaymentStateError(
+                    "CAPTURE requires CAPTURE_ALLOWED commitment and commit certificate"
+                )
+
+            # Hold the evidence registry version lock from the final freshness
+            # check through the simulated irreversible mutation. A concurrent
+            # revoke/superseding version can land immediately after capture, but
+            # never between verification and that boundary.
+            with registry.hold_snapshot_current(certificate.evidence_snapshot, now=now):
+                return perform_locked()
+
         return self._idempotency.execute(
             scope=f"SIMULATED_LOCAL:{transaction.transaction_id}:{operation.value}",
             key=idempotency_key,
@@ -209,3 +258,23 @@ class SimulatedPaymentAdapter:
             return
         if current.transaction_digest != transaction.digest():
             raise PaymentStateError("transaction binding changed after payment activity")
+
+    @staticmethod
+    def _assert_capture_authority(
+        commitment: CommitmentState,
+        *,
+        transaction: TransactionBinding,
+        certificate: CommitCertificate,
+        current: PaymentSnapshot,
+    ) -> None:
+        if commitment.stage != CommitmentStage.CAPTURE_ALLOWED:
+            raise PaymentStateError("CAPTURE requires commitment stage CAPTURE_ALLOWED")
+        if commitment.transaction != transaction:
+            raise PaymentStateError("commitment transaction binding does not match capture")
+        if commitment.certificate_id != certificate.certificate_id:
+            raise PaymentStateError("commitment certificate does not match capture certificate")
+        if current.state == PaymentState.RESERVED and (
+            not commitment.reservation_reference
+            or commitment.reservation_reference != current.last_reference
+        ):
+            raise PaymentStateError("commitment reservation does not match the payment hold")

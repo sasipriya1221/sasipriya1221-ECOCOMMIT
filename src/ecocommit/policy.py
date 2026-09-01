@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ._canonical import sha256_hex
 from .contracts import ClauseType, DecisionStatus, EconomicIntentContract
+from .validator import FidelityReport
 
 
 class PolicyMappingError(ValueError):
@@ -65,9 +66,9 @@ class PolicyClassMapper:
     def map_contract(
         self,
         contract: EconomicIntentContract,
-        validation_status: DecisionStatus,
+        validation_report: FidelityReport,
     ) -> tuple[PolicyObligation, ...]:
-        if validation_status != DecisionStatus.VALIDATED:
+        if validation_report.status != DecisionStatus.VALIDATED:
             raise PolicyMappingError("only a VALIDATED contract may enter policy mapping")
 
         contract_hash = contract.canonical_hash()

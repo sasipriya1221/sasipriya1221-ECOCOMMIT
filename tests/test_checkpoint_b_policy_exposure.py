@@ -16,6 +16,7 @@ from ecocommit.evidence import (
     EvidenceRegistry,
 )
 from ecocommit.exposure import (
+    EvidenceClaimRequirement,
     EvidenceRequirement,
     ExposureCalculator,
     ExposurePolicy,
@@ -24,10 +25,20 @@ from ecocommit.exposure import (
     TransactionBinding,
 )
 from ecocommit.policy import PolicyClass, PolicyClassMapper, PolicyMappingError
+from ecocommit.validator import FidelityReport
 
 
 NOW = datetime(2026, 9, 1, 6, 30, tzinfo=timezone.utc)
 CONTRACT_HASH = "a" * 64
+
+
+def report(status: DecisionStatus = DecisionStatus.VALIDATED):
+    return FidelityReport(
+        status=status,
+        coverage=1.0,
+        faithfulness=1.0,
+        selective_risk=0.0,
+    )
 
 
 def clause(clause_id: str, clause_type: ClauseType, *, policy_class: str | None = None):
@@ -82,7 +93,9 @@ def registry_and_records(*, malicious_claim: bool = False):
         subject="tx-1",
         version=1,
         observed_at=NOW,
-        claims={"max_exposure_minor": 999_999_999} if malicious_claim else {"approved": True},
+        claims={"approved": True, "max_exposure_minor": 999_999_999}
+        if malicious_claim
+        else {"approved": True},
     )
     merchant = EvidenceRecord(
         evidence_id="merchant-1",
@@ -111,6 +124,7 @@ def policy():
                     EvidenceRequirement(
                         kind=EvidenceKind.USER_AUTHORIZATION,
                         authority_ids={"user-auth"},
+                        claims=(EvidenceClaimRequirement(key="approved", expected_value=True),),
                     ),
                 ),
                 max_irreversible_minor=1_000,
@@ -121,10 +135,12 @@ def policy():
                     EvidenceRequirement(
                         kind=EvidenceKind.USER_AUTHORIZATION,
                         authority_ids={"user-auth"},
+                        claims=(EvidenceClaimRequirement(key="approved", expected_value=True),),
                     ),
                     EvidenceRequirement(
                         kind=EvidenceKind.COUNTERPARTY_VERIFICATION,
                         authority_ids={"kyc"},
+                        claims=(EvidenceClaimRequirement(key="status", expected_value="verified"),),
                     ),
                 ),
                 max_irreversible_minor=5_000,
@@ -142,15 +158,15 @@ def test_policy_mapper_rejects_any_contract_not_validated():
 
     for status in (DecisionStatus.REJECTED, DecisionStatus.CLARIFICATION_REQUIRED):
         with pytest.raises(PolicyMappingError, match="VALIDATED"):
-            mapper.map_contract(contract, status)
+            mapper.map_contract(contract, report(status))
 
 
 def test_policy_mapper_uses_closed_deterministic_class_set():
     clauses = [clause(item.value, item) for item in ClauseType]
     contract = EconomicIntentContract(instruction="Synthetic validated fixture", clauses=clauses)
 
-    first = PolicyClassMapper().map_contract(contract, DecisionStatus.VALIDATED)
-    second = PolicyClassMapper().map_contract(contract, DecisionStatus.VALIDATED)
+    first = PolicyClassMapper().map_contract(contract, report())
+    second = PolicyClassMapper().map_contract(contract, report())
 
     assert first == second
     assert {item.policy_class for item in first} == set(PolicyClass)
@@ -164,7 +180,7 @@ def test_candidate_policy_class_cannot_override_deterministic_mapping():
     )
 
     with pytest.raises(PolicyMappingError, match="deterministic class"):
-        PolicyClassMapper().map_contract(contract, DecisionStatus.VALIDATED)
+        PolicyClassMapper().map_contract(contract, report())
 
 
 def test_strongest_satisfied_deterministic_tier_sets_cap():
@@ -192,6 +208,34 @@ def test_evidence_payload_cannot_inject_or_increase_financial_authority():
     assert decision.allowed is False
     assert decision.reason == ExposureReason.EXCEEDS_POLICY_CAP
     assert decision.max_irreversible_minor == 1_000
+
+
+def test_negative_authoritative_claim_cannot_satisfy_an_exposure_tier():
+    registry = registry_and_records()
+    registry.register(
+        EvidenceRecord(
+            evidence_id="auth-denied",
+            authority_id="user-auth",
+            issuer="identity-service",
+            kind=EvidenceKind.USER_AUTHORIZATION,
+            subject="tx-1",
+            version=1,
+            observed_at=NOW,
+            claims={"approved": False, "max_exposure_minor": 999_999_999},
+        ),
+        now=NOW,
+    )
+    snapshot = registry.snapshot(["auth-denied"], subject="tx-1", now=NOW)
+
+    decision = ExposureCalculator(policy()).calculate(
+        transaction(amount_minor=1),
+        snapshot,
+        now=NOW,
+    )
+
+    assert decision.allowed is False
+    assert decision.reason == ExposureReason.NO_SATISFIED_TIER
+    assert decision.max_irreversible_minor == 0
 
 
 def test_request_amount_cannot_select_a_higher_exposure_tier():
