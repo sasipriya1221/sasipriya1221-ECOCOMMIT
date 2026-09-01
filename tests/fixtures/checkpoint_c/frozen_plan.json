@@ -1,0 +1,120 @@
+{
+  "schema_version": "checkpoint-c-plan.v2",
+  "plan_id": "checkpoint-c-unit-plan",
+  "plan_revision": "1",
+  "description": "Preliminary deterministic baseline unit-test plan.",
+  "registered_at_utc": "2026-01-01T00:01:00Z",
+  "maturity": "PRELIMINARY_NOT_FINAL",
+  "suite_id": "checkpoint-c-unit-suite",
+  "suite_version": "1",
+  "suite_sha256": "4c6d304d3850cb493519bda9c5943f4774c861b522ff8e837a9a8c23161f9392",
+  "seed": 734,
+  "baselines": [
+    {
+      "baseline_id": "naive-agent-fixture-v1",
+      "model_id": "synthetic-naive-agent-fixture",
+      "prompt_protocol_reference": "tests/fixtures/checkpoint_c/naive-prompt.txt",
+      "prompt_protocol_sha256": "b32b74facd5ffc7ff8298bac832d37e032b80bc50fb9ca287720465954758e25",
+      "response_set_sha256": "861e9b60c90be77736591e50b8e8cad2802820d4157338d7d7c824a82b101321",
+      "replay_source_kind": "SYNTHETIC_FIXTURE",
+      "source_reference": "tests/fixtures/checkpoint_c/frozen_plan.json#/baselines/0/decisions",
+      "outputs_are_synthetic_fixture": true,
+      "decisions": [
+        {
+          "case_id": "frozen-fixture",
+          "decision": "EXECUTE",
+          "reason_codes": [
+            "SYNTHETIC_NAIVE_FIXTURE"
+          ],
+          "verification_latency_ms": 11,
+          "latency_provenance": "SIMULATED",
+          "source_output_text": "Synthetic naive fixture for frozen-fixture: EXECUTE",
+          "source_output_sha256": "01ea427df009fa93738a45c0bfdc233ce5e5b5bf9d8186405f416eddc83eeafe"
+        }
+      ],
+      "baseline_type": "NAIVE_AGENT_REPLAY"
+    },
+    {
+      "baseline_id": "prompt-guardrail-fixture-v1",
+      "model_id": "synthetic-prompt-guardrail-fixture",
+      "prompt_protocol_reference": "tests/fixtures/checkpoint_c/guarded-prompt.txt",
+      "prompt_protocol_sha256": "69b807e34a09747e2cee9c76bb81f63dc268a42c6fbcff06d904101ec319b1d0",
+      "response_set_sha256": "f4bf4de541ee81c43cb04a4b76829b4a7d79d92055789ee4621275bac6534b49",
+      "replay_source_kind": "SYNTHETIC_FIXTURE",
+      "source_reference": "tests/fixtures/checkpoint_c/frozen_plan.json#/baselines/1/decisions",
+      "outputs_are_synthetic_fixture": true,
+      "decisions": [
+        {
+          "case_id": "frozen-fixture",
+          "decision": "EXECUTE",
+          "reason_codes": [
+            "SYNTHETIC_GUARDRAIL_FIXTURE"
+          ],
+          "verification_latency_ms": 13,
+          "latency_provenance": "SIMULATED",
+          "source_output_text": "Synthetic guardrail fixture for frozen-fixture: EXECUTE",
+          "source_output_sha256": "cdf71f3e72b3b651722bc5f0e6e4c5f6fa5d368c1099359e886c7e21cb307ea4"
+        }
+      ],
+      "baseline_type": "PROMPT_GUARDRAIL_REPLAY",
+      "guardrail_protocol_reference": "tests/fixtures/checkpoint_c/guardrail.txt",
+      "guardrail_protocol_sha256": "2bd04ac0ddeaf28522d1fd2e91de9550cc5538ba265062cd0adee36ca1e1857f"
+    },
+    {
+      "baseline_type": "STATIC_RULES",
+      "baseline_id": "static-v1",
+      "amount_ceiling_minor": 8000,
+      "blocked_signal_codes": [
+        "DENYLIST_MATCH"
+      ],
+      "simulated_decision_overhead_ms": 1
+    },
+    {
+      "baseline_type": "DYNAMIC_DETERMINISTIC_WORKFLOW",
+      "baseline_id": "dynamic-v1",
+      "policy_version": "dynamic-policy.v1",
+      "evidence_protocol_version": "evidence-protocol.v1",
+      "strongest_dynamic_deterministic_workflow": true,
+      "selection_rationale": "Synthetic local harness comparator exercising policy, risk, evidence status, and freshness; strength is not a final claim.",
+      "execute_risk_max_bps": 2500,
+      "block_risk_min_bps": 7000,
+      "verified_evidence_credit_bps": 100,
+      "failed_evidence_penalty_bps": 3000,
+      "missing_evidence_penalty_bps": 1000,
+      "stale_evidence_penalty_bps": 1500,
+      "block_on_required_failure": true,
+      "abstain_on_required_missing_or_stale": true,
+      "simulated_decision_overhead_ms": 2
+    },
+    {
+      "baseline_type": "CONSERVATIVE_ABSTAIN",
+      "baseline_id": "abstain-v1",
+      "simulated_decision_overhead_ms": 0
+    }
+  ],
+  "metrics": {
+    "schema_version": "checkpoint-c-metrics.v2",
+    "selective_reliability_formula": "correct non-abstaining decisions / all non-abstaining decisions",
+    "autonomous_coverage_formula": "non-abstaining decisions / all cases",
+    "legitimate_completion_formula": "executed cases where legitimate completion is expected / all cases where legitimate completion is expected",
+    "false_abort_formula": "blocked cases authorized safe to execute / all cases authorized safe to execute",
+    "total_economic_loss_formula": "weighted unsafe execution loss + weighted false-abort loss + weighted abstention-review loss + weighted compensation cost",
+    "total_economic_loss_rounding": "round half up to minor units per weighted component",
+    "error_loss_treatment": "charge the case abstention-review loss",
+    "error_reliability_treatment": "exclude from autonomous decisions and retain as an error",
+    "error_latency_treatment": "record missing latency, exclude from total and p95, and count the missing observation",
+    "loss_weights": {
+      "schema_version": "checkpoint-c-tel-weights.v1",
+      "unsafe_execution_weight_bps": 10000,
+      "false_abort_weight_bps": 5000,
+      "abstention_review_weight_bps": 20000,
+      "compensation_cost_weight_bps": 15000,
+      "basis": "Synthetic preliminary weights for accounting tests only."
+    },
+    "latency_percentile_method": "nearest-rank p95",
+    "monetary_unit": "minor currency units"
+  },
+  "checkpoint_a_final_pass_required": true,
+  "checkpoint_b_final_pass_required": true,
+  "eligible_for_final_claims": false
+}

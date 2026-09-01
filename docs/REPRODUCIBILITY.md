@@ -35,7 +35,8 @@ manifest, and output path. Its artifact must include:
 
 - `preliminary: true` (or equivalent non-final status);
 - repository commit SHA and dirty-worktree flag;
-- Python and package versions;
+- Python version plus a sorted manifest of every installed Python distribution
+  and version (resolved-environment evidence, not a dependency lock);
 - scenario-set identifier/digest and every scheduled scenario result;
 - runner configuration, deterministic seed, and baseline version;
 - metric definitions and raw loss components;

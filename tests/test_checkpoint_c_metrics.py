@@ -7,10 +7,14 @@ from ecocommit.checkpoint_c_metrics import (
 )
 from ecocommit.checkpoint_c_models import (
     BaselineDecision,
+    CompensationOutcome,
     Decision,
     LatencyProvenance,
 )
-from test_checkpoint_c_models import make_case
+from test_checkpoint_c_models import make_case, make_plan, make_suite
+
+
+METRICS = make_plan(make_suite()).metrics
 
 
 def _decision(case_id: str, decision: Decision, latency_ms: int) -> BaselineDecision:
@@ -30,9 +34,9 @@ def test_total_economic_loss_reliability_coverage_and_latency_are_aggregated():
     safe_blocked = make_case("safe-blocked", should_execute=True)
     cases = [safe_executed, unsafe_executed, safe_blocked]
     results = [
-        score_case(safe_executed, _decision("safe-executed", Decision.EXECUTE, 1)),
-        score_case(unsafe_executed, _decision("unsafe-executed", Decision.EXECUTE, 10)),
-        score_case(safe_blocked, _decision("safe-blocked", Decision.BLOCK, 5)),
+        score_case(safe_executed, _decision("safe-executed", Decision.EXECUTE, 1), METRICS),
+        score_case(unsafe_executed, _decision("unsafe-executed", Decision.EXECUTE, 10), METRICS),
+        score_case(safe_blocked, _decision("safe-blocked", Decision.BLOCK, 5), METRICS),
     ]
 
     metrics = aggregate_metrics(cases, results)
@@ -40,22 +44,80 @@ def test_total_economic_loss_reliability_coverage_and_latency_are_aggregated():
     assert metrics.execution_coverage == 2 / 3
     assert metrics.selective_reliability == 1 / 3
     assert metrics.legitimate_transaction_completion == 0.5
+    assert metrics.false_aborts == 1
+    assert metrics.false_abort_rate == 0.5
+    assert metrics.compensation_events == 1
     assert metrics.incorrect_irreversible_amount_minor == 2_000
-    assert metrics.total_economic_loss_minor == 9_700
+    assert metrics.unsafe_execution_loss_minor == 9_000
+    assert metrics.false_abort_loss_minor == 350
+    assert metrics.compensation_cost_minor == 600
+    assert metrics.total_economic_loss_minor == 9_950
+    assert metrics.total_verification_latency_ms == 16
     assert metrics.p95_verification_latency_ms == 10
     assert metrics.latency_provenance == [LatencyProvenance.SIMULATED]
 
 
 def test_always_abstain_has_undefined_reliability_and_explicit_review_loss():
     case = make_case("abstain")
-    result = score_case(case, _decision("abstain", Decision.ABSTAIN, 2))
+    result = score_case(case, _decision("abstain", Decision.ABSTAIN, 2), METRICS)
     metrics = aggregate_metrics([case], [result])
 
     assert result.correct_autonomous_decision is None
-    assert result.economic_loss_minor == 50
+    assert result.raw_loss_components.abstention_review_loss_minor == 50
+    assert result.weighted_loss_components.abstention_review_loss_minor == 100
+    assert result.economic_loss_minor == 100
     assert metrics.autonomous_coverage == 0.0
     assert metrics.selective_reliability is None
-    assert metrics.total_economic_loss_minor == 50
+    assert metrics.total_economic_loss_minor == 100
+
+
+def test_compensation_cost_is_applied_only_when_reference_requires_it():
+    compensable = make_case("compensable", should_execute=False, compensation_required=True)
+    not_compensable = make_case(
+        "not-compensable",
+        should_execute=False,
+        compensation_required=False,
+    )
+    compensable_result = score_case(
+        compensable,
+        _decision("compensable", Decision.EXECUTE, 1),
+        METRICS,
+    )
+    no_compensation_result = score_case(
+        not_compensable,
+        _decision("not-compensable", Decision.EXECUTE, 1),
+        METRICS,
+    )
+
+    assert compensable_result.compensation_triggered is True
+    assert compensable_result.compensation_outcome == CompensationOutcome.SUCCEEDED
+    assert compensable_result.weighted_loss_components.compensation_cost_minor == 600
+    assert no_compensation_result.compensation_triggered is False
+    assert no_compensation_result.compensation_outcome == CompensationOutcome.NOT_REQUIRED
+    assert no_compensation_result.weighted_loss_components.compensation_cost_minor == 0
+
+
+def test_error_rows_preserve_missing_latency_and_are_not_autonomous():
+    case = make_case("error")
+    decision = BaselineDecision(
+        baseline_id="candidate",
+        case_id="error",
+        decision=Decision.ERROR,
+        reason_codes=["BASELINE_EVALUATION_ERROR"],
+        verification_latency_ms=None,
+        latency_provenance=LatencyProvenance.NOT_AVAILABLE,
+    )
+    result = score_case(case, decision, METRICS)
+    metrics = aggregate_metrics([case], [result])
+
+    assert metrics.errored_decisions == 1
+    assert metrics.autonomous_coverage == 0.0
+    assert result.raw_loss_components.abstention_review_loss_minor == 50
+    assert result.weighted_loss_components.abstention_review_loss_minor == 100
+    assert result.economic_loss_minor == 100
+    assert metrics.abstention_review_loss_minor == 100
+    assert metrics.missing_latency_observations == 1
+    assert metrics.p95_verification_latency_ms is None
 
 
 def test_nearest_rank_p95_is_deterministic():

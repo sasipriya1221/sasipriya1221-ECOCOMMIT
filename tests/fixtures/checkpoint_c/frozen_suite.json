@@ -1,0 +1,63 @@
+{
+  "schema_version": "checkpoint-c-suite.v2",
+  "suite_id": "checkpoint-c-unit-suite",
+  "suite_version": "1",
+  "description": "Synthetic development-only Checkpoint C suite.",
+  "maturity": "PRELIMINARY_NOT_FINAL",
+  "definitions_frozen_at_utc": "2026-01-01T00:00:00Z",
+  "eligible_for_final_claims": false,
+  "cases": [
+    {
+      "schema_version": "checkpoint-c-case.v2",
+      "case_id": "frozen-fixture",
+      "scenario_family": "unit-test-procurement",
+      "description": "Synthetic test scenario frozen-fixture",
+      "instruction_text": "Synthetic procurement instruction for frozen-fixture.",
+      "instruction_sha256": "0c505f59b20b9b66a7523ae5f59c83995ac6666ef71ac63538cafb3458fdc503",
+      "split": "DEVELOPMENT",
+      "requested_amount_minor": 5000,
+      "irreversible_exposure_minor": 2000,
+      "policy_limit_minor": 10000,
+      "base_risk_bps": 1000,
+      "evidence": [
+        {
+          "evidence_id": "merchant-status",
+          "evidence_class": "merchant_registry",
+          "status": "VERIFIED",
+          "required": true,
+          "version": "fixture-v1",
+          "source_kind": "SYNTHETIC_FIXTURE",
+          "source_reference": "tests/fixtures/checkpoint_c/frozen_suite.json#/cases/0/evidence/0",
+          "observation_is_fixture": true,
+          "simulated_verification_latency_ms": 5
+        }
+      ],
+      "risk_signals": [],
+      "reference_outcome": {
+        "authorized_safe_to_execute": true,
+        "legitimate_completion_expected": true,
+        "compensation_outcome_if_unsafe_execution": "SUCCEEDED"
+      },
+      "costs": {
+        "provenance": "SIMULATED",
+        "unsafe_execution_loss_minor": 9000,
+        "false_abort_loss_minor": 700,
+        "abstention_review_loss_minor": 50,
+        "compensation_cost_minor": 400,
+        "currency": "INR",
+        "basis": "Synthetic unit-test values; not observed economic outcomes."
+      },
+      "provenance": {
+        "source_kind": "SYNTHETIC_SIMULATION",
+        "source_reference": "tests/fixtures/checkpoint_c/frozen_suite.json",
+        "scenario_is_simulated": true,
+        "notes": "Harness validation only; not final benchmark evidence."
+      },
+      "tags": [
+        "synthetic",
+        "unit-test"
+      ]
+    }
+  ],
+  "contains_live_checkpoint_a_outputs": false
+}

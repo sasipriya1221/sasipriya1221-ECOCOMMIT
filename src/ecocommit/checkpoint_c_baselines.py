@@ -11,6 +11,9 @@ from .checkpoint_c_models import (
     DynamicRiskEvidenceRegistration,
     EvidenceStatus,
     LatencyProvenance,
+    NaiveAgentReplayRegistration,
+    PromptGuardrailReplayRegistration,
+    RegisteredAgentDecision,
     StaticRulesRegistration,
 )
 
@@ -27,6 +30,45 @@ class DeterministicBaseline(ABC):
     def evaluate(self, case: BenchmarkCase) -> BaselineDecision:
         raise NotImplementedError
 
+
+class AgentReplayBaseline(DeterministicBaseline):
+    """Deterministically replay a frozen agent-output manifest.
+
+    The registration carries explicit fixture/cached-output provenance. Replaying
+    synthetic decisions validates the harness only and is never model-performance
+    evidence.
+    """
+
+    def __init__(
+        self,
+        registration: NaiveAgentReplayRegistration | PromptGuardrailReplayRegistration,
+    ):
+        self.registration = registration
+        self._decision_by_case = {
+            decision.case_id: decision for decision in registration.decisions
+        }
+
+    @property
+    def baseline_id(self) -> str:
+        return self.registration.baseline_id
+
+    def evaluate(self, case: BenchmarkCase) -> BaselineDecision:
+        try:
+            registered: RegisteredAgentDecision = self._decision_by_case[case.case_id]
+        except KeyError as exc:
+            raise ValueError(
+                f"agent replay {self.baseline_id!r} has no frozen output for case {case.case_id!r}"
+            ) from exc
+        return BaselineDecision(
+            baseline_id=self.baseline_id,
+            case_id=case.case_id,
+            decision=registered.decision,
+            reason_codes=registered.reason_codes,
+            calculated_risk_bps=None,
+            examined_evidence_ids=[],
+            verification_latency_ms=registered.verification_latency_ms,
+            latency_provenance=registered.latency_provenance,
+        )
 
 class StaticRulesBaseline(DeterministicBaseline):
     """A strong fixed-rule comparator with no access to evidence state."""
@@ -166,6 +208,11 @@ class ConservativeAbstainBaseline(DeterministicBaseline):
 
 
 def build_baseline(registration: BaselineRegistration) -> DeterministicBaseline:
+    if isinstance(
+        registration,
+        (NaiveAgentReplayRegistration, PromptGuardrailReplayRegistration),
+    ):
+        return AgentReplayBaseline(registration)
     if isinstance(registration, StaticRulesRegistration):
         return StaticRulesBaseline(registration)
     if isinstance(registration, DynamicRiskEvidenceRegistration):
@@ -173,3 +220,24 @@ def build_baseline(registration: BaselineRegistration) -> DeterministicBaseline:
     if isinstance(registration, ConservativeAbstainRegistration):
         return ConservativeAbstainBaseline(registration)
     raise TypeError(f"unsupported baseline registration: {type(registration).__name__}")
+
+
+def evaluate_with_error_retention(
+    baseline: DeterministicBaseline,
+    case: BenchmarkCase,
+) -> BaselineDecision:
+    """Keep one explicit row when a baseline implementation raises unexpectedly."""
+
+    try:
+        return baseline.evaluate(case)
+    except Exception as exc:  # noqa: BLE001 - benchmark errors are retained as data
+        return BaselineDecision(
+            baseline_id=baseline.baseline_id,
+            case_id=case.case_id,
+            decision=Decision.ERROR,
+            reason_codes=["BASELINE_EVALUATION_ERROR", f"ERROR_TYPE_{type(exc).__name__}"],
+            calculated_risk_bps=None,
+            examined_evidence_ids=[],
+            verification_latency_ms=None,
+            latency_provenance=LatencyProvenance.NOT_AVAILABLE,
+        )

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from ecocommit.checkpoint_c_baselines import (
+    AgentReplayBaseline,
     ConservativeAbstainBaseline,
     DynamicRiskEvidenceBaseline,
     StaticRulesBaseline,
+    evaluate_with_error_retention,
 )
 from ecocommit.checkpoint_c_models import (
     ConservativeAbstainRegistration,
@@ -11,10 +13,20 @@ from ecocommit.checkpoint_c_models import (
     DynamicRiskEvidenceRegistration,
     EvidenceStatus,
     LatencyProvenance,
+    NaiveAgentReplayRegistration,
     RiskSignal,
     StaticRulesRegistration,
 )
-from test_checkpoint_c_models import make_case
+from test_checkpoint_c_models import make_case, make_plan, make_suite
+
+
+def _dynamic_registration(**overrides):
+    values = {
+        "baseline_id": "dynamic",
+        "selection_rationale": "Synthetic local comparator for unit tests.",
+    }
+    values.update(overrides)
+    return DynamicRiskEvidenceRegistration(**values)
 
 
 def test_static_rules_use_only_pre_registered_ceiling_and_signal_codes():
@@ -44,8 +56,7 @@ def test_static_rules_use_only_pre_registered_ceiling_and_signal_codes():
 
 
 def test_dynamic_baseline_executes_only_with_policy_evidence_and_low_risk():
-    baseline = DynamicRiskEvidenceBaseline(DynamicRiskEvidenceRegistration(
-        baseline_id="dynamic",
+    baseline = DynamicRiskEvidenceBaseline(_dynamic_registration(
         simulated_decision_overhead_ms=2,
     ))
     decision = baseline.evaluate(make_case(
@@ -64,7 +75,7 @@ def test_dynamic_baseline_executes_only_with_policy_evidence_and_low_risk():
 
 def test_dynamic_baseline_blocks_failed_evidence_and_policy_breach():
     baseline = DynamicRiskEvidenceBaseline(
-        DynamicRiskEvidenceRegistration(baseline_id="dynamic")
+        _dynamic_registration()
     )
     failed = baseline.evaluate(make_case("failed", evidence_status=EvidenceStatus.FAILED))
     policy_breach = baseline.evaluate(make_case(
@@ -83,7 +94,7 @@ def test_dynamic_baseline_blocks_failed_evidence_and_policy_breach():
 
 def test_dynamic_baseline_abstains_for_stale_evidence_or_review_band():
     baseline = DynamicRiskEvidenceBaseline(
-        DynamicRiskEvidenceRegistration(baseline_id="dynamic")
+        _dynamic_registration()
     )
     stale = baseline.evaluate(make_case("stale", evidence_status=EvidenceStatus.STALE))
     review_band = baseline.evaluate(make_case(
@@ -100,7 +111,7 @@ def test_dynamic_baseline_abstains_for_stale_evidence_or_review_band():
 
 def test_dynamic_baseline_blocks_at_registered_risk_threshold():
     baseline = DynamicRiskEvidenceBaseline(
-        DynamicRiskEvidenceRegistration(baseline_id="dynamic")
+        _dynamic_registration()
     )
     high_risk = baseline.evaluate(make_case(
         "high-risk",
@@ -124,3 +135,28 @@ def test_conservative_baseline_is_an_explicit_zero_coverage_control():
     assert decision.decision == Decision.ABSTAIN
     assert decision.reason_codes == ["CONSERVATIVE_ALWAYS_ABSTAIN"]
     assert decision.verification_latency_ms == 1
+
+
+def test_naive_agent_fixture_replays_only_the_frozen_manifest():
+    suite = make_suite([make_case("agent-case")])
+    registration = make_plan(suite).baselines[0]
+    assert isinstance(registration, NaiveAgentReplayRegistration)
+    baseline = AgentReplayBaseline(registration)
+
+    decision = baseline.evaluate(suite.cases[0])
+    assert decision.decision == Decision.EXECUTE
+    assert decision.reason_codes == ["SYNTHETIC_NAIVE_FIXTURE"]
+    assert decision.latency_provenance == LatencyProvenance.SIMULATED
+
+
+def test_unexpected_baseline_error_is_retained_as_an_explicit_row():
+    suite = make_suite([make_case("known")])
+    registration = make_plan(suite).baselines[0]
+    assert isinstance(registration, NaiveAgentReplayRegistration)
+    baseline = AgentReplayBaseline(registration)
+
+    error = evaluate_with_error_retention(baseline, make_case("not-registered"))
+    assert error.decision == Decision.ERROR
+    assert error.reason_codes == ["BASELINE_EVALUATION_ERROR", "ERROR_TYPE_ValueError"]
+    assert error.verification_latency_ms is None
+    assert error.latency_provenance == LatencyProvenance.NOT_AVAILABLE

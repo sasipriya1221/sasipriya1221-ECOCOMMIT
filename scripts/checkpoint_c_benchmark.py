@@ -23,13 +23,25 @@ def main() -> int:
     parser.add_argument("--output", required=True, help="Destination artifact JSON")
     parser.add_argument(
         "--code-revision",
-        help="Optional immutable source revision recorded as provenance (never inferred)",
+        required=True,
+        help="Immutable source revision recorded as provenance (never inferred)",
+    )
+    parser.add_argument(
+        "--working-tree-state",
+        required=True,
+        choices=("clean", "dirty"),
+        help="Explicit source-tree state recorded with the run",
     )
     args = parser.parse_args()
 
     plan = load_plan(args.plan)
     suite = load_suite(args.suite)
-    artifact = run_benchmark(plan, suite, code_revision=args.code_revision)
+    artifact = run_benchmark(
+        plan,
+        suite,
+        code_revision=args.code_revision,
+        working_tree_dirty=args.working_tree_state == "dirty",
+    )
     destination = write_artifact(artifact, args.output)
     print(artifact_receipt(artifact, destination))
     return 0
