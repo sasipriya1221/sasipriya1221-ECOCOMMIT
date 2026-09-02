@@ -9,12 +9,14 @@ presented as final ECOCOMMIT evidence.
 **Framework locally validated; final evidence bundle BLOCKED; Checkpoint E NOT
 PASSED.**
 
-No final ECOCOMMIT-versus-baseline numbers are available. No final screenshot or
-video is retained. Checkpoint A is still incomplete, the only retained Razorpay
-Checkout authorization is permanently non-promotable because it predates the
-required certificate/key-reference provenance, and the post-fix Razorpay Test
-lifecycle has not run. Apache-2.0 licensing and independent clean-machine
-reproduction are retained, but they do not substitute for A-D final evidence.
+No final ECOCOMMIT-versus-baseline numbers are available. No final screenshot is
+retained. No final video is recorded. The only retained Razorpay Checkout
+authorization is permanently non-promotable because it predates the required
+certificate/key-reference provenance. The post-fix Razorpay Test lifecycle has
+not run; for that fresh lifecycle, no payment authorization, capture, refund,
+webhook delivery, reconciliation, or settlement was executed. Apache-2.0
+licensing and independent clean-machine reproduction are retained, but they do
+not substitute for A-D final evidence.
 
 `PROGRESS.md` is the canonical current evidence board; detailed failures remain
 preserved in repository history, `evidence/`, checkpoint reports, and retained
