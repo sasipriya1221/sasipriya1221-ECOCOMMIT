@@ -107,11 +107,17 @@ jobs:
               ["git", "rev-parse", "HEAD^{tree}"], text=True
           ).strip()
 
-          junit = ET.parse(out / "pytest.xml").getroot()
-          collected = int(junit.attrib.get("tests", 0))
-          failures = int(junit.attrib.get("failures", 0))
-          errors = int(junit.attrib.get("errors", 0))
-          skipped = int(junit.attrib.get("skipped", 0))
+          junit_root = ET.parse(out / "pytest.xml").getroot()
+          suites = [
+              node for node in junit_root.iter()
+              if node.tag.rsplit("}", 1)[-1] == "testsuite"
+          ]
+          if not suites:
+              raise SystemExit("independent regression report contains no testsuite")
+          collected = sum(int(node.attrib.get("tests", 0)) for node in suites)
+          failures = sum(int(node.attrib.get("failures", 0)) for node in suites)
+          errors = sum(int(node.attrib.get("errors", 0)) for node in suites)
+          skipped = sum(int(node.attrib.get("skipped", 0)) for node in suites)
           passed = collected - failures - errors - skipped
           if collected <= 0 or failures or errors or skipped or passed != collected:
               raise SystemExit("independent regression was not a complete pass")
