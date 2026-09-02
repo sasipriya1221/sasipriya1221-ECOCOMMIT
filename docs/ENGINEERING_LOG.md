@@ -1044,9 +1044,13 @@ is justified because successful contaminated jobs cannot be repaired by the
 failed-jobs-only path.
 
 The Candidate 3/A/provider/evidence scope passes **67/67** and the complete
-working-tree suite passes **392/392**. The frozen dataset, prompt, model settings,
-evaluator, schemas, and thresholds were not changed. Candidate 3 has not been
-pushed or evaluated, so Checkpoint A remains not passed.
+working-tree suite passes **392/392**. A separate no-hardlink clean copy of
+`bb4c15b7de9649cd4a405edb7476813759cb0eb5` also passes **392/392**, dependency
+consistency, byte-compilation, JavaScript syntax, local readiness structure,
+diff checks, and clean status. Its local origin is correctly rejected as a public
+remote. The frozen dataset, prompt, model settings, evaluator, schemas, and
+thresholds were not changed. Candidate 3 has not been pushed or evaluated, so
+Checkpoint A remains not passed.
 
 ## Log discipline
 

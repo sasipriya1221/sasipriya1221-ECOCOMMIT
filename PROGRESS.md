@@ -171,9 +171,10 @@ execution classification and fresh artifact namespace change:
   digest and thresholds.
 
 The focused Candidate 3/provider/evidence scope passes **67/67** with an isolated
-local pytest temp area. Candidate 3 has not been pushed, dispatched, or evaluated.
-A fresh remote run requires an explicit push/dispatch boundary; no current result
-marks Checkpoint A passed.
+local pytest temp area. Implementation commit `bb4c15b7…` passes **392/392** in
+both the working repository and a separate no-hardlink clean copy. Candidate 3
+has not been pushed, dispatched, or evaluated. A fresh remote run requires an
+explicit push/dispatch boundary; no current result marks Checkpoint A passed.
 
 ## Checkpoint B
 

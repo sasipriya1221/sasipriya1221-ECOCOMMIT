@@ -55,8 +55,9 @@ checker additionally accepts only the expected public GitHub repository as its
 remote, never emits a credential-bearing or local raw origin, and keeps a local
 clone or mismatched repository blocked from final readiness. The current working
 tree at `75401299e09514ad8134c2cf25b7646d9ec775bc` passed 388/388 tests. The
-subsequent Candidate 3 working tree passed 392/392 tests; exact committed
-clean-copy validation is recorded only after the final local commit exists.
+subsequent Candidate 3 implementation commit
+`bb4c15b7de9649cd4a405edb7476813759cb0eb5` passed 392/392 tests in both the
+working repository and a separate no-hardlink clean copy.
 
 The current Razorpay order-boundary workflow also confines both credentials to
 the provider-execution step. Its later redacted-summary and artifact-upload steps
@@ -105,8 +106,8 @@ provider deferrals, and no receipt. Candidate 3 is not remotely evaluated.
 | pytest | 8.4.2 |
 | Pydantic | 2.13.5 |
 | Node.js syntax check | v24.18.1 |
-| Latest fully validated code/test revision | `75401299e09514ad8134c2cf25b7646d9ec775bc` |
-| Public remote HEAD during validation | `1cc9fd199781de3974adbcb6099b77d89aec2206` |
+| Latest fully validated code/test revision | `bb4c15b7de9649cd4a405edb7476813759cb0eb5` |
+| Public remote HEAD during validation | `c52884eb455c1858608d430aa2d14b1d31a9fa12` |
 | Provider/payment mode | Current local run made no provider call; retained prior evidence proves Razorpay Test authentication and order creation only |
 
 ## Local readiness matrix
@@ -118,7 +119,7 @@ provider deferrals, and no receipt. Candidate 3 is not remotely evaluated.
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
 | Reproducibility | Exact runtime, test, and build-backend distributions plus published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Published wheels must still be obtained; independent reproduction is absent |
-| Clean clone | Separate no-hardlink validation snapshots pass the full suite, readiness checks, and clean status; the last code-only snapshot at `75401299e09514ad8134c2cf25b7646d9ec775bc` is covered by the current 388-test result | **LOCAL PASS** | Same host/operator; not independent-machine evidence; a local origin is now explicitly non-public |
+| Clean clone | A separate no-hardlink copy at `bb4c15b7de9649cd4a405edb7476813759cb0eb5` passed 392/392, dependency consistency, compilation, JavaScript syntax, readiness structure, diff checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence; its local origin is correctly blocked as non-public |
 | Engineering log | Real provider, semantic, schema, harness, product, documentation, and portability failures remain recorded with fixes and limitations | **LOCAL PASS** | Log is repository evidence, not external attestation |
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
 | Demo/pitch | Runbook and five-minute outline distinguish local simulation from provider/final evidence | **LOCAL PASS** | No final screenshots or video were produced |
@@ -147,7 +148,8 @@ provider deferrals, and no receipt. Candidate 3 is not remotely evaluated.
   **115/115 passed**; Checkpoint C: **47/47 passed**; Checkpoint D: **76/76
   passed**; workflow security: **7/7 passed**.
 - Current Checkpoint E-focused readiness regression: **26/26 passed**.
-- Current Candidate 3 working-tree full suite: **392/392 passed**.
+- Current Candidate 3 implementation commit: **392/392 passed** in both the
+  working repository and a separate no-hardlink clean copy at `bb4c15b7…`.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.
 - Browser JavaScript syntax: **PASS**.
