@@ -134,21 +134,27 @@ blocked gate reports. It is not hosted or provider evidence.
 ## Checkpoint A live evidence
 
 Follow `CHECKPOINT_A_RUNBOOK.md`. Candidate 1 is mathematically failed and must
-not be resumed. Candidate 2 starts a fresh, manifest-bound 80-case run. A full
+not be resumed. Candidate 2 run `33583323178` exposed a runner-classification
+defect across two incomplete attempts and its artifacts are not eligible for
+Candidate 3. Candidate 3 starts a
+fresh, manifest-bound 80-case run. A full
 gate requires all 80 immutable cases and all four frozen thresholds passing
 together. Provider deferrals, smoke runs, fixtures, partial aggregates, and
 schema failures cannot become a pass.
 
-Cancelled run `33556907712` is a retained remote experiment, not Candidate 2.
+Cancelled run `33556907712` is a retained remote experiment, not Candidate 2 or Candidate 3.
 Its seven exit-75 rows are provider deferrals, its other 72 case jobs were
 cancelled, and its failed partial aggregate is not reusable. Reproduction must
-start Candidate 2 fresh and must not copy artifacts from that run.
+start Candidate 3 fresh and must not copy artifacts from that run.
 
-Candidate 2 retains a redacted record for every provider attempt, including a
+Candidate 3 retains a redacted record for every provider attempt, including a
 transient HTTP or transport retry that later succeeds. This preserves the actual
 attempt chronology without retaining provider bodies or credentials.
 Terminal candidate evidence also carries an explicit correction-attempt flag and
 uses different codes for failure before versus after a correction request.
+Transient provider failure remains resumable when it interrupts correction or
+when its retry consumes the request budget before correction can run. A completed
+bounded correction failure and a non-transient provider rejection remain terminal.
 The model provider, GitHub verifier, Razorpay transport, and inline credential
 preflights attach authorization as an unredirected header and reject a changed
 final response URL. Preserve `REDIRECT_REJECTED` as terminal provider evidence;

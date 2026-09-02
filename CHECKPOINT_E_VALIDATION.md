@@ -21,8 +21,9 @@ secrets to individual steps; removed provider-body printing; expanded offline CI
 to UI/workflow/protocol changes and static checks; and made the readiness checker
 capable of a real final transition. The checker now parses each evidence slot's
 state, validates a revision-bound independent-reproduction receipt, and supports
-`--mode final`. It still reports false today because the real slots, license,
-push, independent reproduction, and media are absent.
+`--mode final`. Public `main` and offline CI now exist at `c52884e…`, but it still
+reports false because the A–D real slots, license, independent reproduction,
+media, and the unpushed Candidate 3 correction remain absent.
 
 A historical fresh-virtual-environment run exposed an unrecorded build bootstrap:
 the hash lock installed runtime/test packages but not setuptools/wheel, so the
@@ -45,12 +46,17 @@ inputs, and the E independent-reproduction receipt reject ambiguous or
 non-standard JSON before schema validation. The current tree additionally keeps
 recovered provider retries in Candidate 2's redacted attempt chronology and
 distinguishes terminal schema failure before versus after a correction request.
+The live Candidate 2 run then exposed that transient provider interruption during
+correction was still terminalized. Candidate 3 keeps that path resumable without
+changing the frozen semantic inputs.
 It and a no-hardlink clone at `60c85f0b75574007a7bf1de9a8b4be7214c69a75`
 passed **369 / 369** at that historical hardening snapshot. The current release
 checker additionally accepts only the expected public GitHub repository as its
 remote, never emits a credential-bearing or local raw origin, and keeps a local
 clone or mismatched repository blocked from final readiness. The current working
-tree at `75401299e09514ad8134c2cf25b7646d9ec775bc` passed 388/388 tests.
+tree at `75401299e09514ad8134c2cf25b7646d9ec775bc` passed 388/388 tests. The
+subsequent Candidate 3 working tree passed 392/392 tests; exact committed
+clean-copy validation is recorded only after the final local commit exists.
 
 The current Razorpay order-boundary workflow also confines both credentials to
 the provider-execution step. Its later redacted-summary and artifact-upload steps
@@ -70,8 +76,10 @@ run offline regression but cannot start a credentialed provider operation.
 
 The historical E snapshot left A on its guarded retry process. Subsequent
 forensics proved Candidate 1 mathematically failed at attempt 15; its failure
-manifest is retained. Candidate 2 changes the candidate/runtime/evidence protocol
-but not the frozen cases, evaluator criteria, or thresholds. The thresholds remain:
+manifest is retained. Candidate 2 ran remotely but was incomplete and exposed a
+runner-classification defect. Candidate 3 changes only the runner classification
+and artifact namespace, not the frozen cases, model/prompt, evaluator criteria,
+or thresholds. The thresholds remain:
 
 - case pass rate >= 90%;
 - selective semantic reliability >= 95%;
@@ -83,8 +91,10 @@ A later independently launched score-recovery experiment ran from remote commit
 ended cancelled after partial provider deferrals; public metadata checked before
 Candidate 2 dispatch reports the same excluded run completed with failure at
 attempt 6. It was not Candidate 2, its automatic maximum-score repair was rejected
-during reconciliation, and no attempt is promoted. Candidate 2 itself has not
-been remotely evaluated.
+during reconciliation, and no attempt is promoted. Genuine Candidate 2 run
+`33583323178` remained incomplete after two attempts: the cumulative aggregate
+has one proven pass, three infrastructure/runner-contaminated error rows, 76
+provider deferrals, and no receipt. Candidate 3 is not remotely evaluated.
 
 ## Validation environment
 
@@ -103,7 +113,7 @@ been remotely evaluated.
 
 | Area | Validation performed | Result | Acceptance boundary |
 |---|---|---|---|
-| Public access | Unauthenticated repository page returned HTTP 200; remote default branch and HEAD were resolved read-only | **LOCAL PASS** | Later local validation commits are intentionally unpushed |
+| Public access | Unauthenticated repository page returned HTTP 200; public `main` is `c52884e…` after an authorized 51-commit fast-forward push | **PUBLIC PASS** | Candidate 3 local correction is intentionally unpushed |
 | README | Problem, architecture, checkpoint truth, quick start, demo, evidence, limitations, and license status are explicit | **LOCAL PASS** | Final metrics and media remain absent |
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
@@ -113,7 +123,7 @@ been remotely evaluated.
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
 | Demo/pitch | Runbook and five-minute outline distinguish local simulation from provider/final evidence | **LOCAL PASS** | No final screenshots or video were produced |
 | Repository hygiene | Local links, local-machine path leakage, transient tracked files, status vocabulary, and current-tree secret markers checked | **LOCAL PASS** | Pattern scanning is not exhaustive secret scanning |
-| CI readiness | Offline workflow installs the resolved manifest without dependency re-resolution and runs full tests plus readiness checks | **LOCAL PASS** | Updated workflow has not run on the public remote |
+| CI readiness | Offline workflow installs the resolved manifest without dependency re-resolution and runs full tests plus readiness checks | **PUBLIC PASS** | Offline Regression run `33583217298` passed at `c52884e…`; Candidate 3 CI is not run |
 | License | Missing-license state is stated and detected | **BLOCKED** | Repository owner must choose the license |
 
 ## Tests and checks retained
@@ -133,10 +143,11 @@ been remotely evaluated.
   `60c85f0b75574007a7bf1de9a8b4be7214c69a75`.
 - Current release-remote hardening tree: **388/388 passed** in the working
   repository at `75401299e09514ad8134c2cf25b7646d9ec775bc`.
-- Current A/Candidate 2/provider focused suite: **62/62 passed**; Checkpoint B:
+- Current Candidate 3/A/provider/evidence focused suite: **67/67 passed**; Checkpoint B:
   **115/115 passed**; Checkpoint C: **47/47 passed**; Checkpoint D: **76/76
   passed**; workflow security: **7/7 passed**.
 - Current Checkpoint E-focused readiness regression: **26/26 passed**.
+- Current Candidate 3 working-tree full suite: **392/392 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.
 - Browser JavaScript syntax: **PASS**.

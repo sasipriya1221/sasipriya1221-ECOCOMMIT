@@ -5,11 +5,11 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; excluded score-recovery experiment FAILED after later reruns; Candidate 2 BUILT + LOCALLY VALIDATED, NOT EVALUATED** | Intentional push, fresh 80-case Candidate 2 provider run, and all four unchanged thresholds passing together |
+| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 REMOTE RUN INCOMPLETE; Candidate 3 RUNNER FIX BUILT + FOCUSED-VALIDATED, NOT PUSHED/EVALUATED** | Fresh 80-case Candidate 3 provider run and all four unchanged thresholds passing together |
 | B — deterministic economic safety | **B1–B7 + durable single-host runtime LOCALLY VALIDATED; B8 order subgates live-validated; NOT PASSED** | Passing A receipt, genuine Test Checkout/capture/refund/webhook evidence, and an independently verified signing-key boundary |
 | C — comparative benchmark | **Framework + final preregistration contract LOCALLY VALIDATED; NOT PASSED** | Real frozen suite/costs/outputs, pre-outcome rule choices, passing A+B receipts, and one-shot held-out run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST EXECUTION PATH LOCALLY VALIDATED; NOT PASSED** | Real pinned A/B/C receipts, current credentials/human callback/webhooks, hosted security/operations, and final integrated evidence |
-| E — repository/submission readiness | **LOCAL CHECKER LOCALLY VALIDATED; NOT PASSED** | A–D evidence, owner-selected license, push, independent reproduction, final screenshots, and video |
+| E — repository/submission readiness | **PUBLIC MAIN + OFFLINE CI + LOCAL CHECKER VALIDATED; NOT PASSED** | A–D evidence, owner-selected license, independent reproduction, final screenshots, and video |
 
 Status vocabulary is strict: **BUILT** means an implementation exists;
 **LOCALLY VALIDATED** means deterministic local checks passed; **BLOCKED** means a
@@ -105,8 +105,8 @@ That file remains the immutable observation of attempt 1. Pre-dispatch public
 metadata checked at `2026-09-02T02:23:34Z` reports the same run completed with
 conclusion `failure` at attempt 6. The head SHA remains
 `1cc9fd199781de3974adbcb6099b77d89aec2206`. The later reruns still use the
-rejected earlier protocol and are not Candidate 2; no row or artifact from any
-attempt is eligible for Candidate 2 resume.
+rejected earlier protocol and are not Candidate 2 or Candidate 3; no row or
+artifact from any attempt is eligible for a frozen-candidate resume.
 
 The score-filling change was rejected during reconciliation. Exact text grounding
 does not prove maximum materiality or extraction confidence, and those values
@@ -116,43 +116,64 @@ incomplete candidate, and regressions now explicitly cover both omitted scores.
 The remote history and cancelled evidence remain preserved; they do not pass A
 and do not evaluate Candidate 2.
 
-### Candidate 2 — corrected but not launched
+### Candidate 2 — launched, incomplete, and not promotable
 
-The corrected candidate is explicitly versioned `A-CANDIDATE-2` and starts a
-fresh 80-case run. It does not reuse Candidate 1 rows. The local implementation:
+The validated source was fast-forward pushed to public `main` at
+`c52884eb455c1858608d430aa2d14b1d31a9fa12`. Offline Regression run
+`33583217298` passed. The manually authorized frozen Candidate 2 workflow is run
+`33583323178`, workflow number 11, at that exact source.
 
-- requires every model-emitted clause field explicitly before Pydantic defaults;
-- never invents missing confidence, materiality, provenance, or graph edges;
-- performs at most one general schema-correction request;
-- retains bounded candidate hashes, finish reason, request ID, usage, validation
-  paths, and complete correction/provider chronology—including transient retries
-  that later recover—without retaining raw provider text;
-- treats a provider failure after an invalid candidate as a terminal interrupted
-  correction, not a resumable pure provider deferral;
-- records whether a terminal schema failure occurred before or after a correction
-  request instead of inferring correction from a generic error label;
-- restricts provider URLs to HTTPS allowlisted hosts and bounds response bodies;
-- strictly decodes provider envelopes and candidates, rejecting duplicate keys,
-  non-finite numbers, invalid Unicode scalar values, and excessive structure;
-- accepts credentials only through the environment;
-- binds each row to the frozen dataset, case, prompt/schema, evaluator, runner,
-  criteria, provider configuration, source revision, and manifest digests;
-- directly hashes the interpreter, strict decoder, protocol, shard, aggregate,
-  and typed receipt implementation into the runner manifest;
-- recomputes every successful semantic row during aggregation; and
-- permits identical attempt duplicates but rejects conflicts or mixed manifests;
-  resume/aggregate files must be bounded nonsymlinked strict UTF-8 JSON objects.
+Attempt 1 completed with:
 
-The Candidate 2 workflow uses fresh, immutable, per-attempt artifact names and
-emits a typed passing receipt only after a complete aggregate passes. It is
-commit-pinned and scopes the provider secret only to the validation steps.
+- successful offline regression and secret checks;
+- 80 immutable case artifacts;
+- 78 case jobs exiting code 75 as `transient_provider_error` deferrals;
+- two case jobs completing the live path, but **zero semantic passes**;
+- only two aggregate rows, 78 missing rows, and a failed partial aggregate; and
+- no passing receipt.
 
-Candidate 2 has not been pushed, dispatched, or represented as live evidence.
-Run `33556907712` is explicitly excluded because it used a different, earlier
-protocol; its retained attempt-1 observation ended cancelled and the current
-attempt-6 state is failure.
-Remote launch requires an intentional push/dispatch boundary and the configured
-provider secret.
+The terminal diagnostics were `C002: provider HTTP_429 after 2 attempt(s)` and
+`C042: candidate contract invalid before correction could be attempted`. These
+are not treated as clean semantic failures. The frozen runner converted a
+transient provider interruption during correction into terminal evidence, and
+could also retain a schema-invalid row after provider retry consumed the bounded
+request budget before the promised correction ran. The immutable public-metadata,
+job-log, artifact-digest, and non-claim record is
+`evidence/checkpoint-a-candidate-2-attempt-1.json`.
+
+A failed-jobs-only rerun legitimately completed attempt 2 without changing the
+dataset, prompt, evaluator, model configuration, schemas, or thresholds. It
+preserved successful jobs and retried only the 78 provider-deferred jobs plus the
+dependent aggregate. Two retry jobs became terminal: `A004` logged `passed=true`,
+while `C004` failed before correction could be attempted. The cumulative
+aggregate has four rows, one pass, three infrastructure/runner-contaminated error
+rows (`C002`, `C004`, `C042`), 76 missing rows, and no receipt. Attempt 2 is
+retained in `evidence/checkpoint-a-candidate-2-attempt-2.json`. Further Candidate
+2 retries are not justified because failed-jobs-only reruns cannot repair the
+three contaminated rows already retained by successful jobs.
+
+### Candidate 3 — runner-only correction, not launched
+
+The evidence-driven correction is explicitly versioned `A-CANDIDATE-3`. It
+keeps the same frozen 80 cases, Qwen model/provider configuration, prompt,
+contract schema, semantic evaluator, and four acceptance thresholds. Only the
+execution classification and fresh artifact namespace change:
+
+- a transient provider failure interrupting schema correction remains a
+  resumable infrastructure deferral;
+- a schema-invalid candidate that did not receive its correction opportunity
+  because the trace contains a transient provider retry remains resumable;
+- completed bounded correction failures and non-transient provider errors remain
+  terminal;
+- every case and aggregate artifact uses a fresh Candidate 3 name so no Candidate
+  1 or Candidate 2 row can enter the run; and
+- the typed receipt is bound to Candidate 3 while retaining the frozen dataset
+  digest and thresholds.
+
+The focused Candidate 3/provider/evidence scope passes **67/67** with an isolated
+local pytest temp area. Candidate 3 has not been pushed, dispatched, or evaluated.
+A fresh remote run requires an explicit push/dispatch boundary; no current result
+marks Checkpoint A passed.
 
 ## Checkpoint B
 
@@ -162,7 +183,7 @@ idempotency/reconciliation, and compensation all fail closed under adversarial
 tests.
 
 The A→B boundary no longer accepts a caller-created “A passed” string. It requires
-a typed receipt bound to Candidate 2, the frozen dataset and thresholds, the
+a typed receipt bound to Candidate 3, the frozen dataset and thresholds, the
 aggregate/manifest/source digests, and the exact evidence reference. Explicit
 test-fixture receipts are refused by the production bridge.
 
@@ -187,7 +208,7 @@ installs credentials plus a factory trap and proves neither credential loading n
 provider construction occurs on the rejected path.
 All tracked credentialed `urllib` clients now attach `Authorization` as an
 unredirected header and reject any response whose final URL differs from the
-fixed request URL. This covers Candidate 2/model calls, GitHub run verification,
+fixed request URL. This covers Checkpoint A model calls, GitHub run verification,
 Razorpay API calls, and both inline credential preflights. The new regressions do
 not create provider evidence or retroactively upgrade the retained historical run.
 Every workflow that references a repository secret is now `workflow_dispatch`
@@ -295,9 +316,10 @@ wheels, including the exact setuptools/wheel build backend required by a fresh
 virtual environment; editable project installation uses
 `--no-deps --no-build-isolation`.
 
-Final E blockers are unchanged in substance: A–D final evidence, license choice,
-intentional push/public CI, independent reproduction, final screenshots, and the
-five-minute video.
+Public `main` and offline CI are now real at `c52884e…`; the local Candidate 3
+runner correction is intentionally not pushed. Final E blockers remain A–D final
+evidence, license choice, an authorized Candidate 3 push/CI if that candidate is
+adopted, independent reproduction, final screenshots, and the five-minute video.
 
 ## Non-claims
 
@@ -305,8 +327,10 @@ five-minute video.
 - Candidate 1 run `33493409547` is completed with failure at attempt 27; it is
   neither resumable evidence nor a replacement for the retained attempt-15 failure.
 - Excluded run `33556907712` is completed with failure at attempt 6 and is neither
-  an A pass nor a Candidate 2 run; none of its attempts or artifacts may be resumed.
-- Candidate 2 has not run remotely.
+  an A pass nor a frozen Candidate 2/3 run; none of its attempts or artifacts may be resumed.
+- Candidate 2 ran remotely; attempts 1 and 2 remained incomplete and contaminated
+  by a runner classification defect. It did not pass and will not be retried.
+- Candidate 3 has not been pushed or evaluated.
 - Provider deferrals are not semantic failures; contract failures are not
   provider deferrals.
 - The Razorpay order subgate is not a payment-lifecycle pass.

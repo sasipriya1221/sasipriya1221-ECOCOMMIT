@@ -1,0 +1,121 @@
+{
+  "schema_version": "A.CANDIDATE_2_ATTEMPT_OBSERVATION.1",
+  "observed_at_utc": "2026-09-02T02:59:37Z",
+  "status": "INCOMPLETE_PROVIDER_DEFERRED_RUN_WITH_RUNNER_CLASSIFICATION_DEFECT",
+  "promotion_eligible": false,
+  "github": {
+    "repository": "sasipriya1221/sasipriya1221-ECOCOMMIT",
+    "run_id": "33583323178",
+    "run_number": 11,
+    "run_attempt": 1,
+    "event": "workflow_dispatch",
+    "head_sha": "c52884eb455c1858608d430aa2d14b1d31a9fa12",
+    "created_at": "2026-09-02T02:28:11Z",
+    "terminal_at": "2026-09-02T02:49:28Z",
+    "conclusion": "failure",
+    "run_url": "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33583323178"
+  },
+  "frozen_identity": {
+    "candidate_version": "A-CANDIDATE-2",
+    "dataset_sha256": "968be3ed3a438a3a28a3402fa65c90a45cb564ed1adad2e6e51d852e24c5bb8b",
+    "thresholds_changed": false,
+    "dataset_changed": false,
+    "prompt_changed_during_run": false,
+    "evaluator_changed_during_run": false,
+    "provider_configuration_changed_during_run": false
+  },
+  "job_observation": {
+    "total_jobs": 82,
+    "regression": {
+      "conclusion": "success"
+    },
+    "case_matrix": {
+      "total": 80,
+      "completed_job_success": 2,
+      "failed_exit_75_provider_deferrals": 78,
+      "successful_job_case_indices": [1, 41],
+      "successful_job_case_ids": ["C002", "C042"],
+      "semantic_passes_proven": 0
+    },
+    "aggregate": {
+      "conclusion": "failure",
+      "full_frozen_gate_run": false,
+      "terminal_rows": 2,
+      "missing_case_rows": 78,
+      "passed_cases": 0,
+      "case_pass_rate": 0.0,
+      "checkpoint_a_passed": false,
+      "diagnostic_rows": [
+        {
+          "id": "C002",
+          "kind": "error",
+          "category": "provider HTTP_429 after 2 attempt(s)"
+        },
+        {
+          "id": "C042",
+          "kind": "error",
+          "category": "candidate contract invalid before correction could be attempted (instruction"
+        }
+      ]
+    }
+  },
+  "classification": {
+    "provider_deferrals": {
+      "count": 78,
+      "basis": "Each failed case job exited with code 75 and uploaded its immutable case artifact; this exact shard returns 75 only for transient provider infrastructure deferral. Early and late sampled logs explicitly printed transient_provider_error."
+    },
+    "c002": {
+      "classification": "TRANSIENT_PROVIDER_INTERRUPTION_TERMINALIZED_BY_RUNNER",
+      "basis": "The aggregate diagnostic is provider HTTP_429 after two attempts, but the case job returned success instead of shard exit 75. Under the frozen source, a pure transient ProviderRequestError is classified resumable; the reachable terminal path is a transient provider error interrupting a schema-correction sequence and being relabelled candidate_contract_correction_interrupted before the shard classifier runs.",
+      "semantic_failure_claimed": false
+    },
+    "c042": {
+      "classification": "CORRECTION_OPPORTUNITY_NOT_PROVEN",
+      "basis": "The aggregate diagnostic explicitly says the candidate contract was invalid before correction could be attempted. The bounded runner promised one correction opportunity, so this row is not treated as clean terminal semantic evidence without its protected trace artifact.",
+      "semantic_failure_claimed": false
+    },
+    "general_defect": "The shard treated a transient provider interruption during correction as terminal and could also retain a schema-invalid row when transient retries consumed the bounded request budget before the first correction ran. Provider scheduling and candidate semantics were therefore not cleanly separated."
+  },
+  "artifacts": {
+    "content_download": "AUTHENTICATED_FILE_REFERENCE_RETURNED_BUT_CONTENT_NOT_MODEL_ACCESSIBLE",
+    "aggregate_logs_inspected": true,
+    "items": [
+      {
+        "id": "9829165121",
+        "name": "checkpoint-a-candidate-2-case-1-attempt-1",
+        "size_in_bytes": 1702,
+        "archive_sha256": "aac1014b02d1efdefe96351d6c469f1d70cb0a70d77b5f804eea51b9b1cea1fa"
+      },
+      {
+        "id": "9829392072",
+        "name": "checkpoint-a-candidate-2-case-41-attempt-1",
+        "size_in_bytes": 1662,
+        "archive_sha256": "666fd832219fe743e00ce5b0e17d9a9d5677cf17a81b7c279cbfe88b1b7ada66"
+      },
+      {
+        "id": "9829625559",
+        "name": "checkpoint-a-candidate-2-results-attempt-1",
+        "size_in_bytes": 2418,
+        "archive_sha256": "404049869edcb03a9d6bdb7d5488c193ff3f57ec4a6017d56b2b5b5e01c03c23"
+      }
+    ],
+    "expires_at": "2026-12-01T02:28:12Z"
+  },
+  "resumption": {
+    "failed_jobs_only_rerun_requested": true,
+    "next_attempt": 2,
+    "requested_at_utc": "2026-09-02T02:51:40Z",
+    "successful_attempt_1_jobs_preserved": true
+  },
+  "non_claims": {
+    "complete_80_case_evaluation": false,
+    "checkpoint_a_pass": false,
+    "successful_case_job_is_a_semantic_pass": false,
+    "provider_deferred_cases_are_semantic_failures": false,
+    "c002_is_a_semantic_failure": false,
+    "c042_is_a_semantic_failure": false,
+    "artifact_payloads_locally_rehashed_or_fully_inspected": false,
+    "thresholds_changed": false,
+    "frozen_cases_changed": false
+  }
+}

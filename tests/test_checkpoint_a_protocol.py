@@ -25,7 +25,7 @@ from checkpoint_a_protocol import (
     verify_manifest,
     verify_row,
 )
-from checkpoint_a_shard import _load_resume
+from checkpoint_a_shard import _is_transient_provider_error, _load_resume
 from ecocommit.contracts import EconomicClause, EconomicIntentContract, Provenance, SourceSpan
 from ecocommit.checkpoint_a_evidence import CheckpointAEvidenceReceipt, CheckpointAMetrics
 from ecocommit.interpreter import (
@@ -327,7 +327,7 @@ def test_terminal_schema_evidence_distinguishes_whether_correction_ran(
     assert row["correction_attempted"] is correction_attempted
 
 
-def test_correction_interruption_is_terminal_not_resumable_provider_deferral():
+def test_transient_correction_interruption_is_resumable_provider_deferral():
     gold = (_clear_cases() + _ambiguous_cases())[0]
     mixed = _evaluate_one(gold, _FailingProvider([
         {"attempt": 1, "outcome": "schema_invalid", "issues": [{"location": "clauses", "code": "missing"}]},
@@ -339,17 +339,84 @@ def test_correction_interruption_is_terminal_not_resumable_provider_deferral():
 
     assert mixed["error_kind"] == "candidate_contract_correction_interrupted"
     assert mixed["error_code"] == "CORRECTION_PROVIDER_ERROR"
+    assert _is_transient_provider_error(mixed)
     assert pure["error_kind"] == "transient_provider_error"
     assert pure["error_code"] == "HTTP_429"
+    assert _is_transient_provider_error(pure)
 
 
-def test_candidate_2_workflow_is_fresh_immutable_and_secret_scoped():
+def test_schema_failure_without_correction_is_resumable_after_transient_retry():
+    gold = (_clear_cases() + _ambiguous_cases())[0]
+    provider_trace = [
+        {"attempt": 1, "outcome": "provider_error", "code": "HTTP_429", "transient": True},
+        {"attempt": 2, "outcome": "schema_invalid", "issues": [{"location": "clauses", "code": "missing"}]},
+    ]
+
+    class _RetryThenSchemaProvider:
+        def interpret_with_metadata(self, instruction):
+            raise CandidateContractError(
+                [{"location": "clauses", "code": "missing"}],
+                provider_trace,
+                correction_attempted=False,
+            )
+
+    row = _evaluate_one(gold, _RetryThenSchemaProvider(), FidelityValidator())
+
+    assert row["error_kind"] == "candidate_contract_error"
+    assert row["error_code"] == "SCHEMA_INVALID_BEFORE_CORRECTION"
+    assert _is_transient_provider_error(row)
+
+
+def test_completed_correction_failure_remains_terminal_after_transient_retry():
+    row = {
+        "error_kind": "candidate_contract_error",
+        "correction_attempted": True,
+        "error": "candidate contract invalid after bounded correction",
+        "provider_trace": [
+            {"attempt": 1, "outcome": "provider_error", "code": "HTTP_429", "transient": True},
+            {"attempt": 2, "outcome": "schema_invalid"},
+            {"attempt": 3, "outcome": "schema_invalid"},
+        ],
+    }
+
+    assert not _is_transient_provider_error(row)
+
+
+def test_nontransient_correction_interruption_remains_terminal():
+    row = {
+        "error_kind": "candidate_contract_correction_interrupted",
+        "error_code": "CORRECTION_PROVIDER_ERROR",
+        "error": "provider HTTP_400 after 2 attempt(s)",
+        "provider_trace": [
+            {"attempt": 1, "outcome": "schema_invalid"},
+            {"attempt": 2, "outcome": "provider_error", "code": "HTTP_400", "transient": False},
+        ],
+    }
+
+    assert not _is_transient_provider_error(row)
+
+
+def test_unstructured_provider_error_text_cannot_forge_a_deferral():
+    row = {
+        "error_kind": "candidate_contract_error",
+        "correction_attempted": False,
+        "error": "provider HTTP_429 after 2 attempt(s)",
+        "provider_trace": [],
+    }
+
+    assert not _is_transient_provider_error(row)
+
+
+def test_candidate_3_workflow_is_fresh_immutable_and_secret_scoped():
     workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "checkpoint-a-live.yml").read_text(
         encoding="utf-8"
     )
 
-    assert "checkpoint-a-candidate-2-case-${{ matrix.case }}-attempt-*" in workflow
-    assert "checkpoint-a-candidate-2-results-attempt-${{ github.run_attempt }}" in workflow
+    assert "checkpoint-a-candidate-3-case-${{ matrix.case }}-attempt-*" in workflow
+    assert "checkpoint-a-candidate-3-results-attempt-${{ github.run_attempt }}" in workflow
+    assert "checkpoint_a_candidate_3_results_attempt_${GITHUB_RUN_ATTEMPT}.json" in workflow
+    assert "checkpoint-a-candidate-2-case-${{ matrix.case }}-attempt-*" not in workflow
+    assert "checkpoint_a_candidate_2_results_attempt" not in workflow
     assert "checkpoint-a-case-${{ matrix.case }}" not in workflow
     assert "overwrite: true" not in workflow
     assert workflow.count("ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}") == 2
@@ -363,11 +430,11 @@ def test_candidate_2_workflow_is_fresh_immutable_and_secret_scoped():
 def test_typed_a_receipt_enforces_frozen_candidate_dataset_and_thresholds():
     values = {
         "verification_mode": "FROZEN_AGGREGATE",
-        "evidence_reference": "github-actions://owner/repo/runs/1/candidate-2",
+        "evidence_reference": "github-actions://owner/repo/runs/1/candidate-3",
         "aggregate_sha256": "a" * 64,
         "manifest_sha256": "b" * 64,
         "source_revision": "c" * 40,
-        "candidate_version": "A-CANDIDATE-2",
+        "candidate_version": "A-CANDIDATE-3",
         "dataset_sha256": FROZEN_DATASET_SHA256,
         "total_cases": 80,
         "full_frozen_gate_run": True,
@@ -381,7 +448,7 @@ def test_typed_a_receipt_enforces_frozen_candidate_dataset_and_thresholds():
         ),
     }
     receipt = CheckpointAEvidenceReceipt(**values)
-    assert receipt.candidate_version == "A-CANDIDATE-2"
+    assert receipt.candidate_version == "A-CANDIDATE-3"
 
     with pytest.raises(ValidationError, match="case-pass threshold"):
         CheckpointAEvidenceReceipt(**{

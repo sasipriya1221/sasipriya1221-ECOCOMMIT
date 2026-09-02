@@ -21,9 +21,11 @@ provider.
 
 Checkpoint A remains not passed. Candidate 1 is mathematically failed. A later
 remote score-recovery experiment at run `33556907712` ended cancelled after
-seven transient provider deferrals and is not the locally frozen Candidate 2;
-its automatic maximum-score filling was rejected rather than promoted. Candidate
-2 remains locally validated and unevaluated.
+seven transient provider deferrals and is not an eligible frozen candidate; its
+automatic maximum-score filling was rejected rather than promoted. Candidate 2
+then ran as `33583323178`, but two attempts remained incomplete and exposed a
+general provider/correction resumability defect. Candidate 3 is the runner-only
+correction; it is locally focused-tested and has not been pushed or evaluated.
 
 ## Why ECOCOMMIT
 
@@ -75,7 +77,7 @@ matrix is in [Threat Model](docs/THREAT_MODEL.md).
 | Checkpoint | Engineering state | Acceptance state |
 |---|---|---|
 | A — offline specification/contracts | **BUILT + PASSED (offline scope)** | Frozen invariants retained |
-| A — live intent/fidelity gate | **Candidate 1 failed; intervening remote experiment cancelled; Candidate 2 built + locally validated, not evaluated** | **NOT PASSED** |
+| A — live intent/fidelity gate | **Candidate 1 failed; Candidate 2 incomplete; Candidate 3 runner correction locally focused-tested, not evaluated** | **NOT PASSED** |
 | B — deterministic economic safety | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | C — comparative benchmark harness | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | D — API/UI/audit/operations | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |

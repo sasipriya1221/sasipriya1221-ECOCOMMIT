@@ -20,16 +20,33 @@ from ecocommit.validator import FidelityValidator
 def _is_transient_provider_error(row: dict) -> bool:
     if row.get("error_kind") == "transient_provider_error":
         return True
-    error_text = str(row.get("error", ""))
-    transient_markers = (
-        "provider HTTP 429",
-        "provider HTTP 500",
-        "provider HTTP 502",
-        "provider HTTP 503",
-        "provider HTTP 504",
-        "provider transport error",
-    )
-    return any(marker in error_text for marker in transient_markers)
+
+    provider_trace = row.get("provider_trace")
+    transient_provider_interruption = any(
+        isinstance(item, dict)
+        and item.get("outcome") == "provider_error"
+        and item.get("transient") is True
+        for item in provider_trace
+    ) if isinstance(provider_trace, list) else False
+
+    # A transient provider interruption does not become semantic evidence merely
+    # because it happened while correcting a schema-invalid candidate. Likewise,
+    # if transient provider retries consumed the bounded request budget before the
+    # first schema correction could run, that row did not receive the candidate's
+    # promised correction opportunity and must remain resumable infrastructure.
+    if transient_provider_interruption:
+        if row.get("error_kind") == "candidate_contract_correction_interrupted":
+            return True
+        if (
+            row.get("error_kind") == "candidate_contract_error"
+            and row.get("correction_attempted") is False
+        ):
+            return True
+
+    # Candidate 3 starts a fresh manifest and therefore has no reason to trust
+    # legacy free-form error text. Only typed error fields plus a redacted,
+    # structured transient trace can make a row resumable.
+    return False
 
 
 def _load_resume(

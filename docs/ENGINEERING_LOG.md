@@ -986,6 +986,68 @@ This verifies local normalization, redaction, and blocking behavior. It does not
 prove the public remote contains the local commits, replace explicit push
 authorization, or create public CI/attestation evidence.
 
+## 2026-09-02 — Candidate 2 terminalized transient correction interruptions
+
+### What broke
+
+The authorized fast-forward push advanced public `main` to
+`c52884eb455c1858608d430aa2d14b1d31a9fa12`; Offline Regression run
+`33583217298` passed, and frozen Candidate 2 run `33583323178` started with the
+configured Groq secret. Attempt 1 completed all 80 case jobs but produced only
+two aggregate rows. Seventy-eight case jobs correctly exited 75 and uploaded
+`transient_provider_error` deferrals. The two job-success rows both failed:
+
+- `C002` was diagnosed as `provider HTTP_429 after 2 attempt(s)`, but was retained
+  because a transient provider failure that interrupted schema correction was
+  relabelled `candidate_contract_correction_interrupted`; the shard recognized
+  only a pure transient error kind or older space-form error text.
+- `C042` was diagnosed as candidate-contract invalid before correction could be
+  attempted. A transient provider retry and schema correction shared one request
+  budget, so the row could reach the final attempt without receiving the bounded
+  correction opportunity promised by the candidate protocol.
+
+The aggregate therefore reported zero passes, two terminal rows, 78 missing
+rows, and no receipt. A failed-jobs-only rerun correctly preserved successful
+jobs and retried the 78 code-75 deferrals, but it cannot repair terminal rows
+whose job status was already success. Job success was never presented as a
+semantic pass. The immutable attempt-1 observation and GitHub-published artifact
+digests are retained in `evidence/checkpoint-a-candidate-2-attempt-1.json`.
+
+### How it was fixed
+
+- Version the runner-only correction as `A-CANDIDATE-3`; keep the dataset digest,
+  Qwen provider/model settings, prompt, strict contract schema, evaluator, and
+  all four thresholds unchanged.
+- At shard classification, inspect the redacted structured provider trace. A
+  transient provider interruption during correction remains resumable.
+- Also keep a schema-invalid row resumable when no correction ran and its trace
+  proves a transient provider retry consumed the request budget. This lets the
+  case receive its promised correction opportunity on a later immutable attempt.
+- Preserve non-transient provider rejections and completed bounded correction
+  failures as terminal evidence.
+- Remove the legacy free-form error-message fallback: only typed error fields and
+  a structured transient trace may authorize a resumable deferral.
+- Move every case/result artifact and the production receipt to a fresh Candidate
+  3 namespace so Candidate 1/2 rows cannot be mixed into the new manifest.
+- Add direct regressions for transient correction interruption, pre-correction
+  retry exhaustion, completed correction failure, non-transient interruption,
+  and the Candidate 3 workflow namespace.
+
+### Regression evidence and limitation
+
+Candidate 2 attempt 2 completed failed. It added one proven pass (`A004`) and one
+additional pre-correction error (`C004`), leaving a cumulative one pass, three
+infrastructure/runner-contaminated error rows, 76 provider deferrals, and no
+receipt. Its immutable record is
+`evidence/checkpoint-a-candidate-2-attempt-2.json`; no further Candidate 2 rerun
+is justified because successful contaminated jobs cannot be repaired by the
+failed-jobs-only path.
+
+The Candidate 3/A/provider/evidence scope passes **67/67** and the complete
+working-tree suite passes **392/392**. The frozen dataset, prompt, model settings,
+evaluator, schemas, and thresholds were not changed. Candidate 3 has not been
+pushed or evaluated, so Checkpoint A remains not passed.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

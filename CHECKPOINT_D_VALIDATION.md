@@ -190,7 +190,8 @@ development validation is promoted as final submission evidence.
 
 ## Remaining blockers
 
-- Candidate 1's frozen A gate is mathematically failed; corrected Candidate 2 has
+- Candidate 1's frozen A gate is mathematically failed; Candidate 2 is incomplete
+  after exposing a runner classification defect; corrected Candidate 3 has
   not been remotely evaluated.
 - Checkpoints B and C are locally validated but not passed.
 - The default local server deliberately loads no authoritative checkpoint

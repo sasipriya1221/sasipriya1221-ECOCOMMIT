@@ -20,7 +20,7 @@ class CheckpointAMetrics(BaseModel):
 
 
 class CheckpointAEvidenceReceipt(BaseModel):
-    """Typed proof that the frozen Candidate 2 aggregate passed its real gate.
+    """Typed proof that the current frozen Candidate 3 aggregate passed its real gate.
 
     Production receipts are emitted only by the strict aggregate verifier. The
     explicitly separate TEST_FIXTURE mode exists for local interface tests and
@@ -45,8 +45,8 @@ class CheckpointAEvidenceReceipt(BaseModel):
     @model_validator(mode="after")
     def passed_receipt_is_coherent(self):
         if self.verification_mode == "FROZEN_AGGREGATE":
-            if self.candidate_version != "A-CANDIDATE-2":
-                raise ValueError("production A receipt must identify Candidate 2")
+            if self.candidate_version != "A-CANDIDATE-3":
+                raise ValueError("production A receipt must identify Candidate 3")
             if self.dataset_sha256 != FROZEN_A_DATASET_SHA256:
                 raise ValueError("production A receipt dataset digest is not frozen")
         if self.total_cases != 80 or not self.full_frozen_gate_run or not self.gate_passed:

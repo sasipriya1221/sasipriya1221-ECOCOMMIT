@@ -25,7 +25,9 @@ webhook delivery, reconciliation, or settlement was executed.
   thresholds together.
 - Retained failure: Candidate 1, run `33493409547` attempt 15, is mathematically
   failed at a maximum 69/80. Its tracked failure manifest and aggregate/archive
-  digests are in `PROGRESS.md`; corrected Candidate 2 is not evaluated.
+  digests are in `PROGRESS.md`. Candidate 2 run `33583323178` is incomplete and
+  exposed a resumability-classification defect; corrected Candidate 3 is not
+  evaluated.
 - Do not insert: smoke results, partial aggregates, provider-deferred rows,
   synthetic fixtures, or metrics calculated from an incomplete set.
 - Final artifact reference: **BLOCKED — not available**

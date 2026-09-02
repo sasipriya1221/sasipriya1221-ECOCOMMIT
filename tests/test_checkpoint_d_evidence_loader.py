@@ -62,7 +62,7 @@ def _a_receipt(*, fixture: bool = False) -> CheckpointAEvidenceReceipt:
         "aggregate_sha256": "1" * 64,
         "manifest_sha256": "2" * 64,
         "source_revision": REVISION,
-        "candidate_version": "TEST-FIXTURE" if fixture else "A-CANDIDATE-2",
+        "candidate_version": "TEST-FIXTURE" if fixture else "A-CANDIDATE-3",
         "dataset_sha256": "0" * 64 if fixture else FROZEN_A_DATASET_SHA256,
         "total_cases": 80,
         "full_frozen_gate_run": True,

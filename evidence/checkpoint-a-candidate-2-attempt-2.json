@@ -1,0 +1,120 @@
+{
+  "schema_version": "A.CANDIDATE_2_ATTEMPT_OBSERVATION.1",
+  "observed_at_utc": "2026-09-02T03:14:45Z",
+  "status": "FAILED_INCOMPLETE_RESUMPTION_WITH_RUNNER_CLASSIFICATION_DEFECT",
+  "promotion_eligible": false,
+  "github": {
+    "repository": "sasipriya1221/sasipriya1221-ECOCOMMIT",
+    "run_id": "33583323178",
+    "run_number": 11,
+    "run_attempt": 2,
+    "event": "workflow_dispatch",
+    "head_sha": "c52884eb455c1858608d430aa2d14b1d31a9fa12",
+    "rerun_requested_at": "2026-09-02T02:51:40Z",
+    "completed_at": "2026-09-02T03:13:00Z",
+    "conclusion": "failure",
+    "run_url": "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33583323178"
+  },
+  "resumption": {
+    "mode": "FAILED_JOBS_ONLY",
+    "frozen_inputs_changed": false,
+    "successful_attempt_1_jobs_preserved": true,
+    "attempt_1_failed_case_jobs_retried": 78,
+    "new_terminal_case_jobs": 2,
+    "remaining_exit_75_provider_deferrals": 76,
+    "further_rerun_justified": false,
+    "reason": "The Candidate 2 runner has already retained three infrastructure-contaminated rows as terminal successful jobs, so additional failed-job reruns cannot produce a clean promotable aggregate."
+  },
+  "latest_job_observation": {
+    "total_jobs": 82,
+    "completed_success": 5,
+    "completed_failure": 77,
+    "regression": {
+      "conclusion": "success"
+    },
+    "case_matrix": {
+      "total": 80,
+      "successful_jobs_across_attempts": 4,
+      "failed_exit_75_provider_deferrals": 76,
+      "successful_job_case_indices": [1, 3, 41, 53],
+      "new_attempt_2_successful_job_case_indices": [3, 53]
+    },
+    "aggregate": {
+      "conclusion": "failure",
+      "full_frozen_gate_run": false,
+      "terminal_rows": 4,
+      "missing_case_rows": 76,
+      "passed_cases": 1,
+      "case_pass_rate": 0.0,
+      "autonomous_coverage": 0.0,
+      "selective_semantic_reliability": 0.0,
+      "ambiguous_clarification_accuracy": 0.0,
+      "checkpoint_a_passed": false,
+      "receipt_emitted": false
+    }
+  },
+  "row_observation": {
+    "proven_passes": [
+      {
+        "case_index": 53,
+        "id": "A004",
+        "job_log_signal": "completed with passed=true"
+      }
+    ],
+    "infrastructure_or_runner_contaminated_errors": [
+      {
+        "case_index": 1,
+        "id": "C002",
+        "category": "provider HTTP_429 after 2 attempt(s)"
+      },
+      {
+        "case_index": 3,
+        "id": "C004",
+        "category": "candidate contract invalid before correction could be attempted (clauses.2.norma"
+      },
+      {
+        "case_index": 41,
+        "id": "C042",
+        "category": "candidate contract invalid before correction could be attempted (instruction"
+      }
+    ],
+    "semantic_failure_count_claimed": 0,
+    "classification_basis": "C002 is a transient provider error terminalized during correction. C004 and C042 explicitly failed before correction could be attempted, so neither received the bounded correction opportunity promised by Candidate 2. Protected contract payloads were not available to the model and no benchmark-specific semantic diagnosis is claimed."
+  },
+  "artifacts": {
+    "content_download": "AUTHENTICATED_FILE_REFERENCE_RETURNED_BUT_CONTENT_NOT_MODEL_ACCESSIBLE",
+    "aggregate_logs_inspected": true,
+    "items": [
+      {
+        "id": "9829696174",
+        "name": "checkpoint-a-candidate-2-case-3-attempt-2",
+        "size_in_bytes": 1684,
+        "archive_sha256": "ff56957a58d307f90bc15218f9ef4f6e0750089da8f3b35f99fee4d6e62df37c"
+      },
+      {
+        "id": "9829980525",
+        "name": "checkpoint-a-candidate-2-case-53-attempt-2",
+        "size_in_bytes": 2125,
+        "archive_sha256": "12669eedea42eb58ee5a652cb0fad296b9bada098e4bcf81f385a6c216a358b8"
+      },
+      {
+        "id": "9830140366",
+        "name": "checkpoint-a-candidate-2-results-attempt-2",
+        "size_in_bytes": 3523,
+        "archive_sha256": "52540bbe48f22dbf6aeaf8cfe05fc51b575a6a98662800c3e85863f0ebc57bd8"
+      }
+    ],
+    "expires_at": "2026-12-01T02:51:40Z"
+  },
+  "non_claims": {
+    "complete_80_case_evaluation": false,
+    "checkpoint_a_pass": false,
+    "case_pass_rate_estimate_from_partial_rows": false,
+    "provider_deferred_cases_are_semantic_failures": false,
+    "c002_c004_c042_are_clean_semantic_failures": false,
+    "artifact_payloads_locally_rehashed_or_fully_inspected": false,
+    "candidate_3_evaluated": false,
+    "thresholds_changed": false,
+    "frozen_cases_changed": false
+  }
+}

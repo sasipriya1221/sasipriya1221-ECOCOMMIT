@@ -135,7 +135,7 @@ a source push cannot independently authorize a credentialed call.
 
 | Gate | Evidence and result | Status |
 |---|---|---:|
-| A prerequisite | Candidate 1 in run `33493409547` is mathematically failed at attempt 15: 21 passes, 11 terminal contract failures, 48 provider deferrals, maximum 69/80. Candidate 2 is locally corrected but has not run. | **FAILED / NEW CANDIDATE NOT EVALUATED** |
+| A prerequisite | Candidate 1 in run `33493409547` is mathematically failed at attempt 15: 21 passes, 11 terminal contract failures, 48 provider deferrals, maximum 69/80. Candidate 2 run `33583323178` is incomplete and exposed a runner classification defect. Candidate 3 is locally corrected but has not run. | **FAILED / NEW CANDIDATE NOT EVALUATED** |
 | B1 — Policy Class Mapper | Exhaustive mapping and fail-closed A admission tests pass | **LOCAL PASS** |
 | B2 — Evidence Registry | Authority, identity, version, time, freshness, revocation, subject, and exact-claim adversarial tests pass | **LOCAL PASS** |
 | B3 — Evidence-to-Exposure Policy | Only trusted caps and authoritative exact claims determine exposure | **LOCAL PASS** |

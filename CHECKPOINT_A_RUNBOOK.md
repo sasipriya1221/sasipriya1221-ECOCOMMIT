@@ -1,8 +1,9 @@
 # Checkpoint A Live Evaluation Runbook
 
 Checkpoint A is intentionally blocked unless a real configured model is called.
-Mocked provider fixtures do not count. Candidate 1 is permanently failed; this
-runbook now describes the fresh `A-CANDIDATE-2` evaluation.
+Mocked provider fixtures do not count. Candidate 1 is permanently failed and
+Candidate 2 exposed a provider/correction resumability defect; this runbook now
+describes the fresh runner-only correction `A-CANDIDATE-3`.
 
 ## Secure credential setup
 
@@ -28,28 +29,41 @@ Current committed live configuration:
 
 The model, endpoint, reasoning effort, structured-output mode, completion budget,
 prompt, schema, evaluator, runner, criteria, dataset, and source revision are
-bound into the Candidate 2 evidence manifest. Changing any of them creates a
+bound into the Candidate 3 evidence manifest. Changing any of them creates a
 different candidate and conflicting artifacts are rejected.
 
-Candidate 2 is a fresh 80-case evaluation. Never place a Candidate 1 artifact in
-its resume directory. Candidate 1's attempt-15 failure is retained in
+Candidate 3 is a fresh 80-case evaluation. Never place a Candidate 1 or Candidate
+2 artifact in its resume directory. Candidate 1's attempt-15 failure is retained in
 `evidence/checkpoint-a-candidate-1-failure.json`.
 
-Before dispatching Candidate 2, confirm obsolete run `33493409547` is no longer
+Candidate 2 genuinely ran as workflow run `33583323178` from source
+`c52884eb455c1858608d430aa2d14b1d31a9fa12`. Attempt 1 retained 78 code-75
+provider deferrals and only two terminal rows; neither terminal row passed. One
+was a provider HTTP 429 that the runner incorrectly terminalized after a
+correction interruption, while the other was schema-invalid before its promised
+correction could run. The immutable observation is
+`evidence/checkpoint-a-candidate-2-attempt-1.json`. A failed-jobs-only attempt 2
+added one proven pass and one more pre-correction error but left 76 provider
+deferrals; its terminal observation is
+`evidence/checkpoint-a-candidate-2-attempt-2.json`. Candidate 3 changes only the
+runner classification and fresh artifact namespace; it does not change the
+dataset, prompt, evaluator, model configuration, schemas, or thresholds.
+
+Before dispatching Candidate 3, confirm obsolete run `33493409547` is no longer
 active. It was observed queued as Candidate 1 attempt 27 after Candidate 1 had
 already become mathematically incapable of passing. Public metadata checked at
 `2026-09-02T02:23:34Z` reports it completed with conclusion `failure` at attempt
 27, so no cancellation is currently required. Do not rerun it and do not use
 any later artifact from it to replace the retained attempt-15 failure.
 
-Remote run `33556907712` is also not a Candidate 2 attempt. It used an earlier
+Remote run `33556907712` is also not a Candidate 2 or Candidate 3 attempt. It used an earlier
 runner plus a rejected score-filling experiment, produced only partial provider
 deferrals before its retained attempt-1 cancellation, and failed aggregation.
 Later reruns do not change its identity; public metadata checked at
 `2026-09-02T02:23:34Z` reports conclusion `failure` at attempt 6. Its observations
 are retained separately in `evidence/checkpoint-a-run-33556907712-cancelled.json`
 and `evidence/checkpoint-a-pre-dispatch-run-status.json`; none of its rows or
-artifacts may enter a Candidate 2 resume directory.
+artifacts may enter a Candidate 3 resume directory.
 
 ## Preflight
 
@@ -107,11 +121,14 @@ and every required clause field. The local runtime may recompute exact source
 offsets for model-supplied text, but it does not manufacture missing economic
 fields or graph edges. One schema-invalid candidate receives at most one bounded
 model correction request. A second invalid candidate is terminal. If the
-correction request itself ends in a provider error, both facts are retained and
-the row is terminal rather than misclassified as a pure provider deferral.
+correction request itself ends in a transient provider error, both facts are
+retained but the case remains a provider deferral rather than becoming terminal
+semantic evidence. A non-transient provider rejection remains terminal.
 If earlier provider retries exhaust the request budget before the first invalid
 candidate can be corrected, the row explicitly records that correction was not
-attempted; it is never described as a failed correction.
+attempted; when its trace proves a transient provider interruption, the case is
+resumable so it can receive the promised correction opportunity. A completed
+bounded correction that remains schema-invalid is terminal.
 
 Provider envelopes and candidate content are decoded as bounded strict JSON.
 Duplicate keys, NaN/Infinity, invalid Unicode scalar values, and excessive
@@ -129,18 +146,19 @@ provider body or credential is retained. If one remains unavailable, that case
 records an infrastructure error without a semantic row and exits nonzero.
 Redirect rejection is non-transient and retains only the redacted failure code.
 
-Resume Candidate 2 by re-running only failed jobs in the same workflow run.
+Resume Candidate 3 by re-running only failed jobs in the same workflow run.
 Every attempt uses a unique artifact name. The runner accepts only rows with the
-same manifest and case digests, skips pure transient provider deferrals, permits
+same manifest and case digests, skips transient provider deferrals even when they
+interrupt correction or consume the pre-correction request budget, permits
 identical duplicate rows, and rejects conflicts. Completed terminal rows are
-immutable. Non-transient provider responses, interrupted corrections, and local
-contract-validation failures are terminal evidence. Provider failures are never
-replaced with fixtures.
+immutable. Non-transient provider responses, completed correction failures, and
+local contract-validation failures are terminal evidence. Provider failures are
+never replaced with fixtures.
 
 Aggregation must read every shard through the strict verifier. It recomputes
 contracts, validator reports, semantic decisions, metrics, missing IDs, and the
 exact frozen gate. A passing receipt binds the result artifact SHA-256, manifest,
-source revision, Candidate 2 identity, frozen dataset, and metrics; a partial or
+source revision, Candidate 3 identity, frozen dataset, and metrics; a partial or
 failed aggregate cannot emit that receipt.
 
 Free-tier token-per-day exhaustion can make a smoke artifact mostly operational rather than semantic evidence. Such an artifact must still be retained and reported, but it must not be presented as an estimate of model accuracy when most cases never received a model result.

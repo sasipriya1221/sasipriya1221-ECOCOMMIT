@@ -83,13 +83,18 @@ The live runner calls an allowlisted HTTPS OpenAI-compatible provider, validates
 every model-supplied required field before defaults, permits one bounded schema
 correction, scores frozen cases, and writes redacted per-attempt trace metadata,
 including transient retries that later recover. Terminal schema evidence records
-whether the correction request actually ran. Candidate 2 binds rows to dataset/
+whether the correction request actually ran. Candidate 3 binds rows to dataset/
 case/prompt/schema/evaluator/runner/criteria/provider/source digests and
 recomputes semantic results during aggregation. Immutable attempt artifacts
-support resume of pure provider deferrals and reject conflicts.
+support resume of provider deferrals, including a transient outage that
+interrupts correction or consumes the request budget before correction, and
+reject conflicts. Completed correction failures and non-transient provider
+errors remain terminal.
 
-Candidate 1 is mathematically failed. Candidate 2 is locally validated but has
-not run remotely, so A has not passed the frozen gate.
+Candidate 1 is mathematically failed. Candidate 2 ran remotely but two attempts
+remained incomplete and exposed the correction/deferral classification defect. Candidate
+3 is the runner-only correction and has not run remotely, so A has not passed the
+frozen gate.
 
 ### Deterministic B path
 
@@ -246,7 +251,7 @@ an exact provider-side binding match.
 
 | Area | Implementation |
 |---|---|
-| A contracts/interpretation | `contracts.py`, `interpreter.py`, `validator.py`, `evaluation.py`, Candidate 2 protocol scripts |
+| A contracts/interpretation | `contracts.py`, `interpreter.py`, `validator.py`, `evaluation.py`, Candidate 3 protocol scripts |
 | A-to-B admission | `checkpoint_a_evidence.py`, `checkpoint_b_integration.py` |
 | B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `durable.py`, `payments.py`, `razorpay.py`, `razorpay_checkout.py`, `webhook.py`, `reconciliation.py` |
 | C benchmark | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py`, `checkpoint_c_final.py` |
