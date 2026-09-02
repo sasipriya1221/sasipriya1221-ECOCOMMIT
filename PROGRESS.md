@@ -17,7 +17,7 @@ Status vocabulary is strict:
 | B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | Passing A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
-| E — repository/submission readiness | **PUBLIC MAIN + OFFLINE CI + APACHE-2.0; NOT PASSED** | A–D final evidence, independent reproduction, final screenshots, and final five-minute video |
+| E — repository/submission readiness | **PUBLIC MAIN + OFFLINE CI + APACHE-2.0 + INDEPENDENT REPRODUCTION RETAINED; NOT PASSED** | A–D final evidence, final source-bound screenshots, and final five-minute video |
 
 Acceptance remains sequential and evidence-gated even when engineering proceeds in parallel.
 
@@ -164,34 +164,15 @@ The repository contains:
 - submission-evidence slots and five-minute pitch outline; and
 - a canonical top-level `LICENSE` using **Apache License 2.0**, with the owner decision recorded in `docs/LICENSE_DECISION.md` and package metadata aligned.
 
-The B8 remediation source `36bd3b28…` passed public Offline Regression run `33663013490` with **471/471 tests**. Subsequent documentation-only truth updates also trigger the same public regression and must remain green before they are treated as the current release head.
+Independent clean-machine reproduction is now retained rather than merely implemented. Source `3ab6e12193e578c76bdb2d03a0d39a837af0d353` passed exact-source Offline Regression run `33686790311`, then Independent Clean-Machine Reproduction run `33686844451` independently installed hash-locked dependencies on Ubuntu 24.04/Python 3.11, passed **471/471 tests** and **8/8 repository readiness checks**, verified exact public-main binding, and uploaded artifact `9868448162` (`checkpoint-e-independent-reproduction-33686844451`). The typed self-digesting reproduction receipt SHA-256 is `d968277470ea659de65b562070715e86003e05ae09ab0e132bab06cbf3c236a7`; provider calls and fixture promotion were both false. The workflow repeats after each successful future `main` Offline Regression so later release heads receive source-exact reproduction evidence as well.
 
-Final E blockers are still:
+Final E blockers are now:
 
 1. passing Checkpoint A evidence;
 2. passing Checkpoint B fresh Test lifecycle evidence;
 3. passing Checkpoint C one-shot comparison;
 4. passing Checkpoint D hosted/integrated evidence;
-5. independent clean-machine reproduction receipt;
-6. final source-bound screenshots; and
-7. final five-minute demo video.
+5. final source-bound screenshots; and
+6. final five-minute demo video.
 
 **Checkpoint E remains BLOCKED / NOT PASSED.**
-
----
-
-## Non-claims and hard safety boundary
-
-- Candidate 1 did not pass and cannot be retried into a mathematical pass.
-- The excluded score-recovery experiment is not Candidate 2/3 evidence.
-- Candidate 2 did not pass and is not resumable into a promoted receipt.
-- Candidate 3 currently has only 18 terminal rows; its partial metrics are not final metrics.
-- Provider deferrals are not semantic failures, and semantic/contract failures are not relabelled as provider deferrals.
-- The prior Razorpay Test authorization is retained but non-promotable because it predates the required provenance.
-- `SIMULATED_LOCAL` moves no real money.
-- Razorpay integration is Test Mode only; no Live Mode or real-money evidence is claimed.
-- Synthetic B/C/D fixtures are not provider/final evidence.
-- No final comparator/TEL claim, hosted production claim, independent reproduction, screenshot proof, or video proof is fabricated.
-- Acceptance thresholds and frozen A science are not lowered to force a pass.
-
-The project remains evidence-calibrated: missing proof stays visible as **BLOCKED** instead of being converted into a claim.
