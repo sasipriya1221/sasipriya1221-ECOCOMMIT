@@ -11,22 +11,28 @@ separately gated held-out run.
 
 The current tree also contains a separate final preregistration/evidence contract.
 It requires upstream receipt hashes, held-out suite/case/cost/metric hashes,
-candidate revision, comparator choice, TEL margin, completion/reliability floors,
-latency/error/missing-data/irreversible-loss ceilings, tie handling, rationale,
-and statistical method before any outcome can validate. It structurally refuses
-fixture inputs and simulated cost or latency. No real values or outcomes have
-been filled into that contract.
+candidate revision, candidate/comparator execution-protocol hashes, a separately
+retained comparator-selection receipt, TEL margin, autonomous-coverage and
+completion/reliability floors, latency/error/missing-data/irreversible-loss
+ceilings, tie handling, rationale, and statistical method before any outcome can
+validate. It structurally refuses fixture inputs and simulated cost or latency.
+No real values or outcomes have been filled into that contract.
 
 ### Current boundary-hardening addendum
 
 The current input loader rejects oversized, empty, symlinked, duplicate-key,
 non-finite, invalid-Unicode, over-complex, and non-object plan/suite JSON before
-Pydantic validation. This closes parser-differential ambiguity without changing
-any frozen fixture or final decision rule. The current focused C suite passes
-**47/47** and the full deterministic suite passes **369/369**; a separate
-no-hardlink clone at `60c85f0b75574007a7bf1de9a8b4be7214c69a75`
-passes the same suite and static/readiness checks. This remains same-host local
-evidence, not a final comparison or independent reproduction.
+Pydantic validation. A deterministic one-shot runner requires paired candidate
+and comparator execution receipts bound to one nonce, attempt 1, the exact
+registration/suite/row manifests, preregistered execution protocols, comparator
+selection, complete case count, and exact GitHub Actions artifact references. It
+semantically re-scores all rows, derives TEL and every gate metric internally,
+and atomically publishes one write-once evidence file; identical replay is
+byte-stable and conflicting output fails closed. This closes parser,
+provenance, cherry-picking, and partial-publication gaps without choosing any
+real input, comparator, weight, or threshold. The current focused C suite passes
+**64/64** and the full deterministic suite passes **465/465**. This remains local
+framework evidence, not a final comparison or independent reproduction.
 
 ## Validation boundary
 
@@ -98,7 +104,8 @@ one mutable factory.
 | C10 — benchmark integrity | PASS (local) | Exact baseline×case coverage is enforced; replay coverage must equal the suite; source/response digests are checked where retained; errors become explicit rows; every case result and aggregate summary is semantically recomputed from the frozen plan/suite; tampering tests pass. |
 | C11 — validated integrated ECOCOMMIT candidate | BLOCKED | Checkpoints A and B are explicit prerequisites and are not both validated. The preliminary runner consumes no live A output and has no ECOCOMMIT candidate comparator. |
 | C12 — final held-out comparison | BLOCKED | The preliminary runner rejects every `FINAL_HELD_OUT` case and cannot mark C passed or publish a final comparison. |
-| C13 — quantitative acceptance decision rule | BLOCKED | No final TEL improvement margin/tie rule, legitimate-completion floor, latency ceiling, gate consequence/tolerance for error or missing-latency rows, or statistical decision method is frozen. These must be preregistered before any final outcomes are observed; no threshold is invented here. |
+| C13 — quantitative acceptance decision rule | BLOCKED | No final TEL improvement margin/tie rule, autonomous-coverage/reliability/legitimate-completion floors, latency/irreversible-loss ceilings, error or missing-latency tolerance, or statistical decision method is frozen. These must be preregistered before any final outcomes are observed; no threshold is invented here. |
+| C14 — one-shot execution provenance | PASS (framework only) / BLOCKED (real receipts) | Candidate/comparator receipts must share one execution nonce, carry attempt 1, bind complete raw manifests and preregistered protocols/selection, and name exact retained Actions artifacts. No authentic final receipt exists. |
 
 ## Defects found and fixed
 
@@ -141,6 +148,16 @@ one mutable factory.
 16. Replaced permissive plan/suite JSON loading with a bounded nonsymlinked
     strict decoder so duplicate keys and non-standard JSON cannot be normalized
     into a different frozen input.
+17. Added the missing autonomous-coverage floor to the final acceptance rule, so
+    a low-action candidate cannot pass solely on TEL/reliability outcomes.
+18. Bound candidate and comparator rows to separately frozen execution protocols
+    and a comparator-selection receipt, preventing post-outcome protocol or
+    comparator substitution.
+19. Added paired self-digesting attempt-1 execution receipts with one shared
+    nonce, complete case counts, exact manifest hashes, and strict Actions
+    artifact references; the held-out artifact revalidates all bindings.
+20. Replaced overwrite-prone final output with atomic exclusive publication and
+    byte-identical replay, with regression coverage for conflict handling.
 
 ## Remaining blockers
 
@@ -155,7 +172,10 @@ one mutable factory.
 - Apply the same independently frozen pre-output registration and separate output
   manifest discipline to the real prompt-guardrail comparator.
 - Preregister the comparator-selection method and establish which dynamic
-  deterministic workflow is strongest without using final held-out outcomes.
+  deterministic workflow is strongest without using final held-out outcomes;
+  retain and hash its independent selection receipt.
+- Freeze and retain the exact candidate and comparator execution protocols
+  before either final output exists.
 - Preregister final TEL weights and economic-cost sources; the synthetic fixture
   values are not transferable to a claim.
 - Before observing any final outcomes, preregister the quantitative C acceptance
@@ -168,8 +188,9 @@ one mutable factory.
   validation wheels, but this is not independent reproduction.
 - Obtain genuine passing A and B evidence and a version-bound integrated candidate.
 - After those criteria are frozen, execute the separately gated final-held-out
-  comparison once, retain all error rows/artifacts, and apply the preregistered
-  decision rule without tuning.
+  comparison once under one execution nonce, retain both complete raw manifests
+  plus their attempt-1 execution receipts, and apply the preregistered decision
+  rule without tuning.
 
 ## PASS / BLOCKED / FAIL rule
 

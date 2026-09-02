@@ -1112,8 +1112,15 @@ class RazorpayWebhookVerifier:
     """Verify the raw webhook body before parsing it."""
 
     def __init__(self, secret: str):
-        if not secret or any(character in secret for character in "\r\n"):
-            raise RazorpayConfigurationError("Razorpay webhook secret is required")
+        if (
+            not isinstance(secret, str)
+            or len(secret.encode("utf-8")) < 32
+            or len(secret.encode("utf-8")) > 256
+            or any(ord(character) < 33 or ord(character) > 126 for character in secret)
+        ):
+            raise RazorpayConfigurationError(
+                "Razorpay webhook secret must contain 32-256 visible ASCII bytes"
+            )
         self._secret = secret.encode("utf-8")
 
     @classmethod
@@ -1122,7 +1129,17 @@ class RazorpayWebhookVerifier:
         environ: Mapping[str, str] | None = None,
     ) -> RazorpayWebhookVerifier:
         source = os.environ if environ is None else environ
-        return cls(source.get("RAZORPAY_WEBHOOK_SECRET", ""))
+        webhook_secret = source.get("RAZORPAY_WEBHOOK_SECRET", "")
+        api_secret = source.get("RAZORPAY_KEY_SECRET", "")
+        if (
+            webhook_secret
+            and api_secret
+            and hmac.compare_digest(webhook_secret, api_secret)
+        ):
+            raise RazorpayConfigurationError(
+                "Razorpay webhook and API secrets must be separate"
+            )
+        return cls(webhook_secret)
 
     def __repr__(self) -> str:
         return "RazorpayWebhookVerifier(secret=<redacted>)"

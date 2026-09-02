@@ -29,7 +29,7 @@ from ecocommit.webhook import (
 
 
 NOW = datetime(2026, 9, 2, 12, 0, tzinfo=timezone.utc)
-WEBHOOK_SECRET = "separate-webhook-secret"
+WEBHOOK_SECRET = "separate-webhook-secret-32-bytes-minimum"
 ORDER_ID = "order_Webhook123"
 PAYMENT_ID = "pay_Webhook123"
 REFUND_ID = "rfnd_Webhook123"

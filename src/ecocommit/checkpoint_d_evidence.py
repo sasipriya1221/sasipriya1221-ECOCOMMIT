@@ -14,7 +14,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from ._canonical import sha256_hex
 from .checkpoint_a_evidence import CheckpointAEvidenceReceipt
 from .checkpoint_b_evidence import CheckpointBEvidenceReceipt
-from .checkpoint_c_final import CheckpointCFinalEvidence
+from .checkpoint_c_final import (
+    MAX_FINAL_INPUT_BYTES,
+    CheckpointCFinalHeldOutEvidence,
+)
 from .checkpoint_status import (
     ExecutionMode,
     GateReport,
@@ -126,12 +129,13 @@ class AuthoritativeEvidencePins(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    schema_version: Literal["D.EVIDENCE.PINS.1"] = "D.EVIDENCE.PINS.1"
+    schema_version: Literal["D.EVIDENCE.PINS.2"]
     repository: str = Field(pattern=r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
     integrated_revision: str = Field(pattern=r"^[0-9a-f]{40,64}$")
     checkpoint_a: EvidenceFilePin
     checkpoint_b: EvidenceFilePin
     checkpoint_c: EvidenceFilePin
+    checkpoint_c_schema_version: Literal["C.FINAL.HELD_OUT.EVIDENCE.1"]
     checkpoint_d: EvidenceFilePin | None = None
     pin_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
@@ -150,7 +154,11 @@ class AuthoritativeEvidencePins(BaseModel):
 
     @classmethod
     def create(cls, **values) -> "AuthoritativeEvidencePins":
-        body = {"schema_version": "D.EVIDENCE.PINS.1", **values}
+        body = {
+            "schema_version": "D.EVIDENCE.PINS.2",
+            "checkpoint_c_schema_version": "C.FINAL.HELD_OUT.EVIDENCE.1",
+            **values,
+        }
         return cls(**body, pin_set_sha256=sha256_hex(body))
 
 
@@ -160,7 +168,7 @@ class LoadedAuthoritativeEvidence(BaseModel):
     pins: AuthoritativeEvidencePins
     checkpoint_a: CheckpointAEvidenceReceipt
     checkpoint_b: CheckpointBEvidenceReceipt
-    checkpoint_c: CheckpointCFinalEvidence
+    checkpoint_c: CheckpointCFinalHeldOutEvidence
     checkpoint_d: CheckpointDIntegrationReceipt | None = None
     file_sha256: Mapping[str, str]
 
@@ -208,7 +216,7 @@ class LoadedAuthoritativeEvidence(BaseModel):
                 "C",
                 GateState.PASSED,
                 evidence=f"sha256:{self.pins.checkpoint_c.sha256}",
-                detail="FINAL_COMPARISON_EVIDENCE_PIN_VERIFIED",
+                detail="FINAL_HELD_OUT_RAW_ROW_EVIDENCE_PIN_VERIFIED",
             ),
             "D": GateReport(
                 "D",
@@ -271,7 +279,12 @@ def _decode_json(raw: bytes, *, label: str) -> dict[str, object]:
     return payload
 
 
-def _read_pinned(root: Path, pin: EvidenceFilePin) -> tuple[dict[str, object], str]:
+def _read_pinned(
+    root: Path,
+    pin: EvidenceFilePin,
+    *,
+    max_bytes: int = MAX_EVIDENCE_FILE_BYTES,
+) -> tuple[dict[str, object], str]:
     candidate = root / pin.filename
     if candidate.is_symlink():
         raise AuthoritativeEvidenceError(f"symlinked evidence file is forbidden: {pin.filename}")
@@ -284,7 +297,7 @@ def _read_pinned(root: Path, pin: EvidenceFilePin) -> tuple[dict[str, object], s
         raw = resolved.read_bytes()
     except OSError as exc:
         raise AuthoritativeEvidenceError(f"evidence file is unavailable: {pin.filename}") from exc
-    if not raw or len(raw) > MAX_EVIDENCE_FILE_BYTES:
+    if not raw or len(raw) > max_bytes:
         raise AuthoritativeEvidenceError(f"evidence file size is invalid: {pin.filename}")
     digest = sha256(raw).hexdigest()
     if digest != pin.sha256:
@@ -298,10 +311,11 @@ def load_authoritative_evidence(
     *,
     expected_pins_file_sha256: str,
 ) -> LoadedAuthoritativeEvidence:
-    """Load A/B/C[/D] only through an operator-supplied out-of-band pin.
+    """Load A/B/final-held-out-C[/D] through an out-of-band pin.
 
     Request data is never consulted. Every receipt is hashed before parsing and
-    the semantic cross-links are revalidated after strict schema validation.
+    the semantic cross-links are revalidated after strict schema validation. A
+    legacy aggregate-only C receipt is never authoritative at this boundary.
     """
 
     if len(expected_pins_file_sha256) != 64 or any(
@@ -327,25 +341,28 @@ def load_authoritative_evidence(
         pins = AuthoritativeEvidencePins.model_validate(
             _decode_json(raw_pins, label="pin-set")
         )
-        a_payload, a_sha = _read_pinned(root, pins.checkpoint_a)
-        b_payload, b_sha = _read_pinned(root, pins.checkpoint_b)
-        c_payload, c_sha = _read_pinned(root, pins.checkpoint_c)
-        checkpoint_a = CheckpointAEvidenceReceipt.model_validate(a_payload)
-        checkpoint_b = CheckpointBEvidenceReceipt.model_validate(b_payload)
-        checkpoint_c = CheckpointCFinalEvidence.model_validate(c_payload)
-        checkpoint_d = None
-        file_hashes = {"A": a_sha, "B": b_sha, "C": c_sha}
-        if pins.checkpoint_d is not None:
-            d_payload, d_sha = _read_pinned(root, pins.checkpoint_d)
-            checkpoint_d = CheckpointDIntegrationReceipt.model_validate(d_payload)
-            file_hashes["D"] = d_sha
     except AuthoritativeEvidenceError:
         raise
     except (TypeError, ValueError) as exc:
-        raise AuthoritativeEvidenceError("authoritative evidence schema validation failed") from exc
-
+        raise AuthoritativeEvidenceError(
+            "authoritative evidence pin-set schema validation failed"
+        ) from exc
     if pins.repository != EXPECTED_EVIDENCE_REPOSITORY:
-        raise AuthoritativeEvidenceError("evidence pin set belongs to another repository")
+        raise AuthoritativeEvidenceError(
+            "evidence pin set belongs to another repository"
+        )
+
+    try:
+        a_payload, a_sha = _read_pinned(root, pins.checkpoint_a)
+        b_payload, b_sha = _read_pinned(root, pins.checkpoint_b)
+        checkpoint_a = CheckpointAEvidenceReceipt.model_validate(a_payload)
+        checkpoint_b = CheckpointBEvidenceReceipt.model_validate(b_payload)
+    except AuthoritativeEvidenceError:
+        raise
+    except (TypeError, ValueError) as exc:
+        raise AuthoritativeEvidenceError(
+            "authoritative A/B evidence schema validation failed"
+        ) from exc
     if checkpoint_a.verification_mode != "FROZEN_AGGREGATE":
         raise AuthoritativeEvidenceError("Checkpoint A fixture evidence is forbidden")
     if checkpoint_a.source_revision != pins.integrated_revision:
@@ -354,14 +371,67 @@ def load_authoritative_evidence(
         raise AuthoritativeEvidenceError("Checkpoint B source revision is not integrated")
     if checkpoint_b.checkpoint_a_receipt_sha256 != a_sha:
         raise AuthoritativeEvidenceError("Checkpoint B does not bind the pinned A receipt")
-    if checkpoint_c.upstream.integrated_candidate_revision != pins.integrated_revision:
+
+    try:
+        c_payload, c_sha = _read_pinned(
+            root,
+            pins.checkpoint_c,
+            max_bytes=MAX_FINAL_INPUT_BYTES,
+        )
+        c_schema = c_payload.get("schema_version")
+        if c_schema == "C.FINAL.EVIDENCE.1":
+            raise AuthoritativeEvidenceError(
+                "legacy caller-metric Checkpoint C evidence is forbidden"
+            )
+        if c_schema != pins.checkpoint_c_schema_version:
+            raise AuthoritativeEvidenceError(
+                "Checkpoint C evidence is not the pinned final held-out schema"
+            )
+        checkpoint_c = CheckpointCFinalHeldOutEvidence.model_validate(c_payload)
+    except AuthoritativeEvidenceError:
+        raise
+    except (TypeError, ValueError) as exc:
+        raise AuthoritativeEvidenceError(
+            "authoritative final held-out C evidence schema validation failed"
+        ) from exc
+
+    if checkpoint_c.source_revision != pins.integrated_revision:
         raise AuthoritativeEvidenceError("Checkpoint C source revision is not integrated")
-    if checkpoint_c.upstream.checkpoint_a_receipt_sha256 != a_sha:
+    if (
+        checkpoint_c.registration.upstream.integrated_candidate_revision
+        != pins.integrated_revision
+    ):
+        raise AuthoritativeEvidenceError(
+            "Checkpoint C registration source revision is not integrated"
+        )
+    if checkpoint_c.checkpoint_a_receipt_file_sha256 != a_sha:
         raise AuthoritativeEvidenceError("Checkpoint C does not bind the pinned A receipt")
-    if checkpoint_c.upstream.checkpoint_b_receipt_sha256 != b_sha:
+    if checkpoint_c.checkpoint_b_receipt_file_sha256 != b_sha:
         raise AuthoritativeEvidenceError("Checkpoint C does not bind the pinned B receipt")
+    if checkpoint_c.checkpoint_a_receipt != checkpoint_a:
+        raise AuthoritativeEvidenceError(
+            "Checkpoint C embeds a different Checkpoint A receipt"
+        )
+    if checkpoint_c.checkpoint_b_receipt != checkpoint_b:
+        raise AuthoritativeEvidenceError(
+            "Checkpoint C embeds a different Checkpoint B receipt"
+        )
     if not checkpoint_c.decision.passed:
         raise AuthoritativeEvidenceError("Checkpoint C final decision did not pass")
+
+    checkpoint_d = None
+    file_hashes = {"A": a_sha, "B": b_sha, "C": c_sha}
+    if pins.checkpoint_d is not None:
+        try:
+            d_payload, d_sha = _read_pinned(root, pins.checkpoint_d)
+            checkpoint_d = CheckpointDIntegrationReceipt.model_validate(d_payload)
+            file_hashes["D"] = d_sha
+        except AuthoritativeEvidenceError:
+            raise
+        except (TypeError, ValueError) as exc:
+            raise AuthoritativeEvidenceError(
+                "authoritative D evidence schema validation failed"
+            ) from exc
     if checkpoint_d is not None:
         if checkpoint_d.source_revision != pins.integrated_revision:
             raise AuthoritativeEvidenceError("Checkpoint D source revision is not integrated")

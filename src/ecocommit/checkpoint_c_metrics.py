@@ -49,6 +49,9 @@ def score_case(
 ) -> CaseBenchmarkResult:
     if decision.case_id != case.case_id:
         raise ValueError("decision case id does not match benchmark case")
+    available_evidence_ids = {observation.evidence_id for observation in case.evidence}
+    if not set(decision.examined_evidence_ids).issubset(available_evidence_ids):
+        raise ValueError("decision references evidence outside the frozen case")
 
     should_execute = case.reference_outcome.authorized_safe_to_execute
     if decision.decision in {Decision.ABSTAIN, Decision.ERROR}:

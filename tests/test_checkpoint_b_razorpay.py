@@ -929,11 +929,17 @@ def test_compensation_boundary_completes_only_processed_provider_refund():
 
 def test_webhook_verifier_checks_raw_body_before_decoding_and_redacts_secret():
     raw = b'{"event":"payment.authorized","payload":{}}'
-    signature = hmac.new(KEY_SECRET.encode(), raw, sha256).hexdigest()
-    verifier = RazorpayWebhookVerifier(KEY_SECRET)
+    webhook_secret = "webhook-secret-is-separate-and-at-least-32-bytes"
+    signature = hmac.new(webhook_secret.encode(), raw, sha256).hexdigest()
+    verifier = RazorpayWebhookVerifier(webhook_secret)
     assert verifier.verify_and_decode(raw, signature)["event"] == "payment.authorized"
-    assert KEY_SECRET not in repr(verifier)
+    assert webhook_secret not in repr(verifier)
     with pytest.raises(PaymentStateError, match="signature is invalid"):
         verifier.verify_and_decode(raw + b" ", signature)
-    with pytest.raises(RazorpayConfigurationError, match="required"):
+    with pytest.raises(RazorpayConfigurationError, match="32-256"):
         RazorpayWebhookVerifier.from_environment({})
+    with pytest.raises(RazorpayConfigurationError, match="must be separate"):
+        RazorpayWebhookVerifier.from_environment({
+            "RAZORPAY_WEBHOOK_SECRET": webhook_secret,
+            "RAZORPAY_KEY_SECRET": webhook_secret,
+        })

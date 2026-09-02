@@ -503,6 +503,10 @@ class BaselineDecision(BaseModel):
 
     @model_validator(mode="after")
     def latency_value_matches_provenance(self):
+        if len(self.reason_codes) != len(set(self.reason_codes)):
+            raise ValueError("baseline decision reason codes must be unique")
+        if len(self.examined_evidence_ids) != len(set(self.examined_evidence_ids)):
+            raise ValueError("examined evidence ids must be unique")
         if self.latency_provenance == LatencyProvenance.NOT_AVAILABLE:
             if self.verification_latency_ms is not None:
                 raise ValueError("unavailable latency cannot carry a numeric value")

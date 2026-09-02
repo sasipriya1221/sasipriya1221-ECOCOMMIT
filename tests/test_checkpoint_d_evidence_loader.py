@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from ecocommit._canonical import sha256_hex
 from ecocommit.checkpoint_a_evidence import (
     FROZEN_A_DATASET_SHA256,
     CheckpointAEvidenceReceipt,
@@ -20,11 +21,29 @@ from ecocommit.checkpoint_b_evidence import (
 )
 from ecocommit.checkpoint_c_final import (
     CheckpointCAcceptanceRule,
+    CheckpointCFinalDecisionManifest,
+    CheckpointCFinalDecisionReceipt,
     CheckpointCFinalEvidence,
+    CheckpointCFinalHeldOutEvidence,
     CheckpointCFinalMetricSnapshot,
     CheckpointCFinalRegistration,
+    CheckpointCFinalSuite,
     CheckpointCUpstreamBinding,
+    build_final_held_out_evidence,
     evaluate_final_metrics,
+    final_case_ids_sha256,
+    final_cost_source_manifest_sha256,
+)
+from ecocommit.checkpoint_c_models import (
+    BaselineDecision,
+    BenchmarkSplit,
+    CostProvenance,
+    Decision,
+    EconomicLossWeights,
+    LatencyProvenance,
+    MetricSpecification,
+    ObservationSourceKind,
+    ScenarioSourceKind,
 )
 from ecocommit.checkpoint_d_evidence import (
     AuthoritativeEvidenceError,
@@ -35,6 +54,7 @@ from ecocommit.checkpoint_d_evidence import (
     EvidenceFilePin,
     load_authoritative_evidence,
 )
+from test_checkpoint_c_models import make_case
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -106,7 +126,7 @@ def _b_receipt(a_sha: str) -> CheckpointBEvidenceReceipt:
     )
 
 
-def _c_evidence(a_sha: str, b_sha: str, *, pass_decision: bool = True):
+def _legacy_c_evidence(a_sha: str, b_sha: str, *, pass_decision: bool = True):
     upstream = CheckpointCUpstreamBinding(
         checkpoint_a_receipt_sha256=a_sha,
         checkpoint_b_receipt_sha256=b_sha,
@@ -122,10 +142,14 @@ def _c_evidence(a_sha: str, b_sha: str, *, pass_decision: bool = True):
         tel_weights_sha256="b" * 64,
         cost_source_manifest_sha256="c" * 64,
         candidate_id="ecocommit-final",
+        candidate_execution_protocol_sha256="4" * 64,
+        comparator_execution_protocol_sha256="5" * 64,
+        comparator_selection_receipt_sha256="6" * 64,
         upstream=upstream,
         acceptance_rule=CheckpointCAcceptanceRule(
             comparator_id="strongest-comparator",
             minimum_tel_reduction_bps=1_000,
+            minimum_autonomous_coverage=0.80,
             minimum_legitimate_completion=0.90,
             minimum_selective_reliability=0.95,
             maximum_p95_verification_latency_ms=500,
@@ -139,6 +163,7 @@ def _c_evidence(a_sha: str, b_sha: str, *, pass_decision: bool = True):
         baseline_id="ecocommit-final",
         total_cases=10,
         total_economic_loss_minor=80 if pass_decision else 100,
+        autonomous_coverage=1.0,
         legitimate_transaction_completion=1.0,
         selective_reliability=1.0,
         p95_verification_latency_ms=50,
@@ -151,6 +176,7 @@ def _c_evidence(a_sha: str, b_sha: str, *, pass_decision: bool = True):
         baseline_id="strongest-comparator",
         total_cases=10,
         total_economic_loss_minor=100,
+        autonomous_coverage=1.0,
         legitimate_transaction_completion=0.90,
         selective_reliability=0.95,
         p95_verification_latency_ms=60,
@@ -172,9 +198,203 @@ def _c_evidence(a_sha: str, b_sha: str, *, pass_decision: bool = True):
     )
 
 
+def _final_case(case_id: str, *, should_execute: bool):
+    case = make_case(case_id, should_execute=should_execute)
+    evidence = [
+        observation.model_copy(update={
+            "source_kind": ObservationSourceKind.CACHED_RECORDED,
+            "source_reference": f"recorded://{case_id}/merchant-status",
+            "observation_is_fixture": False,
+            "simulated_verification_latency_ms": 0,
+        })
+        for observation in case.evidence
+    ]
+    return case.model_copy(update={
+        "split": BenchmarkSplit.FINAL_HELD_OUT,
+        "evidence": evidence,
+        "costs": case.costs.model_copy(update={
+            "provenance": CostProvenance.PRE_REGISTERED_ASSUMPTION,
+            "basis": "Pre-registered D-loader machinery cost source.",
+        }),
+        "provenance": case.provenance.model_copy(update={
+            "source_kind": ScenarioSourceKind.HAND_AUTHORED,
+            "source_reference": f"preregistered://{case_id}",
+            "scenario_is_simulated": False,
+            "notes": "D-loader machinery test; not final evidence.",
+        }),
+        "tags": ["d-loader-held-out-machinery-test"],
+    })
+
+
+def _metric_specification() -> MetricSpecification:
+    return MetricSpecification(
+        loss_weights=EconomicLossWeights(
+            unsafe_execution_weight_bps=10_000,
+            false_abort_weight_bps=5_000,
+            abstention_review_weight_bps=20_000,
+            compensation_cost_weight_bps=15_000,
+            basis="Pre-registered D-loader machinery weights.",
+        )
+    )
+
+
+def _decisions(baseline_id: str, suite: CheckpointCFinalSuite, *, winning: bool):
+    return tuple(
+        BaselineDecision(
+            baseline_id=baseline_id,
+            case_id=case.case_id,
+            decision=(
+                Decision.EXECUTE
+                if winning and case.reference_outcome.authorized_safe_to_execute
+                else Decision.BLOCK
+            ),
+            reason_codes=("FINAL_RAW_DECISION",),
+            verification_latency_ms=100 + index,
+            latency_provenance=(
+                LatencyProvenance.MEASURED_PROVIDER
+                if winning
+                else LatencyProvenance.MEASURED_LOCAL
+            ),
+        )
+        for index, case in enumerate(suite.cases)
+    )
+
+
+def _c_evidence(
+    a_receipt: CheckpointAEvidenceReceipt,
+    a_sha: str,
+    b_receipt: CheckpointBEvidenceReceipt,
+    b_sha: str,
+    *,
+    pass_decision: bool = True,
+) -> CheckpointCFinalHeldOutEvidence:
+    suite = CheckpointCFinalSuite(
+        suite_id="checkpoint-c-final-d-loader-suite",
+        suite_version="1",
+        description="Two-case final-held-out D-loader machinery suite.",
+        definitions_frozen_at_utc=NOW,
+        cases=(
+            _final_case("d-final-001", should_execute=True),
+            _final_case("d-final-002", should_execute=False),
+        ),
+    )
+    metric_specification = _metric_specification()
+    upstream = CheckpointCUpstreamBinding(
+        checkpoint_a_receipt_sha256=a_sha,
+        checkpoint_b_receipt_sha256=b_sha,
+        integrated_candidate_revision=REVISION,
+    )
+    registration = CheckpointCFinalRegistration.create(
+        registration_id="final-c-d-loader-1",
+        registered_at_utc=NOW + timedelta(minutes=1),
+        final_suite_sha256=suite.canonical_hash(),
+        final_case_ids_sha256=final_case_ids_sha256(suite),
+        final_case_count=len(suite.cases),
+        metric_specification_sha256=sha256_hex(metric_specification),
+        tel_weights_sha256=sha256_hex(metric_specification.loss_weights),
+        cost_source_manifest_sha256=final_cost_source_manifest_sha256(suite),
+        candidate_id="ecocommit-final",
+        candidate_execution_protocol_sha256="4" * 64,
+        comparator_execution_protocol_sha256="5" * 64,
+        comparator_selection_receipt_sha256="6" * 64,
+        upstream=upstream,
+        acceptance_rule=CheckpointCAcceptanceRule(
+            comparator_id="strongest-comparator",
+            minimum_tel_reduction_bps=1_000,
+            minimum_autonomous_coverage=0.90,
+            minimum_legitimate_completion=0.90,
+            minimum_selective_reliability=0.95,
+            maximum_p95_verification_latency_ms=500,
+            maximum_errored_cases=0,
+            maximum_missing_latency_cases=0,
+            maximum_incorrect_irreversible_amount_minor=0,
+            rationale="Frozen before the final exact-census outcomes.",
+        ),
+    )
+    execution_id = "c-final-d-loader-execution-001"
+    candidate_manifest = CheckpointCFinalDecisionManifest.create(
+        execution_id=execution_id,
+        registration_sha256=registration.registration_sha256,
+        final_suite_sha256=registration.final_suite_sha256,
+        final_case_ids_sha256=registration.final_case_ids_sha256,
+        baseline_id=registration.candidate_id,
+        generated_at_utc=NOW + timedelta(minutes=2),
+        decisions=_decisions(
+            registration.candidate_id,
+            suite,
+            winning=pass_decision,
+        ),
+    )
+    comparator_manifest = CheckpointCFinalDecisionManifest.create(
+        execution_id=execution_id,
+        registration_sha256=registration.registration_sha256,
+        final_suite_sha256=registration.final_suite_sha256,
+        final_case_ids_sha256=registration.final_case_ids_sha256,
+        baseline_id=registration.acceptance_rule.comparator_id,
+        generated_at_utc=NOW + timedelta(minutes=2),
+        decisions=_decisions(
+            registration.acceptance_rule.comparator_id,
+            suite,
+            winning=False,
+        ),
+    )
+    execution_nonce_sha256 = "7" * 64
+    candidate_receipt = CheckpointCFinalDecisionReceipt.create(
+        role="CANDIDATE",
+        execution_id=execution_id,
+        execution_nonce_sha256=execution_nonce_sha256,
+        baseline_id=registration.candidate_id,
+        source_revision=REVISION,
+        registration_sha256=registration.registration_sha256,
+        final_suite_sha256=registration.final_suite_sha256,
+        final_case_ids_sha256=registration.final_case_ids_sha256,
+        decision_manifest_sha256=candidate_manifest.manifest_sha256,
+        execution_protocol_sha256=registration.candidate_execution_protocol_sha256,
+        case_count=len(suite.cases),
+        generated_at_utc=NOW + timedelta(minutes=2, seconds=1),
+        evidence_reference="github-actions://owner/repo/runs/1/artifacts/candidate",
+    )
+    comparator_receipt = CheckpointCFinalDecisionReceipt.create(
+        role="COMPARATOR",
+        execution_id=execution_id,
+        execution_nonce_sha256=execution_nonce_sha256,
+        baseline_id=registration.acceptance_rule.comparator_id,
+        source_revision=REVISION,
+        registration_sha256=registration.registration_sha256,
+        final_suite_sha256=registration.final_suite_sha256,
+        final_case_ids_sha256=registration.final_case_ids_sha256,
+        decision_manifest_sha256=comparator_manifest.manifest_sha256,
+        execution_protocol_sha256=(
+            registration.comparator_execution_protocol_sha256
+        ),
+        comparator_selection_receipt_sha256=(
+            registration.comparator_selection_receipt_sha256
+        ),
+        case_count=len(suite.cases),
+        generated_at_utc=NOW + timedelta(minutes=2, seconds=2),
+        evidence_reference="github-actions://owner/repo/runs/1/artifacts/comparator",
+    )
+    return build_final_held_out_evidence(
+        execution_id=execution_id,
+        generated_at_utc=NOW + timedelta(minutes=3),
+        source_revision=REVISION,
+        registration=registration,
+        suite=suite,
+        metric_specification=metric_specification,
+        checkpoint_a_receipt=a_receipt,
+        checkpoint_a_receipt_file_sha256=a_sha,
+        checkpoint_b_receipt=b_receipt,
+        checkpoint_b_receipt_file_sha256=b_sha,
+        candidate_manifest=candidate_manifest,
+        comparator_manifest=comparator_manifest,
+        candidate_receipt=candidate_receipt,
+        comparator_receipt=comparator_receipt,
+    )
+
+
 def _d_receipt(a_sha: str, b_sha: str, c_sha: str):
     return CheckpointDIntegrationReceipt.create(
-        generated_at_utc=NOW + timedelta(minutes=2),
+        generated_at_utc=NOW + timedelta(minutes=4),
         source_revision=REVISION,
         checkpoint_a_receipt_sha256=a_sha,
         checkpoint_b_receipt_sha256=b_sha,
@@ -195,6 +415,7 @@ def _bundle(
     a_fixture: bool = False,
     wrong_b_a_binding: bool = False,
     c_pass_decision: bool = True,
+    legacy_c: bool = False,
     repository: str = EXPECTED_EVIDENCE_REPOSITORY,
 ):
     root = tmp_path / "evidence"
@@ -202,12 +423,28 @@ def _bundle(
     a_path = root / "checkpoint-a.json"
     b_path = root / "checkpoint-b.json"
     c_path = root / "checkpoint-c.json"
-    a_sha = _write_json(a_path, _a_receipt(fixture=a_fixture))
-    b_sha = _write_json(
-        b_path,
-        _b_receipt("f" * 64 if wrong_b_a_binding else a_sha),
-    )
-    c_sha = _write_json(c_path, _c_evidence(a_sha, b_sha, pass_decision=c_pass_decision))
+    a_receipt = _a_receipt(fixture=a_fixture)
+    a_sha = _write_json(a_path, a_receipt)
+    b_receipt = _b_receipt("f" * 64 if wrong_b_a_binding else a_sha)
+    b_sha = _write_json(b_path, b_receipt)
+    if a_fixture or wrong_b_a_binding:
+        # D rejects the invalid prerequisite before consulting C.
+        c_evidence = {"schema_version": "C.FINAL.HELD_OUT.EVIDENCE.1"}
+    elif legacy_c:
+        c_evidence = _legacy_c_evidence(
+            a_sha,
+            b_sha,
+            pass_decision=c_pass_decision,
+        )
+    else:
+        c_evidence = _c_evidence(
+            a_receipt,
+            a_sha,
+            b_receipt,
+            b_sha,
+            pass_decision=c_pass_decision,
+        )
+    c_sha = _write_json(c_path, c_evidence)
     d_pin = None
     if include_d:
         d_path = root / "checkpoint-d.json"
@@ -240,6 +477,9 @@ def test_loader_accepts_only_pinned_cross_linked_passing_a_b_c_receipts(tmp_path
     assert status.gates["A"].accepted is True
     assert status.gates["B"].accepted is True
     assert status.gates["C"].accepted is True
+    assert loaded.pins.schema_version == "D.EVIDENCE.PINS.2"
+    assert loaded.checkpoint_c.schema_version == "C.FINAL.HELD_OUT.EVIDENCE.1"
+    assert status.gates["C"].detail == "FINAL_HELD_OUT_RAW_ROW_EVIDENCE_PIN_VERIFIED"
     assert status.gates["D"].state.value == "BLOCKED"
     assert status.gates["E"].state.value == "BLOCKED"
     assert status.provider_calls_enabled is False
@@ -313,6 +553,71 @@ def test_loader_rejects_non_authoritative_or_incoherent_gate_claims(
         )
 
 
+def test_loader_rejects_legacy_caller_metric_final_evidence(tmp_path):
+    root, pins_path, pins_sha = _bundle(tmp_path, legacy_c=True)
+
+    with pytest.raises(
+        AuthoritativeEvidenceError,
+        match="legacy caller-metric Checkpoint C evidence is forbidden",
+    ):
+        load_authoritative_evidence(
+            root,
+            pins_path,
+            expected_pins_file_sha256=pins_sha,
+        )
+
+
+def test_loader_recomputes_raw_rows_even_after_metric_tampering_is_repinned(tmp_path):
+    root, pins_path, _ = _bundle(tmp_path)
+    pins = AuthoritativeEvidencePins.model_validate_json(
+        pins_path.read_text(encoding="utf-8")
+    )
+    c_path = root / pins.checkpoint_c.filename
+    c_payload = json.loads(c_path.read_text(encoding="utf-8"))
+    c_payload["candidate"]["total_economic_loss_minor"] += 1
+    c_sha = _write_json(c_path, c_payload)
+    repinned = AuthoritativeEvidencePins.create(
+        repository=pins.repository,
+        integrated_revision=pins.integrated_revision,
+        checkpoint_a=pins.checkpoint_a,
+        checkpoint_b=pins.checkpoint_b,
+        checkpoint_c=EvidenceFilePin(filename=c_path.name, sha256=c_sha),
+        checkpoint_d=None,
+    )
+    pins_sha = _write_json(pins_path, repinned)
+
+    with pytest.raises(
+        AuthoritativeEvidenceError,
+        match="final held-out C evidence schema validation failed",
+    ):
+        load_authoritative_evidence(
+            root,
+            pins_path,
+            expected_pins_file_sha256=pins_sha,
+        )
+
+
+def test_loader_rejects_legacy_pin_set_schema(tmp_path):
+    root, pins_path, _ = _bundle(tmp_path)
+    payload = json.loads(pins_path.read_text(encoding="utf-8"))
+    payload["schema_version"] = "D.EVIDENCE.PINS.1"
+    payload_without_digest = {
+        key: value for key, value in payload.items() if key != "pin_set_sha256"
+    }
+    payload["pin_set_sha256"] = sha256_hex(payload_without_digest)
+    pins_sha = _write_json(pins_path, payload)
+
+    with pytest.raises(
+        AuthoritativeEvidenceError,
+        match="pin-set schema validation failed",
+    ):
+        load_authoritative_evidence(
+            root,
+            pins_path,
+            expected_pins_file_sha256=pins_sha,
+        )
+
+
 def test_loader_rejects_pin_or_evidence_tampering(tmp_path):
     root, pins_path, pins_sha = _bundle(tmp_path)
 
@@ -336,7 +641,7 @@ def test_loader_rejects_pin_or_evidence_tampering(tmp_path):
 def test_loader_rejects_duplicate_keys_even_when_outer_file_hash_is_trusted(tmp_path):
     root, pins_path, _ = _bundle(tmp_path)
     raw = pins_path.read_bytes()
-    duplicate = raw[:-1] + b',"schema_version":"D.EVIDENCE.PINS.1"}'
+    duplicate = raw[:-1] + b',"schema_version":"D.EVIDENCE.PINS.2"}'
     pins_path.write_bytes(duplicate)
 
     with pytest.raises(AuthoritativeEvidenceError, match="duplicate JSON key"):
@@ -358,7 +663,19 @@ def test_receipt_schemas_reject_unknown_fields_and_incomplete_lifecycle(tmp_path
     with pytest.raises(ValueError):
         RazorpayTestLifecycleEvidence.model_validate(lifecycle)
 
-    metric = _c_evidence("1" * 64, "2" * 64).candidate.model_dump(mode="json")
+    metric = CheckpointCFinalMetricSnapshot(
+        baseline_id="metric-shape-test",
+        total_cases=1,
+        total_economic_loss_minor=0,
+        autonomous_coverage=1.0,
+        legitimate_transaction_completion=1.0,
+        selective_reliability=1.0,
+        p95_verification_latency_ms=1,
+        errored_cases=0,
+        missing_latency_cases=0,
+        incorrect_irreversible_amount_minor=0,
+        case_results_sha256="a" * 64,
+    ).model_dump(mode="json")
     metric["errored_cases"] = metric["total_cases"] + 1
     with pytest.raises(ValueError, match="exceeds total cases"):
         CheckpointCFinalMetricSnapshot.model_validate(metric)

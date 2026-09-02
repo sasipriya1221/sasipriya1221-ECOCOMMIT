@@ -9,4 +9,5 @@ build/
 
 # Generated local evidence and audit output must be reviewed before retention.
 artifacts/
+ecocommit-razorpay-checkout-callback.json
 *.audit.jsonl

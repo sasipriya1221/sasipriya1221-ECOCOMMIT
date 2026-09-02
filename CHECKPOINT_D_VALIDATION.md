@@ -137,6 +137,15 @@ remain:
 19. **Startup and HTTP hardening order was incomplete.** Evidence and all local
     secrets are validated before credential preflight, failed authentication is
     rate-limited, and audit input must be strict canonical JSON.
+20. **The trusted proxy boundary accepted ambiguous request framing.** It now
+    rejects every transfer-encoded request and accepts only canonical decimal
+    `Content-Length`, while the nginx template strips `Transfer-Encoding` after
+    buffering. Oversize enforcement remains present at both layers.
+21. **Different path strings could still alias one persistent file.** Existing
+    hard links are now detected by file identity, so mutable SQLite state cannot
+    share storage with the append-only audit stream. Deployment counts must also
+    use canonical decimal values, and the API token is bounded to 32–256 visible
+    ASCII bytes.
 
 ## Reproduction commands executed
 
@@ -188,11 +197,27 @@ five gate cards remained blocked, the real-money card remained disabled, and all
 three scenarios rendered their expected economic states. No screenshot from this
 development validation is promoted as final submission evidence.
 
+## Current hosted-deployment preparation
+
+The current local tree adds a provider-neutral production WSGI entrypoint,
+strict environment and trusted-proxy parsing, nginx/TLS policy templates, and
+explicit persistent-volume, backup/restore, monitoring, rate-limit, and secret
+injection requirements. No host, DNS name, certificate, public listener, tunnel,
+provider account, or paid service was selected or created.
+
+The authoritative evidence loader now requires `D.EVIDENCE.PINS.2` and raw-row
+derived `C.FINAL.HELD_OUT.EVIDENCE.1`. Legacy caller-metric C evidence, old pin
+schemas, A→B→C revision/hash mismatch, and re-pinned aggregate tampering fail
+closed. Deployment-focused tests pass **32/32**, the complete D-specific
+selection passes **111/111**, and the integrated repository passes **465/465**
+locally. This is preparation only; hosted D is **NOT RUN**.
+
 ## Remaining blockers
 
 - Candidate 1's frozen A gate is mathematically failed; Candidate 2 is incomplete
-  after exposing a runner classification defect; corrected Candidate 3 has
-  not been remotely evaluated.
+  after exposing a runner classification defect; corrected Candidate 3 run
+  `33590028177` completed attempt 2 with 78 provider deferrals and no complete
+  aggregate or passing receipt.
 - Checkpoints B and C are locally validated but not passed.
 - The default local server deliberately loads no authoritative checkpoint
   evidence and denies provider execution. The optional loader has no real A/B/C

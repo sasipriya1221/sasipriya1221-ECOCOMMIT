@@ -28,6 +28,9 @@ def _registration():
         tel_weights_sha256="d" * 64,
         cost_source_manifest_sha256="e" * 64,
         candidate_id="ecocommit-integrated",
+        candidate_execution_protocol_sha256="f" * 64,
+        comparator_execution_protocol_sha256="6" * 64,
+        comparator_selection_receipt_sha256="7" * 64,
         upstream=CheckpointCUpstreamBinding(
             checkpoint_a_receipt_sha256="1" * 64,
             checkpoint_b_receipt_sha256="2" * 64,
@@ -36,6 +39,7 @@ def _registration():
         acceptance_rule=CheckpointCAcceptanceRule(
             comparator_id="dynamic-strongest",
             minimum_tel_reduction_bps=1000,
+            minimum_autonomous_coverage=0.60,
             minimum_legitimate_completion=0.80,
             minimum_selective_reliability=0.95,
             maximum_p95_verification_latency_ms=500,
@@ -52,6 +56,7 @@ def _metrics(baseline_id, tel):
         baseline_id=baseline_id,
         total_cases=40,
         total_economic_loss_minor=tel,
+        autonomous_coverage=0.85,
         legitimate_transaction_completion=0.90,
         selective_reliability=0.98,
         p95_verification_latency_ms=400,
@@ -89,6 +94,15 @@ def test_preregistered_final_gate_passes_only_at_quantitative_boundaries():
     )
     assert tie.passed is False
     assert "TEL_NOT_STRICTLY_BETTER" in tie.blockers
+
+    low_coverage = candidate.model_copy(update={"autonomous_coverage": 0.59})
+    coverage_failure = evaluate_final_metrics(
+        registration,
+        low_coverage,
+        comparator,
+    )
+    assert coverage_failure.passed is False
+    assert "AUTONOMOUS_COVERAGE_BELOW_FLOOR" in coverage_failure.blockers
 
 
 def test_final_evidence_recomputes_decision_and_binds_suite_upstream_and_time():

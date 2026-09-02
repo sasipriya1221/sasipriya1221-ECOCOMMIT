@@ -44,6 +44,15 @@ alone cannot satisfy this rule.
 | Payment authorization/reservation | No genuine Checkout callback | **NOT RUN / EXTERNALLY BLOCKED** |
 | Capture, refund, webhook, reconciliation, settlement | No authorized payment or separately configured webhook endpoint/secret | **NOT RUN / BLOCKED** |
 
+The pushed Candidate 3 source now also has a fresh same-revision evidence pair:
+
+| Validation | Evidence | Result |
+|---|---|---:|
+| Exact-source redacted credential preflight | GitHub Actions run `33592456896` at `fd26a52a…` | **PASS** — the read-only Test authentication probe completed successfully without retaining the provider body or credentials |
+| Exact-source order boundary | GitHub Actions run `33592499084` at `fd26a52a…` | **PASS FOR THE ORDER SUBGATE ONLY** — one INR 1.00 Test order, one provider create across identical replay, zero payments, no capture, and a generated Checkout handoff |
+| Exact-source artifact | Artifact `checkpoint-b8-razorpay-test-evidence-33592499084`, ID `9832232980` | **RETAINED** — downloaded archive SHA-256 `56ca57750589d41cbf4b9ea717d0b48d7dfb16344702a5f0b6d7d5d1a350000d` matched GitHub; `checkpoint_b8_passed=false` and blocker `RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED` |
+| Checkout handoff | Same artifact; expires `2026-09-03T04:53:12.35686Z` | **READY FOR HUMAN TEST INTERACTION** — Checkout HTML SHA-256 `ad7c60fd53490693a6fc878a140a21e11be9bccbde997016e385e58c53d97fe5`; no callback exists yet |
+
 The historical order-boundary workflow's successful conclusion means its truthful validation
 script completed and retained the blocked result; it does **not** mean B8 or
 Checkpoint B passed. Its evidence field `checkpoint_b8_passed` remained `false`.
@@ -57,8 +66,9 @@ containing the bound `razorpay_order_id`, `razorpay_payment_id`, and
 `razorpay_signature`. ECOCOMMIT then verifies the signature and provider entities
 before representing the authorization as `RESERVED`. The account must also use
 [manual capture](https://razorpay.com/docs/payments/payments/capture-settings/);
-the default auto-capture setting would bypass ECOCOMMIT's delayed capture gate
-and is rejected by the adapter.
+the final evidence contract requires the exact three-day timeout and Normal
+Refund action. Auto-capture or another timeout action would bypass or change
+ECOCOMMIT's delayed-capture safety boundary and is rejected.
 
 The current local tree closes the earlier software handoff and single-host
 durability gaps. The order
@@ -74,6 +84,19 @@ operation, deduplicates `X-Razorpay-Event-Id`, accepts either arrival order, and
 exports a digest-bound two-event set without retaining raw bodies. This path has
 deterministic fake-transport regression evidence only; it has not been exercised
 against the provider and is not added to the live evidence table above.
+
+A write-once finalizer now cross-validates that lifecycle against the exact A
+receipt, source-bound preflight/order/handoff, verified webhook set, audit chain,
+complete deterministic/durability manifests, non-secret signing-key reference,
+and two Dashboard screenshot attestations. It derives the B receipt without a
+caller pass flag. The manual-capture attestation requires Test Mode, manual
+capture, exactly 259,200 seconds, and `NORMAL_REFUND`; the webhook attestation
+requires HTTPS and exactly `payment.captured` plus `refund.processed`. Both bind
+the Test account, source, observation time, screenshot digest, and verifier
+reference. Final outputs publish atomically, allow only byte-identical replay,
+recover a one-file crash boundary, and require an exact same-repository GitHub
+Actions artifact reference. This is locally tested preparation, not an attested
+Dashboard state or provider result.
 
 The isolated live snapshot was used so the active frozen Checkpoint A retry and
 its main-branch inputs were not changed. The local implementation commit adds
@@ -98,6 +121,8 @@ were not relabeled as part of the earlier live run.
 | Current workflow-security suite | **7 / 7 passed** |
 | Current full deterministic suite | **369 / 369 passed** |
 | Current no-hardlink clone at `60c85f0b75574007a7bf1de9a8b4be7214c69a75` using its hash-locked virtual environment | **369 / 369 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
+| Current B8 finalizer regression | **25 / 25 passed** |
+| Current integrated local suite after finalizer/provenance hardening | **465 / 465 passed** |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 
@@ -135,7 +160,7 @@ a source push cannot independently authorize a credentialed call.
 
 | Gate | Evidence and result | Status |
 |---|---|---:|
-| A prerequisite | Candidate 1 in run `33493409547` is mathematically failed at attempt 15: 21 passes, 11 terminal contract failures, 48 provider deferrals, maximum 69/80. Candidate 2 run `33583323178` is incomplete and exposed a runner classification defect. Candidate 3 is locally corrected but has not run. | **FAILED / NEW CANDIDATE NOT EVALUATED** |
+| A prerequisite | Candidate 1 in run `33493409547` is mathematically failed at attempt 15: 21 passes, 11 terminal contract failures, 48 provider deferrals, maximum 69/80. Candidate 2 run `33583323178` is incomplete and exposed a runner classification defect. Candidate 3 run `33590028177` attempt 2 has `C002` passed, `A002` unchanged failed, 78 provider-deferred cases, and no complete receipt. | **NOT PASSED / PROVIDER-BLOCKED** |
 | B1 — Policy Class Mapper | Exhaustive mapping and fail-closed A admission tests pass | **LOCAL PASS** |
 | B2 — Evidence Registry | Authority, identity, version, time, freshness, revocation, subject, and exact-claim adversarial tests pass | **LOCAL PASS** |
 | B3 — Evidence-to-Exposure Policy | Only trusted caps and authoritative exact claims determine exposure | **LOCAL PASS** |
