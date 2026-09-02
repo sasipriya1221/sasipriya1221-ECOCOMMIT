@@ -6,13 +6,14 @@ import re
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit
 
 from ecocommit._canonical import strict_json_loads
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 MAX_REPRODUCTION_RECEIPT_BYTES = 256 * 1024
+EXPECTED_REMOTE_REPOSITORY = "sasipriya1221/sasipriya1221-ECOCOMMIT"
 REQUIRED_FILES = (
     ".gitattributes",
     "README.md",
@@ -85,6 +86,10 @@ ABSOLUTE_LOCAL_PATH = re.compile(
     re.IGNORECASE,
 )
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+GITHUB_SCP_REMOTE = re.compile(
+    r"^git@github\.com:(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+?)(?:\.git)?/?$",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -233,6 +238,46 @@ def _upstream_counts(root: Path) -> tuple[int | None, int | None]:
     return int(behind), int(ahead)
 
 
+def _public_github_repository(remote_url: str | None) -> str | None:
+    """Return an owner/repository identity without retaining credentials or paths."""
+    if not remote_url:
+        return None
+    scp_match = GITHUB_SCP_REMOTE.fullmatch(remote_url)
+    if scp_match:
+        return f"{scp_match.group('owner')}/{scp_match.group('repo')}"
+
+    try:
+        parsed = urlsplit(remote_url)
+        parsed_port = parsed.port
+    except ValueError:
+        return None
+    allowed_transport = (
+        parsed.scheme == "https" and parsed.username is None and parsed.password is None
+    ) or (
+        parsed.scheme == "ssh"
+        and parsed.username == "git"
+        and parsed.password is None
+    )
+    if (
+        not allowed_transport
+        or parsed.hostname != "github.com"
+        or parsed_port is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        return None
+    parts = parsed.path.strip("/").split("/")
+    if len(parts) != 2:
+        return None
+    owner, repository = parts
+    if repository.lower().endswith(".git"):
+        repository = repository[:-4]
+    component = re.compile(r"^[A-Za-z0-9_.-]+$")
+    if not owner or not repository or not component.fullmatch(owner) or not component.fullmatch(repository):
+        return None
+    return f"{owner}/{repository}"
+
+
 def build_report(
     root: Path = REPOSITORY_ROOT,
     *,
@@ -287,7 +332,16 @@ def build_report(
     status_output = _git(root, "status", "--porcelain=v1")
     clean = not bool(status_output)
     behind, ahead = _upstream_counts(root)
-    remote_url = _git(root, "config", "--get", "remote.origin.url", check=False) or None
+    configured_remote = _git(root, "config", "--get", "remote.origin.url", check=False) or None
+    remote_repository = _public_github_repository(configured_remote)
+    expected_remote = remote_repository is not None and (
+        remote_repository.casefold() == EXPECTED_REMOTE_REPOSITORY.casefold()
+    )
+    remote_url = (
+        f"https://github.com/{EXPECTED_REMOTE_REPOSITORY}.git"
+        if expected_remote
+        else None
+    )
     revision = _git(root, "rev-parse", "HEAD")
     license_present = any(path in tracked_set for path in ("LICENSE", "LICENSE.md", "LICENSE.txt"))
 
@@ -298,8 +352,12 @@ def build_report(
     ]
     if not license_present:
         blockers.append("LICENSE_OWNER_DECISION_REQUIRED")
-    if not remote_url:
+    if not configured_remote:
         blockers.append("REMOTE_ORIGIN_NOT_CONFIGURED")
+    elif remote_repository is None:
+        blockers.append("REMOTE_ORIGIN_NOT_PUBLIC_GITHUB")
+    elif not expected_remote:
+        blockers.append("REMOTE_REPOSITORY_MISMATCH")
     if not clean:
         blockers.append("WORKING_TREE_NOT_CLEAN")
     if ahead is None:
@@ -320,6 +378,12 @@ def build_report(
         "source_revision": revision,
         "working_tree_clean": clean,
         "remote_url": remote_url,
+        "remote_origin": {
+            "configured": configured_remote is not None,
+            "repository": remote_repository,
+            "expected_repository": EXPECTED_REMOTE_REPOSITORY,
+            "verified": expected_remote,
+        },
         "upstream": {"behind": behind, "ahead": ahead},
         "license_present": license_present,
         "evidence_slot_statuses": evidence_statuses,

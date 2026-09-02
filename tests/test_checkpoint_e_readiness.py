@@ -51,7 +51,50 @@ def test_readiness_cli_emits_machine_readable_blocked_report():
     assert report["local_repository_checks_pass"] is True
     assert report["final_submission_ready"] is False
     assert report["license_present"] is False
-    assert isinstance(report["remote_url"], str) and report["remote_url"]
+    remote = report["remote_origin"]
+    assert remote["configured"] is True
+    assert remote["expected_repository"] == "sasipriya1221/sasipriya1221-ECOCOMMIT"
+    if remote["verified"]:
+        assert remote["repository"].casefold() == remote["expected_repository"].casefold()
+        assert report["remote_url"] == (
+            "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT.git"
+        )
+    else:
+        assert report["remote_url"] is None
+        assert any(blocker.startswith("REMOTE_") for blocker in report["blockers"])
+
+
+@pytest.mark.parametrize(
+    "remote_url",
+    [
+        "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT.git",
+        "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT",
+        "git@github.com:sasipriya1221/sasipriya1221-ECOCOMMIT.git",
+        "ssh://git@github.com/sasipriya1221/sasipriya1221-ECOCOMMIT.git",
+    ],
+)
+def test_readiness_normalizes_supported_public_github_origins(remote_url):
+    assert load_readiness_module()._public_github_repository(remote_url) == (
+        "sasipriya1221/sasipriya1221-ECOCOMMIT"
+    )
+
+
+@pytest.mark.parametrize(
+    "remote_url",
+    [
+        r"C:\workspace\ECOCOMMIT",
+        "/tmp/ECOCOMMIT",
+        "file:///tmp/ECOCOMMIT",
+        "http://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT.git",
+        "https://token@github.com/sasipriya1221/sasipriya1221-ECOCOMMIT.git",
+        "https://github.example/sasipriya1221/sasipriya1221-ECOCOMMIT.git",
+        "https://github.com:not-a-port/sasipriya1221/sasipriya1221-ECOCOMMIT.git",
+        "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT.git?token=secret",
+        "https://github.com/sasipriya1221/too/many/parts.git",
+    ],
+)
+def test_readiness_rejects_nonpublic_or_credential_bearing_origins(remote_url):
+    assert load_readiness_module()._public_github_repository(remote_url) is None
 
 
 def test_readiness_manifest_protects_authoritative_integration_components():
