@@ -6,7 +6,7 @@
 
 ECOCOMMIT is a research-grade Buildathon project for autonomous enterprise procurement. It turns natural-language mandates into provenance-preserving economic contracts, abstains on unresolved material ambiguity, and places a deterministic safety boundary between model output and payment commitment.
 
-## Current evidence truth
+## Checkpoint truth
 
 ECOCOMMIT separates **built**, **locally validated**, and **passed**. A component can be implemented and heavily tested without being promoted to an acceptance pass until its frozen, source-bound evidence exists.
 
@@ -135,7 +135,7 @@ Run the structural readiness checker with:
 
 Strict final validation uses `scripts/checkpoint_e_readiness.py --mode final --independent-reproduction <receipt>` only after real final evidence is installed.
 
-## Submission evidence still required
+## Submission evidence status
 
 The final evidence slots remain deliberately blocked until real, source-bound proof exists:
 
