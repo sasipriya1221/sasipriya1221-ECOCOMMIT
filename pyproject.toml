@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Evidence-calibrated economic commitment protocol for autonomous commerce"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "Apache-2.0"
 dependencies = ["pydantic>=2.8,<3"]
 
 [project.urls]

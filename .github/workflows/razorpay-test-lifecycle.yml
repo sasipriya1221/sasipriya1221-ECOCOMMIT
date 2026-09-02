@@ -46,6 +46,13 @@ jobs:
             --run-id "$B8_PREFLIGHT_RUN_ID" \
             --expected-sha "$GITHUB_SHA" \
             --output artifacts/checkpoint-b8-preflight-reference.json
+      - name: Freeze pre-authorization certificate-key boundary provenance
+        run: |
+          python scripts/checkpoint_b8_prepare_provenance.py \
+            --output artifacts/checkpoint-b8-certificate-key-reference.json \
+            --source-revision "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
       - name: Create, bind, fetch, and replay one Test Mode order
         env:
           RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
@@ -66,9 +73,13 @@ jobs:
           from pathlib import Path
 
           path = Path("artifacts/checkpoint-b8-razorpay-test.json")
+          key_reference = Path("artifacts/checkpoint-b8-certificate-key-reference.json")
           if not path.is_file():
               raise SystemExit("B8 evidence file was not produced")
+          if not key_reference.is_file():
+              raise SystemExit("B8 certificate-key reference was not produced")
           evidence = json.loads(path.read_text(encoding="utf-8"))
+          reference = json.loads(key_reference.read_text(encoding="utf-8"))
 
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
               summary.write("# ECOCOMMIT B8 — Razorpay Test Mode\n\n")
@@ -79,6 +90,11 @@ jobs:
                   f"- Preflight run API-verified at this source revision: "
                   f"`{evidence['authentication']['credential_preflight_run_verified']}`\n"
               )
+              summary.write(
+                  "- Certificate-key boundary frozen before Razorpay order call: "
+                  f"`{reference.get('source_revision') == os.environ.get('GITHUB_SHA')}`\n"
+              )
+              summary.write("- Certificate key material retained: `false`\n")
               order = evidence.get("order", {})
               summary.write(f"- Test order created: `{order.get('executed', False)}`\n")
               if order.get("order_id"):
@@ -107,6 +123,7 @@ jobs:
           name: checkpoint-b8-razorpay-test-evidence-${{ github.run_id }}
           path: |
             artifacts/checkpoint-b8-preflight-reference.json
+            artifacts/checkpoint-b8-certificate-key-reference.json
             artifacts/checkpoint-b8-razorpay-test.json
             artifacts/checkpoint-b8-checkout-handoff.json
             artifacts/checkpoint-b8-test-checkout.html
