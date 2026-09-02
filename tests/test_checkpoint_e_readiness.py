@@ -2,6 +2,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -101,12 +102,25 @@ def test_readiness_manifest_protects_authoritative_integration_components():
     required = set(load_readiness_module().REQUIRED_FILES)
 
     assert {
+        ".github/workflows/offline-regression.yml",
+        "deploy/ecocommit.env.example",
+        "deploy/nginx.conf.template",
+        "deploy/proxy-policy.inc.template",
+        "deploy/wsgi.py",
+        "docs/DEPLOYMENT_READINESS.md",
+        "docs/LICENSE_DECISION.md",
+        "scripts/checkpoint_a_diagnostics.py",
+        "scripts/checkpoint_b8_finalize.py",
         "scripts/checkpoint_b8_webhook_evidence.py",
         "scripts/checkpoint_b8_webhook_server.py",
+        "scripts/checkpoint_c_final_held_out.py",
         "scripts/checkpoint_d_evidence_status.py",
         "scripts/checkpoint_d_prepare_operation.py",
+        "scripts/checkpoint_e_readiness.py",
         "src/ecocommit/checkpoint_b_evidence.py",
+        "src/ecocommit/checkpoint_c_final.py",
         "src/ecocommit/checkpoint_d_evidence.py",
+        "src/ecocommit/deployment.py",
         "src/ecocommit/durable.py",
         "src/ecocommit/execution.py",
         "src/ecocommit/webhook.py",
@@ -145,29 +159,103 @@ def test_evidence_slots_can_progress_to_passed_without_changing_checker_code():
 def test_independent_reproduction_receipt_is_revision_bound(tmp_path):
     module = load_readiness_module()
     revision = "a" * 40
+    source_tree_id = "b" * 40
+    dependency_lock_sha256 = "c" * 64
     receipt = tmp_path / "reproduction.json"
-    receipt.write_text(json.dumps({
-        "schema_version": "E.REPRODUCTION.1",
-        "source_revision": revision,
-        "independent_machine": True,
-        "clean_checkout": True,
-        "full_tests_passed": True,
-        "dependency_check_passed": True,
-        "readiness_local_checks_passed": True,
-        "artifact_sha256": "b" * 64,
-    }), encoding="utf-8")
+    value = module.IndependentReproductionReceipt.create(
+        source_revision=revision,
+        source_tree_id=source_tree_id,
+        dependency_lock_sha256=dependency_lock_sha256,
+        machine_identity_sha256="d" * 64,
+        verifier_identity_sha256="e" * 64,
+        platform_sha256="f" * 64,
+        python_version="3.11.10",
+        started_at_utc=datetime(2026, 9, 2, 5, 0, tzinfo=UTC),
+        completed_at_utc=datetime(2026, 9, 2, 5, 10, tzinfo=UTC),
+        collected_tests=450,
+        passed_tests=450,
+        failed_tests=0,
+        error_tests=0,
+        readiness_checks_collected=10,
+        readiness_checks_passed=10,
+        test_report_sha256="1" * 64,
+        dependency_check_report_sha256="2" * 64,
+        readiness_report_sha256="3" * 64,
+        commands_manifest_sha256="4" * 64,
+        artifact_bundle_sha256="5" * 64,
+        evidence_reference=(
+            "github-actions://sasipriya1221/sasipriya1221-ECOCOMMIT/"
+            "runs/1/artifacts/independent-reproduction"
+        ),
+    )
+    receipt.write_text(value.model_dump_json(), encoding="utf-8")
 
     assert module._independent_reproduction_status(
-        receipt, source_revision=revision
+        receipt,
+        source_revision=revision,
+        source_tree_id=source_tree_id,
+        dependency_lock_sha256=dependency_lock_sha256,
     )[0] is True
     assert module._independent_reproduction_status(
-        receipt, source_revision="c" * 40
+        receipt,
+        source_revision="f" * 40,
+        source_tree_id=source_tree_id,
+        dependency_lock_sha256=dependency_lock_sha256,
     )[0] is False
+
+    tampered = json.loads(receipt.read_text(encoding="utf-8"))
+    tampered["passed_tests"] -= 1
+    receipt.write_text(json.dumps(tampered), encoding="utf-8")
+    assert module._independent_reproduction_status(
+        receipt,
+        source_revision=revision,
+        source_tree_id=source_tree_id,
+        dependency_lock_sha256=dependency_lock_sha256,
+    ) == (False, "receipt=schema_or_digest_invalid")
+
+
+def test_independent_reproduction_receipt_rejects_inexact_or_wrong_repo_reference():
+    module = load_readiness_module()
+    common = {
+        "source_revision": "a" * 40,
+        "source_tree_id": "b" * 40,
+        "dependency_lock_sha256": "c" * 64,
+        "machine_identity_sha256": "d" * 64,
+        "verifier_identity_sha256": "e" * 64,
+        "platform_sha256": "f" * 64,
+        "python_version": "3.11.10",
+        "started_at_utc": datetime(2026, 9, 2, 5, 0, tzinfo=UTC),
+        "completed_at_utc": datetime(2026, 9, 2, 5, 10, tzinfo=UTC),
+        "collected_tests": 450,
+        "passed_tests": 450,
+        "failed_tests": 0,
+        "error_tests": 0,
+        "readiness_checks_collected": 10,
+        "readiness_checks_passed": 10,
+        "test_report_sha256": "1" * 64,
+        "dependency_check_report_sha256": "2" * 64,
+        "readiness_report_sha256": "3" * 64,
+        "commands_manifest_sha256": "4" * 64,
+        "artifact_bundle_sha256": "5" * 64,
+    }
+
+    with pytest.raises(ValueError, match="exact GitHub Actions reference"):
+        module.IndependentReproductionReceipt.create(
+            **common,
+            evidence_reference="github-actions://owner/repo/runs/1",
+        )
+    with pytest.raises(ValueError, match="another repository"):
+        module.IndependentReproductionReceipt.create(
+            **common,
+            evidence_reference=(
+                "github-actions://someone/else/runs/1/artifacts/reproduction"
+            ),
+        )
 
 
 @pytest.mark.parametrize("raw", [
-    '{"schema_version":"E.REPRODUCTION.1","schema_version":"E.REPRODUCTION.1"}',
-    '{"schema_version":"E.REPRODUCTION.1","score":NaN}',
+    '{"schema_version":"E.REPRODUCTION.2","schema_version":"E.REPRODUCTION.2"}',
+    '{"schema_version":"E.REPRODUCTION.2","score":NaN}',
     '[]',
 ])
 def test_independent_reproduction_receipt_requires_strict_object_json(tmp_path, raw):
@@ -177,6 +265,8 @@ def test_independent_reproduction_receipt_requires_strict_object_json(tmp_path, 
     verified, detail = load_readiness_module()._independent_reproduction_status(
         receipt,
         source_revision="a" * 40,
+        source_tree_id="b" * 40,
+        dependency_lock_sha256="c" * 64,
     )
 
     assert verified is False
@@ -231,7 +321,8 @@ def test_checkpoint_e_report_distinguishes_order_boundary_from_payment_lifecycle
     assert "passed 392/392 tests" in normalized
 
 
-def test_digest_bound_checkpoint_c_protocol_files_force_lf_checkout():
+def test_byte_digest_bound_inputs_force_lf_checkout():
     attributes = (REPOSITORY_ROOT / ".gitattributes").read_text(encoding="utf-8")
 
     assert "/tests/fixtures/checkpoint_c/*.txt text eol=lf" in attributes
+    assert "/requirements-dev.lock text eol=lf" in attributes

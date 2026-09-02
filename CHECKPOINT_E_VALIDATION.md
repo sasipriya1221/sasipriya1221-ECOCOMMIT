@@ -18,12 +18,17 @@ resolved dependency manifest into an install-time SHA-256 lock for the supported
 Linux CI and Windows validation wheels; pinned every third-party workflow action
 to a commit; disabled persisted checkout credentials; scoped provider/payment
 secrets to individual steps; removed provider-body printing; expanded offline CI
-to UI/workflow/protocol changes and static checks; and made the readiness checker
-capable of a real final transition. The checker now parses each evidence slot's
-state, validates a revision-bound independent-reproduction receipt, and supports
-`--mode final`. Public `main` and offline CI now exist at `c52884e…`, but it still
-reports false because the A–D real slots, license, independent reproduction,
-media, and the unpushed Candidate 3 correction remain absent.
+to every `main` push and pull request without path-filter gaps; and made the
+readiness checker capable of a real final transition. The checker now parses each
+evidence slot's state, validates a self-digesting independent-reproduction
+receipt bound to the exact source tree, dependency lock, complete counts,
+retained report/bundle digests, distinct machine/verifier identities, UTC
+chronology, and an exact same-repository Actions artifact, and supports `--mode
+final`. Public `main` now exists at `fd26a52a…`, Offline Regression run
+`33589998688` passed that exact pushed state, and Candidate 3 run `33590028177`
+completed attempt 2 incomplete with 78 provider deferrals and no receipt. Final
+mode still reports false because the A–D real slots, license,
+independent reproduction, and media remain absent.
 
 A historical fresh-virtual-environment run exposed an unrecorded build bootstrap:
 the hash lock installed runtime/test packages but not setuptools/wheel, so the
@@ -64,14 +69,26 @@ the provider-execution step. Its later redacted-summary and artifact-upload step
 receive neither credential; this narrows exposure without claiming a new live
 provider result. Before that provider step, a bounded GitHub Actions API check
 now binds a successful preflight to the expected workflow, repository, and exact
-source revision in a strict digest-checked receipt. This implementation has not
-been pushed or used to upgrade the historical order evidence. The credential
+source revision in a strict digest-checked receipt. This implementation is now
+present on public `main` at `fd26a52a…` but has not been used to upgrade the
+historical order evidence. The credential
 factory and credential-backed redaction guard are reached only after that receipt
 validates; a rejected receipt is proven not to load credentials or construct a
 provider. Every tracked credentialed Python HTTP boundary additionally marks its
 authorization value non-redirectable and rejects a changed final response URL.
 All seven workflows that reference secrets are manual-only; source pushes can
 run offline regression but cannot start a credentialed provider operation.
+
+The current local release-preparation tree additionally makes the A diagnostic,
+B/C finalizers, D deployment boundary/templates, license-decision note, and E
+checker itself mandatory public files. Candidate 3 diagnostics recompute retained
+rows without assuming missing artifacts are provider deferrals and never launch a
+retry. B/C output writers are atomic/write-once; C execution receipts and the E
+reproduction receipt require exact Actions artifact references. Deployment
+parsing rejects ambiguous body framing, state/audit hard-link aliasing,
+noncanonical counts, and unsafe API tokens. The full local regression now passes
+**465/465**. None of these local changes has been pushed or promoted to final
+evidence.
 
 ## Frozen-boundary check
 
@@ -93,9 +110,12 @@ ended cancelled after partial provider deferrals; public metadata checked before
 Candidate 2 dispatch reports the same excluded run completed with failure at
 attempt 6. It was not Candidate 2, its automatic maximum-score repair was rejected
 during reconciliation, and no attempt is promoted. Genuine Candidate 2 run
-`33583323178` remained incomplete after two attempts: the cumulative aggregate
-has one proven pass, three infrastructure/runner-contaminated error rows, 76
-provider deferrals, and no receipt. Candidate 3 is not remotely evaluated.
+`33583323178` remained incomplete after the two retained evidence attempts: the
+cumulative aggregate has one proven pass, three infrastructure/runner-contaminated
+error rows, 76 provider deferrals, and no receipt. Public metadata later showed
+Candidate 2 attempt 3 completed with failure, but no additional artifact is
+claimed. Candidate 3 run `33590028177` completed attempt 2 with one pass, one
+failed row, 78 provider deferrals, and no complete aggregate or receipt.
 
 ## Validation environment
 
@@ -106,15 +126,15 @@ provider deferrals, and no receipt. Candidate 3 is not remotely evaluated.
 | pytest | 8.4.2 |
 | Pydantic | 2.13.5 |
 | Node.js syntax check | v24.18.1 |
-| Latest fully validated code/test revision | `bb4c15b7de9649cd4a405edb7476813759cb0eb5` |
-| Public remote HEAD during validation | `c52884eb455c1858608d430aa2d14b1d31a9fa12` |
+| Latest fully validated public revision | `fd26a52a21dc8431133c50be76d7d1ecaf0d099b` |
+| Public remote HEAD during validation | `fd26a52a21dc8431133c50be76d7d1ecaf0d099b` |
 | Provider/payment mode | Current local run made no provider call; retained prior evidence proves Razorpay Test authentication and order creation only |
 
 ## Local readiness matrix
 
 | Area | Validation performed | Result | Acceptance boundary |
 |---|---|---|---|
-| Public access | Unauthenticated repository page returned HTTP 200; public `main` is `c52884e…` after an authorized 51-commit fast-forward push | **PUBLIC PASS** | Candidate 3 local correction is intentionally unpushed |
+| Public access | Public repository metadata confirms `main` is exactly `fd26a52a…` after the separately authorized two-commit fast-forward | **PUBLIC PASS** | Candidate 3 evaluation remains incomplete |
 | README | Problem, architecture, checkpoint truth, quick start, demo, evidence, limitations, and license status are explicit | **LOCAL PASS** | Final metrics and media remain absent |
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
@@ -124,7 +144,7 @@ provider deferrals, and no receipt. Candidate 3 is not remotely evaluated.
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
 | Demo/pitch | Runbook and five-minute outline distinguish local simulation from provider/final evidence | **LOCAL PASS** | No final screenshots or video were produced |
 | Repository hygiene | Local links, local-machine path leakage, transient tracked files, status vocabulary, and current-tree secret markers checked | **LOCAL PASS** | Pattern scanning is not exhaustive secret scanning |
-| CI readiness | Offline workflow installs the resolved manifest without dependency re-resolution and runs full tests plus readiness checks | **PUBLIC PASS** | Offline Regression run `33583217298` passed at `c52884e…`; Candidate 3 CI is not run |
+| CI readiness | Offline workflow installs the resolved manifest without dependency re-resolution and runs full tests plus readiness checks | **PUBLIC PASS** | Offline Regression run `33589998688` passed at `fd26a52a…`; Candidate 3 run `33590028177` remains incomplete/provider-blocked after attempt 2 |
 | License | Missing-license state is stated and detected | **BLOCKED** | Repository owner must choose the license |
 
 ## Tests and checks retained
@@ -144,18 +164,28 @@ provider deferrals, and no receipt. Candidate 3 is not remotely evaluated.
   `60c85f0b75574007a7bf1de9a8b4be7214c69a75`.
 - Current release-remote hardening tree: **388/388 passed** in the working
   repository at `75401299e09514ad8134c2cf25b7646d9ec775bc`.
-- Current Candidate 3/A/provider/evidence focused suite: **67/67 passed**; Checkpoint B:
-  **115/115 passed**; Checkpoint C: **47/47 passed**; Checkpoint D: **76/76
-  passed**; workflow security: **7/7 passed**.
+- Candidate 3 implementation snapshot: A/provider/evidence **67/67 passed**;
+  Checkpoint B **115/115 passed**; Checkpoint C **47/47 passed**; Checkpoint D
+  **76/76 passed**; workflow security **7/7 passed**.
 - Current Checkpoint E-focused readiness regression: **26/26 passed**.
 - Current Candidate 3 implementation commit: **392/392 passed** in both the
   working repository and a separate no-hardlink clean copy at `bb4c15b7…`.
+- Current local B/C/D preparation: B/runtime/security **188/188 passed**,
+  final-held-out C **9/9 passed**, complete D **97/97 passed**, and the combined
+  repository **440/440 passed** in both the working tree and a fresh no-hardlink
+  overlay clone at public `fd26a52a…` with upstream 0/0.
+- Current local A–E hardening tree: **465/465 passed**; E readiness **27/27**,
+  workflow security **8/8**, B8 finalizer **25/25**, C **64/64**, and D-specific
+  **111/111**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.
 - Browser JavaScript syntax: **PASS**.
 - Repository diff whitespace validation: **PASS**.
 - Machine-readable E structural checks: **8/8 passed**.
-- Clean-clone working tree after validation: **clean**.
+- Historical committed clean-clone working tree after validation: **clean**.
+  The current preparation is destined for local review commits only; until it is
+  intentionally pushed, the readiness checker must report local commits ahead of
+  the public upstream as a final-readiness blocker.
 - Current tracked-tree and Git-history high-risk credential-marker scans:
   **no matches** for the defined Groq/OpenAI/Razorpay/private-key patterns.
 - The readiness report exposes only a canonical expected GitHub URL. Local,
@@ -209,6 +239,20 @@ independent-machine reproduction slot remains blocked.
     failures caused by the deliberately missing `ecocommit` distribution/import,
     rather than hiding the provenance gap. Exact build-backend wheels are now
     hash-locked and a workflow-security regression enforces their presence.
+11. **The reproduction receipt trusted broad pass booleans.** Schema
+    `E.REPRODUCTION.2` instead binds exact source/tree/lock identities, complete
+    test and readiness counts, report/command/bundle hashes, independent identity
+    digests, UTC chronology, and a same-repository Actions artifact, then verifies
+    its self-digest. It remains an attestation, not proof of identity truth.
+12. **Offline CI still had change-selection gaps.** Path filters were removed, so
+    every pull request and every `main` push exercises the regression/static/
+    readiness job.
+13. **New critical readiness plumbing could be omitted from a release.** The
+    required-file manifest now includes the A diagnostic, B/C finalizers, D
+    deployment runtime/templates/docs, license decision, workflow, and checker.
+14. **Deployment configuration accepted ambiguous aliases and encodings.** The
+    release boundary now rejects transfer encoding, noncanonical lengths/counts,
+    unsafe API tokens, and hard-linked state/audit files before startup.
 
 The failed clean-clone run is retained here as failure evidence; it was not
 discarded or described as a passing run.

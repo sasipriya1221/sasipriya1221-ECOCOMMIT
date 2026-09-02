@@ -53,8 +53,8 @@ production-readiness claim.
 
 | Threat | Implemented local control | Local validation | Residual blocker |
 |---|---|---|---|
-| Model invents authority | Closed mapping, explicit provider candidate fields, bounded model correction, provenance/fidelity gate, trusted exposure config | Adversarial A/B tests | Candidate 2 incomplete; Candidate 3 real gate not evaluated |
-| Material ambiguity guessed | Clarification/rejection based on material risk | Ambiguity and live-failure regressions | Candidate 1 failed; Candidate 2 incomplete; Candidate 3 real gate not evaluated |
+| Model invents authority | Closed mapping, explicit provider candidate fields, bounded model correction, provenance/fidelity gate, trusted exposure config | Adversarial A/B tests | Candidate 3 run incomplete: one pass, one unchanged failure, 78 provider deferrals |
+| Material ambiguity guessed | Clarification/rejection based on material risk | Ambiguity and live-failure regressions | Candidate 1 failed; Candidate 2 incomplete; Candidate 3 has one terminal ambiguity failure and no complete score |
 | Caller forges pass/readiness | Caller claims ignored; A→B and D require strict digest-bound receipts; D reloads an out-of-band-hash-pinned cross-linked bundle | A/B/D boundary and loader-tamper tests | Real passing A/B/C receipts and trusted operational pin distribution absent |
 | JSON parser differential or duplicate-key overwrite | Shared bounded strict decoder rejects duplicates, non-finite values, invalid Unicode scalars, excessive structure, symlinked evidence inputs, and non-object A/C/E gate artifacts | Candidate correction, A resume/aggregate, C loader, and E receipt adversarial tests | External providers and independent attestors remain outside local parser control |
 | Unknown evidence source | Registered authority/issuer/kind/scope and subject checks | B evidence tests | Durable authority service absent |
@@ -68,16 +68,16 @@ production-readiness claim.
 | Audit row tampering | Canonical duplicate/nonfinite-safe JSON row parsing and SHA-256 chain verification | Edit/reorder/malformed/noncanonical tests | Trusted remote head/immutable store absent |
 | Concurrent local audit writers | Resolved companion lock using OS file locking | Thread and multi-process append tests | Distributed writers/remote immutable head absent |
 | Non-finite observability data | Finite value and aggregate-overflow rejection | D metric regressions | External telemetry pipeline absent |
-| HTTP parser/route abuse | 64 KiB bound, duplicate/nonfinite rejection, WSGI checks, optional environment-only bearer auth, exact opaque-operation body, and single-process rate limit including failed authentication | D negative/auth/rate tests | Production TLS/proxy, distributed limiter, network controls, and abuse load evidence absent |
+| HTTP parser/route abuse | 64 KiB bound, duplicate/nonfinite rejection, canonical content length, transfer-encoding denial, exact trusted proxy/host, bounded visible-ASCII bearer auth, exact opaque-operation body, and single-process rate limit including failed authentication | D negative/auth/rate/deployment tests | Production TLS/proxy, distributed limiter, network controls, and abuse load evidence absent |
 | Mode confusion | Explicit simulation/Test labels, non-test credential refusal, same-revision GitHub-API-verified preflight receipt, read-only current-credential preflight, and permanently disabled real-money field | Preflight identity/tamper tests, API/UI/browser checks, and redacted Test authentication/order evidence | Current verifier not run remotely; authorization/capture evidence and external webhook Test-mode configuration absent |
 | Provider ambiguity | Exact provider bindings, complete redacted per-attempt retry chronology, explicit correction-attempt state, transient correction-interruption deferral, provider/local idempotency, durable result recovery, capture re-fetch, exact refund-ID polling, and raw webhook HMAC/stable event-ID binding | Provider retry/correction-state, adapter, and webhook adversarial tests plus live order replay | Complete Candidate 3 evaluation, authorization, asynchronous refund, and webhook delivery evidence absent |
 | Credentialed HTTP redirect | Fixed HTTPS/allowlisted origins, non-redirectable authorization headers, exact final-URL checks, and non-transient model redirect evidence | Model, GitHub verifier, Razorpay transport, and inline-workflow redirect-policy regressions | Provider/TLS/proxy trust and remote workflow execution remain external; no managed egress proxy attestation |
 | Unintended provider workflow invocation | Every secret-bearing workflow is manual-only `workflow_dispatch`; offline regression is the only source-push CI path | Workflow trigger-policy regression enumerates all seven secret-bearing workflows | Repository write/Actions permission governance and manual operator intent remain external |
 | Malicious local DB writer | Payload digests, strict models, SQLite integrity check, CAS | Corruption/unknown-field/stale-write tests | Digests are unkeyed; a writer able to rewrite DB rows and hashes is outside the boundary |
-| Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation, and pre-outcome final registration/decision contract | C artifact/final-gate tests | Real registration/inputs/final run absent |
+| Benchmark cherry-picking | Frozen IDs/digests, exact coverage, error-row retention, semantic recomputation, pre-outcome protocols/selection/rule, paired attempt-1 receipts with one nonce, and atomic write-once final output | C artifact/final-gate/receipt tests | Real registration, selection receipt, protocols, inputs, execution receipts, and final run absent |
 | Fabricated submission media | Blocked evidence markers and promotion rule | E readiness checks | Human review/final evidence still required |
 | Secret committed | CI secret references, ignored artifacts, current-tree/history pattern scan | E local scan | Dedicated secret-scanner service/history audit not retained |
-| Supply-chain drift | Hash-required binary wheels, commit-pinned actions, disabled checkout credentials, provider-step-only secrets, read-only permissions | Lock dry-run and workflow-policy tests | No fully offline build bootstrap or provenance attestation |
+| Supply-chain drift | Hash-required binary wheels, commit-pinned actions, disabled checkout credentials, provider-step-only secrets, read-only permissions, and offline CI on every push/PR change | Lock dry-run and workflow-policy tests | No fully offline build bootstrap or provenance attestation |
 
 ## Key and credential boundary
 
@@ -106,9 +106,10 @@ access controls, clock discipline, backup, and recovery evidence.
 
 ## Public-repository risks
 
-- The remote is public; only the isolated B8 validation snapshot was pushed for
-  provider evidence. The integrated local main revision remains unpushed and is
-  not public evidence.
+- The remote is public and integrated `main` is now exactly `fd26a52a…`. The
+  authorized push itself is public source evidence, not proof that Candidate 3 or
+  any payment/product checkpoint passed; those still require their retained run
+  artifacts and receipts.
 - No license has been selected, so open-source reuse rights are not asserted.
 - Generated artifacts, audit logs, virtual environments, and test temporary
   directories are ignored and must be reviewed before intentional retention.
@@ -122,6 +123,11 @@ access controls, clock discipline, backup, and recovery evidence.
   Local paths, alternate hosts, insecure or credential-bearing URLs, and
   mismatched repositories are blockers; invalid raw origin values are not emitted
   into readiness evidence.
+- The independent-reproduction checker binds the exact commit tree, dependency
+  lock, complete test/readiness counts, retained report/bundle digests, distinct
+  machine/verifier identities, UTC chronology, and a same-repository Actions
+  artifact. This makes a receipt tamper-evident but does not independently prove
+  that the asserted operator or machine identities are truthful.
 
 ## Remaining high-priority review
 

@@ -195,9 +195,18 @@ credential value. Summary and upload steps run without either Razorpay credentia
 4. Treat `ORDER_API_VALIDATED_PAYMENT_LIFECYCLE_BLOCKED` and
    `checkpoint_b8_passed=false` literally. A successful workflow conclusion only
    means the validator retained this truthful partial result.
-5. Before testing payment authorization/capture, set the Razorpay account to
-   manual capture. Download and open the retained Test Checkout page, complete
+5. Before testing payment authorization/capture, set the Razorpay Test account
+   to **Manual Capture → 3 days → Normal Refund** and retain a redacted Dashboard
+   screenshot. Download and open the retained Test Checkout page, complete
    one genuine Test Checkout, and keep the downloaded callback JSON private.
+   Move it immediately into the ignored private-artifact directory before using
+   any repository command:
+
+   ```powershell
+   New-Item -ItemType Directory -Force artifacts\private
+   Move-Item -LiteralPath ecocommit-razorpay-checkout-callback.json `
+     -Destination artifacts\private\ecocommit-razorpay-checkout-callback.json
+   ```
 6. Before capture, combine the handoff/callback into a pinned webhook binding,
    configure the public HTTPS URL ending in `/v1/razorpay/webhook` in the
    Razorpay Test Dashboard, and start the loopback receiver behind that reviewed
@@ -206,7 +215,7 @@ credential value. Summary and upload steps run without either Razorpay credentia
    ```powershell
    .venv\Scripts\python.exe scripts\checkpoint_d_prepare_operation.py `
      --handoff artifacts\checkpoint-b8-checkout-handoff.json `
-     --callback ecocommit-razorpay-checkout-callback.json `
+     --callback artifacts\private\ecocommit-razorpay-checkout-callback.json `
      --output artifacts\private\checkpoint-b8-prepared-operation.json
 
    .venv\Scripts\python.exe scripts\checkpoint_b8_webhook_server.py `
@@ -228,7 +237,7 @@ credential value. Summary and upload steps run without either Razorpay credentia
    ```powershell
    .venv\Scripts\python.exe scripts\checkpoint_b8_razorpay_continue.py `
      --handoff artifacts\checkpoint-b8-checkout-handoff.json `
-     --callback ecocommit-razorpay-checkout-callback.json `
+     --callback artifacts\private\ecocommit-razorpay-checkout-callback.json `
      --output artifacts\checkpoint-b8-lifecycle.json `
      --state-db artifacts\checkpoint-b8-state.sqlite3
    ```
@@ -254,10 +263,81 @@ credential value. Summary and upload steps run without either Razorpay credentia
    Dashboard endpoint was configured in Test Mode; retain that external fact.
 9. Retain application denials and provider/transport failures and checksum the
    complete redacted evidence bundle.
+10. Only after Checkpoint A has a genuine passing receipt and every B8 provider
+    event above has been retained, assemble the final B receipt with the
+    write-once cross-checker. Supply separate Test Dashboard screenshots and
+    strict attestations for manual capture and the enabled HTTPS webhook. The
+    attestations retain hashes and observation metadata, never the endpoint URL,
+    API secret, webhook secret, or signing material:
+
+   ```powershell
+   .venv\Scripts\python.exe scripts\checkpoint_b8_finalize.py `
+     --preflight artifacts\checkpoint-b8-preflight.json `
+     --order-evidence artifacts\checkpoint-b8-order.json `
+     --handoff artifacts\checkpoint-b8-checkout-handoff.json `
+     --lifecycle artifacts\checkpoint-b8-lifecycle.json `
+     --webhook-evidence artifacts\checkpoint-b8-webhooks.json `
+     --checkpoint-a-receipt evidence\final\checkpoint-a-receipt.json `
+     --deterministic-safety-manifest artifacts\checkpoint-b8-safety.json `
+     --durability-manifest artifacts\checkpoint-b8-durability.json `
+     --certificate-key-reference artifacts\checkpoint-b8-key-reference.json `
+     --manual-capture-attestation artifacts\private\manual-capture-attestation.json `
+     --webhook-configuration-attestation artifacts\private\webhook-configuration-attestation.json `
+     --audit-log artifacts\checkpoint-b8-audit.ndjson `
+     --evidence-reference github-actions://OWNER/REPO/runs/RUN_ID/artifacts/ARTIFACT `
+     --provider-manifest-output artifacts\checkpoint-b8-provider-manifest.json `
+     --output evidence\final\checkpoint-b-receipt.json
+   ```
+
+   The finalizer derives the result from the complete cross-linked chain. It
+   rejects caller-supplied pass flags, mismatched source/account/amount/IDs,
+   any manual-capture timeout/action other than three days plus Normal Refund,
+   late configuration observations, incomplete webhook sets, fixture inputs,
+   symlinks, extra JSON fields, inexact/cross-repository evidence references,
+   and conflicting output. Publication is atomic and a byte-identical replay can
+   recover if a prior process stopped between its two outputs. Its local tests
+   are not a substitute for the provider and Dashboard evidence.
 
 The server-side Payments API cannot collect a payment, so step 5 requires an
 interactive Test Checkout. No simulation, mocked HTTP response, credential
 presence, or order-only run counts as complete B8 evidence.
+
+## Future Checkpoint C final held-out run
+
+Do not execute the authoritative final comparison until A and B both have
+genuine passing receipts. Before observing candidate or comparator outcomes,
+freeze the final suite, metric/TEL and cost definitions, acceptance choices,
+integrated source revision, exact A/B receipt hashes, candidate/comparator
+execution-protocol hashes, and comparator-selection receipt hash in the final
+registration. Publish or otherwise retain the registration SHA-256 out of band.
+Run the final census once from complete raw decision rows and their independently
+retained execution receipts:
+
+```powershell
+.venv\Scripts\python.exe scripts\checkpoint_c_final_held_out.py `
+  --registration evidence\final\checkpoint-c-registration.json `
+  --expected-registration-sha256 <out-of-band-registration-sha256> `
+  --suite evidence\final\checkpoint-c-suite.json `
+  --metric-specification evidence\final\checkpoint-c-metrics.json `
+  --candidate-rows artifacts\checkpoint-c-candidate-rows.json `
+  --comparator-rows artifacts\checkpoint-c-comparator-rows.json `
+  --candidate-receipt artifacts\checkpoint-c-candidate-receipt.json `
+  --comparator-receipt artifacts\checkpoint-c-comparator-receipt.json `
+  --checkpoint-a-receipt evidence\final\checkpoint-a-receipt.json `
+  --checkpoint-b-receipt evidence\final\checkpoint-b-receipt.json `
+  --source-revision <registered-40-character-sha> `
+  --execution-id <unique-final-execution-id> `
+  --output evidence\final\checkpoint-c-final.json
+```
+
+The candidate/comparator receipts must share one execution nonce, specify attempt
+1, bind their complete raw manifests plus the preregistered protocols/selection,
+and name exact GitHub Actions artifacts. The final runner recomputes both sides
+from the raw rows, enforces exact case coverage and the A→B→registration
+revision/hash chain, and writes only `C.FINAL.HELD_OUT.EVIDENCE.1` atomically.
+Fixture/simulated cases, supplied aggregate metrics, missing or errored rows,
+re-registration after outcome inspection, later attempts, or conflicting output
+fail closed; byte-identical replay returns the retained digest.
 
 ## Future Checkpoint D provider-Test run
 
@@ -287,7 +367,7 @@ integration run; request JSON cannot construct one.
 3. Supply only through the environment: `RAZORPAY_KEY_ID`,
    `RAZORPAY_KEY_SECRET`, the separate Test endpoint
    `RAZORPAY_WEBHOOK_SECRET`, `ECOCOMMIT_D_SIGNING_SECRET` (at least 32 bytes),
-   and `ECOCOMMIT_D_API_TOKEN` (at least 32 non-space bytes). Start the
+   and `ECOCOMMIT_D_API_TOKEN` (32–256 visible ASCII bytes). Start the
    loopback worker with persistent paths:
 
    ```powershell
@@ -332,11 +412,22 @@ For a retained clean-environment result:
 An independent reproduction must be performed by another machine/operator and
 retain the same provenance. This has not happened yet.
 
-For strict E final mode, also retain a JSON receipt with schema
-`E.REPRODUCTION.1`, the exact source revision, `independent_machine=true`, clean
-checkout/full-test/dependency/readiness pass flags, and the retained reproduction
-artifact SHA-256. Pass that file through `--independent-reproduction`; the local
-checker does not create or self-attest it.
+For strict E final mode, also retain a self-digesting JSON receipt with schema
+`E.REPRODUCTION.2`. It must bind the exact source revision and Git tree,
+dependency-lock hash, distinct machine/verifier identity digests, platform and
+Python version, UTC start/completion chronology, complete collected/passed/
+failed/error test counts, complete readiness-check counts, test/dependency/
+readiness/command/bundle hashes, and an exact artifact reference under this
+repository's GitHub Actions run. It must assert a clean upstream-exact checkout,
+no provider calls, and no fixture promotion. Pass that file through
+`--independent-reproduction`; the local checker derives completeness and verifies
+the digest but does not create or self-attest the receipt, nor prove that an
+asserted independent identity is truthful.
+
+The lock file is explicitly checked out with LF line endings through
+`.gitattributes`. This is required because the reproduction receipt hashes its
+checked-out bytes; platform `core.autocrlf` settings must not produce different
+lock digests for the same Git tree.
 
 ## Evidence-bundle checklist
 

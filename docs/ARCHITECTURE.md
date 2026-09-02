@@ -93,8 +93,10 @@ errors remain terminal.
 
 Candidate 1 is mathematically failed. Candidate 2 ran remotely but two attempts
 remained incomplete and exposed the correction/deferral classification defect. Candidate
-3 is the runner-only correction and has not run remotely, so A has not passed the
-frozen gate.
+3 is the runner-only correction. Its run `33590028177` completed attempt 2 with
+`C002` passed, `A002` unchanged failed, 78 provider-deferred cases, no complete
+aggregate, and no receipt. A therefore has not passed the frozen gate, and no
+rapid retry is justified while the same HTTP 429 condition persists.
 
 ### Deterministic B path
 
@@ -124,6 +126,14 @@ capture authority. The raw webhook endpoint verifies and binds
 identity while retaining the first receipt, and handles either event order. All
 of this has local fake-transport evidence only.
 
+The B finalizer is a separate evidence boundary. It reloads the exact A,
+preflight, order, handoff, lifecycle, webhook, audit, deterministic-test,
+durability, key-reference, and Dashboard-attestation files; verifies the
+three-day manual-capture plus Normal Refund setting and exact webhook events;
+and derives the B receipt. It requires an exact same-repository Actions artifact
+reference and atomically publishes byte-stable write-once outputs. It cannot
+substitute for the absent human Dashboard observations or provider lifecycle.
+
 Credentialed Python HTTP boundaries use fixed allowlisted API URLs, attach
 authorization with `add_unredirected_header`, and reject any response whose final
 URL differs from the exact request. This applies to model evaluation, GitHub run
@@ -148,8 +158,13 @@ the artifact by semantic recomputation.
 The checked-in fixture is synthetic and `PRELIMINARY_NOT_FINAL`. The runner
 rejects final-held-out scenarios. A separate final preregistration/evidence model
 binds A/B receipts, suite/case/cost/metric hashes, comparator/candidate identity,
-and quantitative acceptance rules before outcomes, and refuses fixtures or
-simulated final inputs. No real final registration or result exists.
+candidate/comparator protocol hashes, a comparator-selection receipt, and
+quantitative acceptance rules—including autonomous coverage—before outcomes,
+and refuses fixtures or simulated final inputs. Paired decision receipts bind
+one execution nonce, attempt 1, complete raw manifests, exact registered
+protocols/selection, and exact Actions artifacts. The writer derives all case
+scores/TEL/gates and atomically retains a byte-stable one-shot artifact. No real
+final registration, receipt, or result exists.
 
 ### D local product and prepared Test path
 
@@ -185,6 +200,15 @@ operator-supplied field cannot change this. The bundled WSGI server is not a
 public TLS/production host; the optional webhook route needs separately verified
 external routing and Test Dashboard configuration before it can receive genuine
 events.
+
+For a future hosted single-host runtime, `deploy/wsgi.py` applies an exact-host,
+trusted-proxy TLS boundary. It rejects untrusted proxy sources, ambiguous
+forwarding, transfer encoding, noncanonical content length, oversized bodies,
+noncanonical worker/instance settings, unsafe API tokens, and state/audit file
+aliasing. The nginx templates buffer bodies, replace forwarding headers, strip
+transfer encoding, enforce TLS/host/rate limits, and target loopback only. These
+are local templates and checks, not evidence of a host, certificate, route,
+backup, monitor, or public deployment.
 
 ## Progressive economic state
 
@@ -255,8 +279,8 @@ an exact provider-side binding match.
 | A-to-B admission | `checkpoint_a_evidence.py`, `checkpoint_b_integration.py` |
 | B deterministic safety | `policy.py`, `evidence.py`, `exposure.py`, `certificates.py`, `commitment.py`, `idempotency.py`, `durable.py`, `payments.py`, `razorpay.py`, `razorpay_checkout.py`, `webhook.py`, `reconciliation.py` |
 | C benchmark | `checkpoint_c_models.py`, `checkpoint_c_baselines.py`, `checkpoint_c_metrics.py`, `checkpoint_c_runner.py`, `checkpoint_c_final.py` |
-| D product/operations | `checkpoint_status.py`, `checkpoint_d_evidence.py`, `execution.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, `checkpoint_d_workflow.py`, `demo_server.py`, `ui/` |
-| E evidence discipline | `REPRODUCIBILITY.md`, `ENGINEERING_LOG.md`, `SUBMISSION_EVIDENCE.md`, `DEMO_RUNBOOK.md`, `PITCH_OUTLINE.md`, readiness checker |
+| D product/operations | `checkpoint_status.py`, `checkpoint_d_evidence.py`, `execution.py`, `audit.py`, `observability.py`, `service.py`, `api.py`, `checkpoint_d_workflow.py`, `demo_server.py`, `deployment.py`, `deploy/`, `ui/` |
+| E evidence discipline | `REPRODUCIBILITY.md`, `ENGINEERING_LOG.md`, `SUBMISSION_EVIDENCE.md`, `DEMO_RUNBOOK.md`, `PITCH_OUTLINE.md`, `LICENSE_DECISION.md`, readiness checker |
 
 ## Checkpoint dependencies
 

@@ -3,36 +3,7 @@ name: Offline Regression
 on:
   push:
     branches: [main]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'scripts/**'
-      - 'docs/**'
-      - 'ui/**'
-      - '.github/workflows/**'
-      - 'CHECKPOINT_*_VALIDATION.md'
-      - 'CHECKPOINT_A_RUNBOOK.md'
-      - 'PROGRESS.md'
-      - 'README.md'
-      - '.gitattributes'
-      - 'pyproject.toml'
-      - 'requirements-dev.lock'
-      - '.github/workflows/offline-regression.yml'
   pull_request:
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'scripts/**'
-      - 'docs/**'
-      - 'ui/**'
-      - '.github/workflows/**'
-      - 'CHECKPOINT_*_VALIDATION.md'
-      - 'CHECKPOINT_A_RUNBOOK.md'
-      - 'PROGRESS.md'
-      - 'README.md'
-      - '.gitattributes'
-      - 'pyproject.toml'
-      - 'requirements-dev.lock'
 
 concurrency:
   group: offline-regression-${{ github.ref }}

@@ -1,3 +1,6 @@
 # These files are byte-digested as frozen Checkpoint C protocol inputs.
 # Force one checkout representation regardless of core.autocrlf/platform.
 /tests/fixtures/checkpoint_c/*.txt text eol=lf
+
+# The E reproduction receipt hashes the checked-out lock file itself.
+/requirements-dev.lock text eol=lf

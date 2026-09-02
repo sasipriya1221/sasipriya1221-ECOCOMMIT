@@ -5,10 +5,10 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 REMOTE RUN INCOMPLETE; Candidate 3 RUNNER FIX BUILT + FOCUSED-VALIDATED, NOT PUSHED/EVALUATED** | Fresh 80-case Candidate 3 provider run and all four unchanged thresholds passing together |
-| B — deterministic economic safety | **B1–B7 + durable single-host runtime LOCALLY VALIDATED; B8 order subgates live-validated; NOT PASSED** | Passing A receipt, genuine Test Checkout/capture/refund/webhook evidence, and an independently verified signing-key boundary |
-| C — comparative benchmark | **Framework + final preregistration contract LOCALLY VALIDATED; NOT PASSED** | Real frozen suite/costs/outputs, pre-outcome rule choices, passing A+B receipts, and one-shot held-out run |
-| D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST EXECUTION PATH LOCALLY VALIDATED; NOT PASSED** | Real pinned A/B/C receipts, current credentials/human callback/webhooks, hosted security/operations, and final integrated evidence |
+| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE; Candidate 3 ATTEMPT 2 INCOMPLETE / PROVIDER-BLOCKED; NOT PASSED** | After confirmed provider-capacity recovery, resume only the 78 deferred Candidate 3 jobs and pass all four unchanged thresholds together |
+| B — deterministic economic safety | **B1–B7 + DURABLE RUNTIME + B8 FINALIZER LOCALLY VALIDATED; ORDER SUBGATES LIVE-VALIDATED; NOT PASSED** | Passing A receipt, Test manual-capture/webhook attestations, and genuine Checkout/capture/refund/webhook evidence |
+| C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Real frozen suite/costs/outputs, published pre-outcome choices, passing A+B receipts, and one-shot held-out run |
+| D — product/API/UI/operations | **V2 AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real pinned A/B/C receipts, hosted TLS/security/operations, provider lifecycle, and final integrated evidence |
 | E — repository/submission readiness | **PUBLIC MAIN + OFFLINE CI + LOCAL CHECKER VALIDATED; NOT PASSED** | A–D evidence, owner-selected license, independent reproduction, final screenshots, and video |
 
 Status vocabulary is strict: **BUILT** means an implementation exists;
@@ -152,7 +152,12 @@ retained in `evidence/checkpoint-a-candidate-2-attempt-2.json`. Further Candidat
 2 retries are not justified because failed-jobs-only reruns cannot repair the
 three contaminated rows already retained by successful jobs.
 
-### Candidate 3 — runner-only correction, not launched
+Public metadata checked before Candidate 3 dispatch showed Candidate 2 run
+`33583323178` completed with conclusion `failure` at attempt 3. The tracked
+Candidate 2 evidence remains the separately verified attempt-1 and attempt-2
+observations above; no attempt-3 artifact or semantic result is claimed here.
+
+### Candidate 3 — runner-only correction, pushed; attempt 2 incomplete
 
 The evidence-driven correction is explicitly versioned `A-CANDIDATE-3`. It
 keeps the same frozen 80 cases, Qwen model/provider configuration, prompt,
@@ -172,9 +177,62 @@ execution classification and fresh artifact namespace change:
 
 The focused Candidate 3/provider/evidence scope passes **67/67** with an isolated
 local pytest temp area. Implementation commit `bb4c15b7…` passes **392/392** in
-both the working repository and a separate no-hardlink clean copy. Candidate 3
-has not been pushed, dispatched, or evaluated. A fresh remote run requires an
-explicit push/dispatch boundary; no current result marks Checkpoint A passed.
+both the working repository and a separate no-hardlink clean copy. The authorized
+fast-forward then pushed exactly `bb4c15b7…` and the documentation-only
+`fd26a52a…` to public `main`; no force push or history rewrite occurred. Offline
+Regression run `33589998688` passed at `fd26a52a…`.
+
+The fresh manual Candidate 3 workflow is run `33590028177` at that exact source:
+`https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33590028177`.
+Attempt 1 passed its independent regression/static job and every Groq
+secret-presence check. Seventy-nine case jobs then exited code 75 as typed
+provider deferrals; the representative `C001` artifact proves a transient
+`candidate_contract_correction_interrupted` / `CORRECTION_PROVIDER_ERROR` after
+provider HTTP 429, not a semantic failure. Its artifact ID is `9831406347`; the
+downloaded archive SHA-256 exactly matched GitHub's published digest
+`481068fb0824dfbc466902c3cef3eeb10e1cc7ad44a83de94ee021d13da21aff`.
+
+One case, `A002`, retained a terminal row. It did not pass: the validator and
+expected status were both `CLARIFICATION_REQUIRED`, but the required dependency
+condition failed. The aggregate therefore contained one failed terminal row,
+79 missing rows, `full_frozen_gate_run=false`, `gate_passed=false`, and no
+receipt. Its artifact ID is `9831908998`; the downloaded archive SHA-256 matched
+`bc8ae6175e1d1cce424ac0a4ad1a757d5719b88338ec1e9412ea8ab707b650c5`.
+The zero values in that partial aggregate are not final metrics and are not a
+Candidate 3 semantic score.
+
+The verified manifest still binds Candidate 3, source `fd26a52a…`, run
+`33590028177`, frozen dataset SHA-256
+`968be3ed3a438a3a28a3402fa65c90a45cb564ed1adad2e6e51d852e24c5bb8b`,
+and the unchanged Qwen/JSON-object/1,024-token configuration. Its verified
+manifest SHA-256 is
+`773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934`;
+that digest is an identity pin, not an A receipt. A
+failed-jobs-only attempt 2 began at `2026-09-02T04:40:34Z`. GitHub preserved
+the successful `A002` job at its original attempt-1 timestamps and scheduled
+only the 79 deferred cases plus the dependent aggregate.
+
+Attempt 2 completed with conclusion `failure` at `2026-09-02T05:05:19Z` because
+coverage remained incomplete. It added one genuine passing terminal row,
+`C002`: validator and expected status were both `VALIDATED`, every dependency
+condition passed, and the retained trace records an HTTP 429 followed by an
+accepted response. Its row SHA-256 is
+`bec8aafd4467d6a382f40857ebed3c3ce4c78a61cffb910acb922d16bcc07f12`.
+The earlier `A002` row was byte-for-byte unchanged with row SHA-256
+`5dbfc71fcb1cdebe5ef7c4210b38f8dbbe7e19fb7079686170f302902be78c29`.
+The cumulative aggregate therefore has two terminal rows, one pass, one
+semantic failure, 78 missing provider-deferred rows,
+`full_frozen_gate_run=false`, `gate_passed=false`, and no receipt. Partial
+metrics are not a final Candidate 3 score.
+
+Attempt-2 aggregate artifact `9832489831` has verified archive SHA-256
+`fcbe84be1211d6a195ff778b6bb0f104dd3b35ae16bd65a4259b857ad935296a`
+and JSON SHA-256
+`b01a7d5f83beb9018fa25e7cbec7f9ed57e238d9f1e708d5ab2995512e916c76`.
+An immediate attempt 3 is not justified: attempt 2 converted only one of 79
+deferred cases while pervasive HTTP 429s continued. After confirmed Groq
+quota/capacity recovery, continuation may resume only this run's 78 failed jobs.
+Checkpoint A remains **BLOCKED / NOT PASSED**.
 
 ## Checkpoint B
 
@@ -198,7 +256,18 @@ Live Razorpay evidence already retained:
   `6d8cdcabbc78093f2638c8fbefd2e7bcd4d566d1eb807cd6fa0abf709d700f4d`.
 
 That historical order run remains evidence for its original adapter snapshot; it
-is not retroactively upgraded. The current manual order-boundary workflow now
+is not retroactively upgraded. A fresh exact-source preflight run `33592456896`
+then passed at public `fd26a52a…`. Exact-source order-boundary run `33592499084`
+created and fetched one INR 1.00 Test order, proved one provider create across
+identical replay, found zero attached payments, generated the Checkout handoff,
+and truthfully retained `checkpoint_b8_passed=false`, capture not executed, and
+blocker `RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`. Its artifact ID is
+`9832232980`; the downloaded archive SHA-256 matched GitHub's published
+`56ca57750589d41cbf4b9ea717d0b48d7dfb16344702a5f0b6d7d5d1a350000d`.
+The generated handoff expires at `2026-09-03T04:53:12.35686Z`; its Checkout HTML
+SHA-256 is `ad7c60fd53490693a6fc878a140a21e11be9bccbde997016e385e58c53d97fe5`.
+
+The current manual order-boundary workflow
 uses GitHub's Actions API to require a successful `workflow_dispatch` preflight
 from the expected workflow, repository, and exact lifecycle source revision. A
 bounded strict-JSON receipt is digest-bound, retained, and consumed before
@@ -234,6 +303,28 @@ expiry never grants fresh capture authority to a merely reserved payment. That
 is a **single-host durability implementation**, not a
 high-availability, malicious-database-tamper, backup/restore, or KMS claim.
 
+A new local-only B8 finalizer now cross-loads the A receipt, exact-source
+preflight/order/handoff, lifecycle, verified webhook set, audit chain,
+deterministic safety counts, durability scenarios, and non-secret key-boundary
+reference. It derives the B receipt and refuses caller pass booleans, missing or
+duplicate strict JSON, cross-artifact ID/amount/digest mismatches, and output
+overwrite. Final provider-manifest and receipt publication is atomic, byte-exact
+on replay, and recoverable if the process stops after publishing only the first
+file. The retained evidence reference must name an exact artifact under the same
+GitHub repository. The Checkout callback filename is explicitly ignored and the
+runbook moves it immediately under `artifacts/private/`.
+
+The finalizer also requires two owner-produced, non-secret Dashboard
+attestations: Test-mode manual capture with an exact three-day timeout and
+`NORMAL_REFUND` timeout action, and an enabled HTTPS webhook configuration with
+exactly `payment.captured` and `refund.processed`. It binds source revision,
+provider-account hash, observation time, screenshot hash, and verifier reference
+without retaining the endpoint URL or credentials. Webhook secrets must contain
+32–256 visible ASCII bytes and must differ from the API secret. The focused B
+finalizer suite passes **25/25** locally.
+These controls prepare evidence assembly; no genuine Checkout/capture/refund or
+webhook event exists, so B remains **NOT PASSED**.
+
 ## Checkpoint C
 
 The V2 preliminary framework remains explicitly synthetic and ineligible for
@@ -246,10 +337,11 @@ A separate final protocol now requires, before outcomes are observed:
 - hashes for the real held-out suite, case identities, metric specification, TEL
   weights, and cost-source manifest;
 - passing A and B receipt hashes plus the integrated candidate revision;
-- the selected comparator;
+- the candidate and comparator execution-protocol hashes plus a separately
+  retained comparator-selection receipt hash;
 - a quantitative TEL-reduction margin, legitimate-completion and selective-
-  reliability floors, latency/error/missing-data/irreversible-loss ceilings,
-  tie handling, rationale, and statistical method; and
+  reliability floors, an autonomous-coverage floor, latency/error/missing-data/
+  irreversible-loss ceilings, tie handling, rationale, and statistical method;
 - authentic case-result hashes with fixtures, simulated costs, and simulated
   latency structurally forbidden.
 
@@ -258,6 +350,20 @@ inputs, preregistration decisions, A+B, and one-shot held-out execution.
 Standalone plan/suite loading now uses the same bounded nonsymlinked strict-JSON
 boundary, so duplicate-key or non-standard JSON cannot silently change a frozen
 benchmark input.
+
+The local final path is no longer limited to a caller-created metric snapshot. A
+write-once `C.FINAL.HELD_OUT.EVIDENCE.1` CLI accepts an out-of-band pinned frozen
+registration, exact held-out suite and metric/TEL/cost-source hashes, passing A/B
+receipt files, complete candidate/comparator raw decision rows, and paired
+write-once execution receipts. Those receipts bind one shared execution nonce,
+attempt 1, the frozen protocols and comparator selection, complete row manifests,
+and exact GitHub Actions artifact references. The runner rejects fixtures/
+simulated inputs, enforces exact unique case coverage and the A→B→C revision/hash
+chain, re-scores every case, and derives both aggregate snapshots and the
+preregistered decision internally. Output publication is atomic and identical
+replay returns the same bytes; conflicts fail closed. The focused C scope passes
+**64/64**. No real suite, rows, receipts, or one-shot execution were supplied, so
+C remains **NOT RUN / BLOCKED**.
 
 ## Checkpoint D
 
@@ -287,13 +393,37 @@ TLS deployment/reverse proxy, independently verified authentication/rate-limit/
 webhook endpoint configuration, operations evidence, and a cross-linked D
 receipt. The bundled WSGI server remains loopback development software.
 
+Local deployment readiness now includes an importable production WSGI entrypoint,
+strict environment/forwarded-host policy, provider-neutral nginx/TLS and proxy
+templates, request-size and external-rate-limit expectations, and explicit
+persistent-volume, backup, monitoring, and secret-injection requirements. These
+files also reject transfer-encoded/ambiguous body framing, noncanonical numeric
+settings, unbounded/non-ASCII API tokens, and hard-link aliasing between the
+mutable state database and append-only audit log. They are configuration
+scaffolding only: no listener, DNS, host, certificate, provider route, or paid
+service was created.
+
+The authoritative D loader now requires `D.EVIDENCE.PINS.2` and the new raw-row
+`C.FINAL.HELD_OUT.EVIDENCE.1`; legacy caller-metric C evidence, old pins,
+cross-link mismatches, and re-pinned aggregate tampering fail closed. The focused
+D suite passes **111/111**, and the complete local suite passes **465/465**.
+Hosted TLS scans,
+reverse-proxy rendering on the chosen host, edge controls, backup/restore,
+monitoring, real A/B/C receipts, and a hosted integrated run remain **NOT RUN**.
+
 ## Checkpoint E and release security
 
-The readiness checker can now genuinely transition to final-ready: it reads each
-evidence slot's `BLOCKED`/`FAILED`/`PASSED` state, validates a revision-bound
+The readiness checker can structurally transition to final-ready: it reads each
+evidence slot's `BLOCKED`/`FAILED`/`PASSED` marker, validates a revision-bound
 independent-reproduction receipt as a bounded nonsymlinked strict JSON object
-with exactly the typed fields, and provides a strict `--mode final`. Today's
-real slots remain blocked, so final readiness remains false.
+with exact source tree/dependency-lock/test-count/readiness-count/report/bundle
+digests, distinct verifier and machine bindings, UTC chronology, and an exact
+same-repository GitHub Actions artifact reference. It derives completeness from
+the counts and self-digest rather than trusting pass booleans, and provides a
+strict `--mode final`. It does not
+yet substantively reload and verify every underlying final artifact, so marker
+promotion alone is not authoritative evidence. Today's real slots remain blocked,
+and final readiness remains false.
 
 Remote readiness is now identity-bound rather than presence-based. Only the
 expected public GitHub repository is accepted; local filesystem clones,
@@ -309,18 +439,31 @@ All repository workflows now:
 - avoid printing provider bodies; and
 - use the hash-locked validation dependency file.
 
-Offline CI watches source, scripts, tests, docs, UI, workflows, protocol files,
-and the lock, then runs tests, compilation, JavaScript syntax, dependency
-consistency, readiness structure, and diff checks. The lock authorizes exact
+Offline CI now runs for every `main` push and every pull request, removing path-
+filter gaps, then runs tests, compilation, JavaScript syntax, dependency
+consistency, readiness structure, and diff checks. The readiness manifest makes
+the A diagnostic, B/C finalizers, D deployment boundary, deployment templates,
+and license-decision plumbing required public files. The lock authorizes exact
 published artifact hashes for the supported Linux CI and Windows validation
 wheels, including the exact setuptools/wheel build backend required by a fresh
 virtual environment; editable project installation uses
 `--no-deps --no-build-isolation`.
 
-Public `main` and offline CI are now real at `c52884e…`; the local Candidate 3
-runner correction is intentionally not pushed. Final E blockers remain A–D final
-evidence, license choice, an authorized Candidate 3 push/CI if that candidate is
-adopted, independent reproduction, final screenshots, and the five-minute video.
+Public `main` is now exactly `fd26a52a…`, and Offline Regression run
+`33589998688` passed that pushed state. Candidate 3 run `33590028177` completed
+attempt 2 incomplete with 78 provider deferrals and no A receipt. Final E blockers remain A–D final evidence,
+license choice, independent reproduction, final screenshots, and the five-minute
+video.
+
+The owner license decision remains **BLOCKED**, not inferred. The prepared option
+brief in `docs/LICENSE_DECISION.md` recommends Apache-2.0 for permissive
+enterprise/research reuse with express patent terms, while preserving MIT,
+AGPL-3.0, and no-license as explicit alternatives. No `LICENSE` file will be
+created until the owner chooses.
+
+The existing final evidence slots and five-minute pitch outline remain prepared
+but deliberately blocked. They will not be populated with screenshots, metrics,
+or video claims until A–D have authoritative retained evidence.
 
 ## Non-claims
 
@@ -331,11 +474,16 @@ adopted, independent reproduction, final screenshots, and the five-minute video.
   an A pass nor a frozen Candidate 2/3 run; none of its attempts or artifacts may be resumed.
 - Candidate 2 ran remotely; attempts 1 and 2 remained incomplete and contaminated
   by a runner classification defect. It did not pass and will not be retried.
-- Candidate 3 has not been pushed or evaluated.
+- Candidate 3 was pushed and run `33590028177` completed attempt 2 incomplete;
+  its two terminal rows and 78 provider deferrals are not a complete score or pass.
 - Provider deferrals are not semantic failures; contract failures are not
   provider deferrals.
 - The Razorpay order subgate is not a payment-lifecycle pass.
 - Synthetic B/C/D fixtures are not provider or final comparison evidence.
 - No final comparator/TEL numbers, hosted integration, independent reproduction,
   screenshot, or video is claimed.
-- No remote push was performed without explicit authorization.
+- The only new remote push was the explicitly authorized fast-forward of
+  `bb4c15b7…` and `fd26a52a…`; no later local readiness work is remotely published.
+- The new A diagnostic, B finalizer, C raw-row/receipt runner, D V2 loader and
+  deployment templates, E receipt verifier, license brief, and truth updates are
+  local review work, not public evidence; they have not been pushed.

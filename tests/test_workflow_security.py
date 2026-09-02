@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -79,11 +80,14 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
     ]
 
 
-def test_offline_regression_covers_runtime_ui_workflows_and_static_checks():
+def test_offline_regression_covers_every_change_and_static_checks():
     workflow = (WORKFLOWS / "offline-regression.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
 
-    assert workflow.count("- '.github/workflows/**'") == 2
-    assert workflow.count("- 'ui/**'") == 2
+    assert "paths:" not in trigger_block
+    assert "paths-ignore:" not in trigger_block
+    assert re.search(r"(?m)^  push:\s*$", trigger_block)
+    assert re.search(r"(?m)^  pull_request:\s*$", trigger_block)
     assert "python -m compileall -q src scripts tests" in workflow
     assert "node --check ui/app.js" in workflow
     assert "git diff --check" in workflow
@@ -103,3 +107,17 @@ def test_hash_lock_includes_build_backend_for_a_fresh_venv():
         index = matches[0]
         assert lines[index].endswith(" \\")
         assert re.fullmatch(r"  --hash=sha256:[0-9a-f]{64}", lines[index + 1])
+
+
+def test_checkout_callback_is_ignored_and_runbook_moves_it_to_private_artifacts():
+    callback = "ecocommit-razorpay-checkout-callback.json"
+    ignored = subprocess.run(
+        ["git", "check-ignore", "--quiet", "--no-index", callback],
+        cwd=ROOT,
+        check=False,
+    )
+    runbook = (ROOT / "docs" / "REPRODUCIBILITY.md").read_text(encoding="utf-8")
+
+    assert ignored.returncode == 0
+    assert f"Move-Item -LiteralPath {callback}" in runbook
+    assert runbook.count(f"artifacts\\private\\{callback}") == 3

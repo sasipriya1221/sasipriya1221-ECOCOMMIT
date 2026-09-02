@@ -23,9 +23,15 @@ Checkpoint A remains not passed. Candidate 1 is mathematically failed. A later
 remote score-recovery experiment at run `33556907712` ended cancelled after
 seven transient provider deferrals and is not an eligible frozen candidate; its
 automatic maximum-score filling was rejected rather than promoted. Candidate 2
-then ran as `33583323178`, but two attempts remained incomplete and exposed a
-general provider/correction resumability defect. Candidate 3 is the runner-only
-correction; it is locally focused-tested and has not been pushed or evaluated.
+then ran as `33583323178`, but the retained attempts remained incomplete and
+exposed a general provider/correction resumability defect. Candidate 3 is the
+runner-only correction; it was fast-forward pushed at `fd26a52a…`, Offline
+Regression run `33589998688` passed, and fresh Candidate 3 run `33590028177` is
+incomplete after attempt 2. Its cumulative aggregate has one passing row, one
+failed row, 78 provider deferrals, and no receipt. No complete score or
+Checkpoint A pass is claimed. The local diagnostic can verify/recompute retained
+rows and assess retry readiness, but never dispatches a retry; another attempt is
+not justified while pervasive HTTP 429s remain.
 
 ## Why ECOCOMMIT
 
@@ -77,7 +83,7 @@ matrix is in [Threat Model](docs/THREAT_MODEL.md).
 | Checkpoint | Engineering state | Acceptance state |
 |---|---|---|
 | A — offline specification/contracts | **BUILT + PASSED (offline scope)** | Frozen invariants retained |
-| A — live intent/fidelity gate | **Candidate 1 failed; Candidate 2 incomplete; Candidate 3 runner correction locally focused-tested, not evaluated** | **NOT PASSED** |
+| A — live intent/fidelity gate | **Candidate 1 failed; Candidate 2 incomplete; Candidate 3 run `33590028177` attempt 2 incomplete/provider-blocked** | **NOT PASSED** |
 | B — deterministic economic safety | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | C — comparative benchmark harness | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | D — API/UI/audit/operations | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
@@ -160,6 +166,8 @@ implementation and its fake-transport regressions are not live evidence.
 - [Checkpoint D validation](CHECKPOINT_D_VALIDATION.md)
 - [Checkpoint E validation](CHECKPOINT_E_VALIDATION.md)
 - [Reproducibility runbook](docs/REPRODUCIBILITY.md)
+- [Hosted deployment readiness](docs/DEPLOYMENT_READINESS.md)
+- [Owner license decision brief](docs/LICENSE_DECISION.md)
 - [Engineering failure/fix log](docs/ENGINEERING_LOG.md)
 - [Submission evidence framework](docs/SUBMISSION_EVIDENCE.md)
 - [Five-minute pitch outline](docs/PITCH_OUTLINE.md)
@@ -202,6 +210,7 @@ captures, mocked provider output, or preliminary benchmark numbers.
 | `scripts/` | Live A/B tooling, webhook/evidence export, C runner, D demo/prepared Test server, and E readiness checks |
 | `spec/` | Frozen scope, hypothesis, metrics, and evaluation protocol |
 | `docs/` | Architecture, threat model, reproducibility, engineering log, demo, pitch, and evidence framework |
+| `deploy/` | Provider-neutral single-host WSGI, TLS proxy, and environment templates; not a deployed service |
 | `.github/workflows/` | Offline CI plus manual-only credentialed provider workflows |
 
 ## Safety and limitations

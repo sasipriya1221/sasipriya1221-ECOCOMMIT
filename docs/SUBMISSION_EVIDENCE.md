@@ -26,8 +26,10 @@ webhook delivery, reconciliation, or settlement was executed.
 - Retained failure: Candidate 1, run `33493409547` attempt 15, is mathematically
   failed at a maximum 69/80. Its tracked failure manifest and aggregate/archive
   digests are in `PROGRESS.md`. Candidate 2 run `33583323178` is incomplete and
-  exposed a resumability-classification defect; corrected Candidate 3 is not
-  evaluated.
+  exposed a resumability-classification defect. Corrected Candidate 3 run
+  `33590028177` completed attempt 2 with `C002` passed, `A002` unchanged failed,
+  78 provider-deferred cases, no complete score, and no receipt; it is **NOT
+  PASSED**.
 - Do not insert: smoke results, partial aggregates, provider-deferred rows,
   synthetic fixtures, or metrics calculated from an incomplete set.
 - Final artifact reference: **BLOCKED — not available**
@@ -49,12 +51,21 @@ webhook delivery, reconciliation, or settlement was executed.
 - Partial redacted artifact: `checkpoint-b8-razorpay-test-evidence-33535533557`,
   artifact ID `9811456771`, GitHub artifact SHA-256
   `6d8cdcabbc78093f2638c8fbefd2e7bcd4d566d1eb807cd6fa0abf709d700f4d`.
+- Exact public-source subgates: preflight `33592456896` and order run
+  `33592499084` at `fd26a52a…` passed their limited boundaries. The order
+  artifact retained `checkpoint_b8_passed=false`; Checkout/capture/refund/
+  webhooks remain **NOT RUN**.
 - Exact blocker: `RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`; the Payments API
   cannot collect a payment, and no genuine Test Checkout callback/signature was
   available. A digest-bound Checkout page and capture/refund continuation now
   exist locally with single-host durable state and a bound raw-webhook receiver,
   but have not run against Razorpay. Manual capture, external Test webhook
   configuration/delivery, and managed signing-key evidence remain unverified.
+- Finalizer readiness: the local write-once cross-checker requires the exact
+  three-day manual-capture + Normal Refund screenshot attestation, exact HTTPS
+  webhook-event configuration attestation, complete provider/webhook/audit/
+  durability chain, and an exact same-repository Actions artifact reference. It
+  has deterministic test evidence only.
 - Promotion state: **BLOCKED — partial order evidence is not final B8 evidence**.
 
 ### Checkpoint C final economic comparison
@@ -66,8 +77,11 @@ webhook delivery, reconciliation, or settlement was executed.
   authentic comparator outputs, validated A+B candidate, and the separately
   gated one-shot held-out run.
 - Framework state: a final preregistration/evidence contract now binds the
-  required hashes, upstream receipts, candidate/comparator, and quantitative
-  rule before outcomes; no real registration values or results exist.
+  required hashes, upstream receipts, candidate/comparator protocols, comparator
+  selection receipt, and quantitative rule—including autonomous coverage—before
+  outcomes. Paired attempt-1 receipts must share one execution nonce and bind
+  complete raw manifests plus exact Actions artifacts. No real registration,
+  execution receipts, values, or results exist.
 - Do not insert: the checked-in synthetic one-case fixture or preliminary harness
   output.
 - Final comparison table: **BLOCKED — deliberately absent**
@@ -84,7 +98,10 @@ webhook delivery, reconciliation, or settlement was executed.
 - Local implementation state: strict pinned receipt loading, SQLite/OS-lock
   single-host durability, startup-pinned Test execution, bearer authentication,
   local rate limiting, operator UI, and bound webhook ingestion are implemented
-  and regression-tested. No real receipt bundle or provider/hosted run used them.
+  and regression-tested. Hosted scaffolding additionally rejects ambiguous body
+  framing, unsafe proxy/host data, state/audit hard-link aliasing, noncanonical
+  deployment counts, and unsafe API tokens. No real receipt bundle or provider/
+  hosted run used them.
 - Do not insert: the synthetic D happy path, localhost status, or a static render.
 - Hosted application/API reference: **BLOCKED — not available**
 - Integrated trace/artifact SHA-256: **BLOCKED — not available**
@@ -96,6 +113,14 @@ webhook delivery, reconciliation, or settlement was executed.
 - Status: **BLOCKED**
 - Required: capture only after the integrated system and displayed data are
   frozen; include source revision and capture context.
+- Required manifest per image: filename, SHA-256, UTC capture time, exact source
+  revision, page/route, execution mode, visible checkpoint states, viewport,
+  redaction review, and the upstream artifact IDs/digests supporting every shown
+  metric or provider state.
+- Required frames: checkpoint/evidence status, economic state transition, final
+  comparison only if C passed, and provider lifecycle only if B/D passed. Keep
+  browser chrome/account identifiers/API keys/callback signatures/webhook URLs
+  and secrets out of frame.
 - Current placeholder: **No screenshot**. Development visual checks are not
   promoted into this slot.
 
@@ -106,6 +131,14 @@ webhook delivery, reconciliation, or settlement was executed.
 - Status: **BLOCKED**
 - Required: record only after A/B/C/D integration, final evidence freeze, and a
   truthful run-through of the final demo.
+- Required manifest: file/host URL, SHA-256 where downloadable, UTC recording
+  time, exact source revision, duration, presenter/operator identity reference,
+  script revision, referenced evidence bundle, edits/cuts disclosure, captions,
+  and redaction review.
+- Required content: show the gate-status screen before claims, distinguish
+  simulation from Test Mode aloud/on screen, trace only retained results, show
+  failure/blocker states, and end with limitations. Never recreate a missing
+  provider event or benchmark result for the recording.
 - Current placeholder: **No video URL and no video claim**.
 
 ## Evidence-bundle manifest
@@ -120,6 +153,7 @@ fields. Empty fields stay blocked; they are never filled with examples.
 | `checkpoint_statuses` | A–E state plus evidence references | A–E not all passed |
 | `execution_mode` | Exact mode; Test Mode distinguished from simulation | `SIMULATED_LOCAL` development plus partial `RAZORPAY_TEST_MODE` order evidence; full lifecycle blocked |
 | `environment` | OS, Python, resolved dependencies, lock digest | Local manifest exists; independent reproduction pending |
+| `independent_reproduction` | `E.REPRODUCTION.2` source/tree/lock/count/report/bundle bindings and exact Actions artifact | Blocked; no independent machine/operator receipt |
 | `commands` | Exact invocations with secrets removed | Framework available |
 | `raw_artifacts` | Complete outputs, including failures/error rows | Final artifacts blocked |
 | `artifact_sha256` | Digest for every retained file | Final artifacts blocked |

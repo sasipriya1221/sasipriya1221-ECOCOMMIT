@@ -1052,6 +1052,161 @@ remote. The frozen dataset, prompt, model settings, evaluator, schemas, and
 thresholds were not changed. Candidate 3 has not been pushed or evaluated, so
 Checkpoint A remains not passed.
 
+## 2026-09-02 — Candidate 3 authorized push and fresh dispatch
+
+The clean local head was revalidated against the live public ref before any
+remote mutation. Public `main` remained `c52884e…`; the only ahead commits were
+`bb4c15b7…` followed by `fd26a52a…`; the frozen 80-case digest, prompt, model
+configuration, schema, evaluator, token budget, and four thresholds were
+unchanged. Focused checks and the complete **392/392** local suite passed.
+
+The explicit non-force refspec fast-forwarded exactly those two commits to
+`origin/main`. Public `main` then resolved to `fd26a52a…`, and automatically
+triggered Offline Regression run `33589998688`, which passed. The credentialed
+Checkpoint A workflow remained manual-only.
+
+Fresh Candidate 3 workflow run `33590028177` was then manually dispatched at
+`fd26a52a…`. Its independent regression/static job and Groq secret-presence check
+passed. Attempt 1 retained 79 typed exit-75 provider deferrals and one terminal
+row, `A002`. That row failed its dependency condition even though both the
+validator and expected status were `CLARIFICATION_REQUIRED`. The one-row
+aggregate was incomplete, failed, and emitted no receipt; its artifact
+`9831908998` has verified archive SHA-256
+`bc8ae6175e1d1cce424ac0a4ad1a757d5719b88338ec1e9412ea8ab707b650c5`.
+Partial zero metrics were not interpreted as a semantic score.
+
+The intended failed-jobs-only resume started attempt 2 without starting a new
+workflow run. GitHub retained `A002` at its original timestamps and scheduled
+only the 79 provider-deferred cases plus the dependent aggregate. Attempt 2
+completed failed after adding one genuine pass (`C002`) and deferring the other
+78 cases through exit 75. `A002` remained byte-for-byte identical. The cumulative
+aggregate therefore has two terminal rows, one pass, one semantic failure, 78
+missing rows, no full gate, and no receipt. Its artifact `9832489831` has verified
+archive SHA-256
+`fcbe84be1211d6a195ff778b6bb0f104dd3b35ae16bd65a4259b857ad935296a`.
+
+The new `C002` trace retains an HTTP 429 followed by an accepted valid contract,
+which validates Candidate 3's retry chronology, but attempt 2 converted only one
+of 79 deferred cases. An immediate attempt 3 would create provider/Actions
+pressure with negligible predicted yield. Resume only the 78 failed jobs after
+confirmed Groq quota/capacity recovery. Checkpoint A remains **BLOCKED / NOT
+PASSED**; partial metrics are not a final score.
+
+## 2026-09-02 — Local B/C/D final-evidence hardening
+
+The remaining finalization code still allowed three classes of self-assertion:
+B lifecycle/configuration artifacts were not assembled by one cross-checking
+verifier, C final metrics could be supplied rather than recomputed from raw rows,
+and D accepted that legacy C schema while lacking a production deployment
+contract.
+
+Local-only hardening added:
+
+- a write-once B8 finalizer that cross-validates the exact A/preflight/order/
+  handoff/lifecycle/webhook/audit/safety/durability/key-boundary chain and requires
+  hashed Test manual-capture and webhook-configuration attestations;
+- a write-once `C.FINAL.HELD_OUT.EVIDENCE.1` runner that requires a pinned
+  preregistration, real A/B receipts, exact raw candidate/comparator coverage,
+  and internally derives all case results, metrics, and the final decision;
+- a `D.EVIDENCE.PINS.2` loader that rejects the legacy caller-metric C schema;
+  and
+- provider-neutral WSGI/nginx/TLS/environment templates plus local policy tests,
+  without starting a listener or choosing a host.
+
+The combined repository suite passed **440/440** after these changes. A first
+disposable snapshot commit passed 438 tests and correctly failed only the two E
+readiness tests because that synthetic commit was one revision ahead of its
+public upstream. The identical file overlay on a fresh no-hardlink clone at
+public `fd26a52a…` with upstream 0/0 then passed **440/440**, dependency
+consistency, byte-compilation, JavaScript syntax, diff checks, and all eight
+local readiness checks. Its dirty status is expected because the preparation is
+deliberately local and unpushed; it is not independent-machine evidence.
+
+No provider call, authoritative C run, deployment, commit in the working
+repository, or additional push was performed. Real Dashboard attestations,
+Checkout/webhook lifecycle, frozen C inputs/rows, hosted TLS/operations, owner
+license choice, independent reproduction, and media remain external blockers.
+
+## 2026-09-02 — Exact-source Razorpay Test order handoff
+
+Fresh credential-preflight run `33592456896` authenticated the Test credentials
+at public `fd26a52a…` with one read-only order-list request and retained neither
+the provider body nor credentials. The dependent order-boundary run
+`33592499084` then created one INR 1.00 Test order, rebound and fetched it,
+replayed the same idempotency key with only one provider create, confirmed zero
+attached payments, and generated a 24-hour Checkout handoff.
+
+The run intentionally retained `checkpoint_b8_passed=false`, capture not
+executed, and `RAZORPAY_CHECKOUT_AUTHORIZATION_REQUIRED`. Artifact `9832232980`
+has verified archive SHA-256
+`56ca57750589d41cbf4b9ea717d0b48d7dfb16344702a5f0b6d7d5d1a350000d`.
+The handoff expires at `2026-09-03T04:53:12.35686Z`; the generated Checkout HTML
+SHA-256 is `ad7c60fd53490693a6fc878a140a21e11be9bccbde997016e385e58c53d97fe5`.
+No Checkout, capture, refund, webhook, reconciliation, settlement, or real-money
+operation was performed.
+
+## 2026-09-02 — Autonomous A–E diagnostic, provenance, and release hardening
+
+The retained Candidate 3 attempt-1/attempt-2 artifacts were re-read locally. A
+new non-mutating diagnostic verifies the Candidate 3 manifest against the frozen
+dataset/criteria, strictly reloads and semantically recomputes terminal rows,
+rejects conflicts, and separates absent rows from directly retained provider
+reports. Against the available artifacts it confirms two terminal rows (`C002`
+pass and unchanged `A002` failure), 78 unresolved rows, no complete gate, and no
+receipt. The external job-log review remains the authority for classifying those
+78 as provider-deferred. Retry readiness stays closed while HTTP 429 throttling
+persists, when another attempt is active, or when run/provider health is not
+digest-bound; the tool never launches a retry.
+
+Further local defects and omissions were fixed with regression coverage:
+
+- B Dashboard evidence previously froze manual capture and timeout but omitted
+  the required Normal Refund action. The attestation now requires Test Mode,
+  manual capture, exactly 259,200 seconds, and `NORMAL_REFUND`. Webhook secrets
+  are bounded visible ASCII and cannot equal the API secret. B final outputs use
+  atomic exclusive publication, recover one-output interruption through exact
+  replay, and bind an exact same-repository Actions artifact.
+- C's final rule omitted autonomous coverage and its raw manifests were not bound
+  to preregistered execution protocols or comparator selection. The registration
+  and gate now include those fields. Paired attempt-1 receipts share one nonce,
+  bind complete raw manifests, and require strict Actions artifact references;
+  final scoring remains internally recomputed and write-once.
+- D's trusted-proxy middleware accepted integer spellings such as `+1` and did
+  not explicitly reject transfer encoding. It now accepts canonical decimal
+  counts/lengths only, rejects ambiguous framing, bounds API tokens, strips
+  transfer encoding in the nginx policy, and detects hard-link aliases between
+  SQLite state and the append-only audit log.
+- E's earlier reproduction contract trusted broad booleans. The v2 receipt binds
+  exact source/tree/lock identities, complete test/readiness counts, report and
+  bundle digests, distinct machine/verifier identities, UTC chronology, and an
+  exact same-repository Actions artifact. Offline regression path filters were
+  removed, and all new A–E finalization/deployment files are required by the
+  public-structure checker.
+- The screenshot/video framework now specifies per-media provenance, hashes,
+  source revision, displayed-state evidence, redaction review, script/edit
+  disclosure, and explicit prohibition on recreating missing results.
+
+The first complete post-documentation run reached 463 passes and failed the two
+E readiness checks because the newly tracked B finalizer fixture used a
+realistically shaped fake Razorpay public key that intentionally triggered the
+repository credential-marker scanner. The fixture was shortened while preserving
+the required Test-key schema, making its non-secret nature unambiguous; the
+focused B/E rerun then passed 52/52. The failure was retained rather than
+weakening the scanner.
+
+The first committed no-hardlink clone then passed all 465 tests but reported a
+different checked-out `requirements-dev.lock` SHA-256 under
+`core.autocrlf=true`. Git's normalized blob was identical, yet the E receipt
+correctly hashes actual input bytes, so the difference would make provenance
+platform-dependent. `.gitattributes` now forces LF for the lock and a regression
+protects that rule; the replacement clone must match the source lock digest.
+
+Focused regressions and the full working-tree suite pass **465/465**. No provider
+request, Candidate 3 retry, Checkout, webhook, public endpoint, deployment,
+license selection, paid service, final benchmark, screenshot, or video was
+performed. This work is prepared as local review commits and remains unpushed;
+A–E acceptance states are unchanged.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

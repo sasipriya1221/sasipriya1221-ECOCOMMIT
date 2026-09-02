@@ -5,10 +5,15 @@ import json
 import re
 import subprocess
 from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from hashlib import sha256
 from pathlib import Path
+from typing import Literal
 from urllib.parse import unquote, urlsplit
 
-from ecocommit._canonical import strict_json_loads
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from ecocommit._canonical import sha256_hex, strict_json_loads
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +21,7 @@ MAX_REPRODUCTION_RECEIPT_BYTES = 256 * 1024
 EXPECTED_REMOTE_REPOSITORY = "sasipriya1221/sasipriya1221-ECOCOMMIT"
 REQUIRED_FILES = (
     ".gitattributes",
+    ".github/workflows/offline-regression.yml",
     "README.md",
     "PROGRESS.md",
     "pyproject.toml",
@@ -27,17 +33,29 @@ REQUIRED_FILES = (
     "CHECKPOINT_E_VALIDATION.md",
     "docs/ARCHITECTURE.md",
     "docs/DEMO_RUNBOOK.md",
+    "docs/DEPLOYMENT_READINESS.md",
     "docs/ENGINEERING_LOG.md",
+    "docs/LICENSE_DECISION.md",
     "docs/PITCH_OUTLINE.md",
     "docs/REPRODUCIBILITY.md",
     "docs/SUBMISSION_EVIDENCE.md",
     "docs/THREAT_MODEL.md",
+    "deploy/ecocommit.env.example",
+    "deploy/nginx.conf.template",
+    "deploy/proxy-policy.inc.template",
+    "deploy/wsgi.py",
+    "scripts/checkpoint_a_diagnostics.py",
+    "scripts/checkpoint_b8_finalize.py",
     "scripts/checkpoint_b8_webhook_evidence.py",
     "scripts/checkpoint_b8_webhook_server.py",
+    "scripts/checkpoint_c_final_held_out.py",
     "scripts/checkpoint_d_evidence_status.py",
     "scripts/checkpoint_d_prepare_operation.py",
+    "scripts/checkpoint_e_readiness.py",
     "src/ecocommit/checkpoint_b_evidence.py",
+    "src/ecocommit/checkpoint_c_final.py",
     "src/ecocommit/checkpoint_d_evidence.py",
+    "src/ecocommit/deployment.py",
     "src/ecocommit/durable.py",
     "src/ecocommit/execution.py",
     "src/ecocommit/webhook.py",
@@ -90,6 +108,10 @@ GITHUB_SCP_REMOTE = re.compile(
     r"^git@github\.com:(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+?)(?:\.git)?/?$",
     re.IGNORECASE,
 )
+GITHUB_ACTIONS_EVIDENCE_REFERENCE = re.compile(
+    r"^github-actions://(?P<repository>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/"
+    r"runs/[0-9]{1,20}/artifacts/[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+)
 
 
 @dataclass(frozen=True)
@@ -97,6 +119,98 @@ class Check:
     name: str
     passed: bool
     detail: str
+
+
+def _utc(value: datetime, field_name: str) -> datetime:
+    if value.utcoffset() != timedelta(0):
+        raise ValueError(f"{field_name} must be expressed in UTC")
+    return value
+
+
+class IndependentReproductionReceipt(BaseModel):
+    """Strict, self-digesting independent clean-machine reproduction receipt."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    schema_version: Literal["E.REPRODUCTION.2"] = "E.REPRODUCTION.2"
+    source_repository: Literal[EXPECTED_REMOTE_REPOSITORY] = EXPECTED_REMOTE_REPOSITORY
+    source_revision: str = Field(pattern=r"^[0-9a-f]{40}$")
+    source_tree_id: str = Field(pattern=r"^[0-9a-f]{40,64}$")
+    dependency_lock_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    independent_machine: Literal[True] = True
+    clean_checkout: Literal[True] = True
+    upstream_exact: Literal[True] = True
+    machine_identity_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    verifier_identity_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    platform_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    python_version: str = Field(pattern=r"^3\.(?:11|12|13|14)\.[0-9]+(?:[-+._A-Za-z0-9]*)?$")
+    started_at_utc: datetime
+    completed_at_utc: datetime
+    collected_tests: int = Field(gt=0, strict=True)
+    passed_tests: int = Field(ge=0, strict=True)
+    failed_tests: int = Field(ge=0, strict=True)
+    error_tests: int = Field(ge=0, strict=True)
+    readiness_checks_collected: int = Field(gt=0, strict=True)
+    readiness_checks_passed: int = Field(ge=0, strict=True)
+    test_report_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    dependency_check_report_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    readiness_report_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    commands_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    artifact_bundle_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evidence_reference: str = Field(min_length=1, max_length=512)
+    network_provider_calls_made: Literal[False] = False
+    fixture_outputs_promoted: Literal[False] = False
+    receipt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("started_at_utc", "completed_at_utc")
+    @classmethod
+    def timestamps_are_utc(cls, value: datetime, info):
+        return _utc(value, info.field_name)
+
+    @field_validator("evidence_reference")
+    @classmethod
+    def evidence_reference_is_exact(cls, value: str):
+        if any(character.isspace() or ord(character) < 33 for character in value):
+            raise ValueError("reproduction evidence reference contains whitespace")
+        match = GITHUB_ACTIONS_EVIDENCE_REFERENCE.fullmatch(value)
+        if match is None:
+            raise ValueError("reproduction evidence must use an exact GitHub Actions reference")
+        if match.group("repository").casefold() != EXPECTED_REMOTE_REPOSITORY.casefold():
+            raise ValueError("reproduction evidence belongs to another repository")
+        return value
+
+    @model_validator(mode="after")
+    def complete_run_and_digest_are_valid(self):
+        if self.completed_at_utc < self.started_at_utc:
+            raise ValueError("reproduction completion predates its start")
+        if (
+            self.passed_tests != self.collected_tests
+            or self.failed_tests != 0
+            or self.error_tests != 0
+        ):
+            raise ValueError("independent full test counts are not a complete pass")
+        if self.readiness_checks_passed != self.readiness_checks_collected:
+            raise ValueError("independent readiness check counts are incomplete")
+        if self.machine_identity_sha256 == self.verifier_identity_sha256:
+            raise ValueError("machine and verifier identities must be independently bound")
+        expected = sha256_hex(self.model_dump(exclude={"receipt_sha256"}))
+        if self.receipt_sha256 != expected:
+            raise ValueError("independent reproduction receipt digest is invalid")
+        return self
+
+    @classmethod
+    def create(cls, **values) -> "IndependentReproductionReceipt":
+        body = {
+            "schema_version": "E.REPRODUCTION.2",
+            "source_repository": EXPECTED_REMOTE_REPOSITORY,
+            "independent_machine": True,
+            "clean_checkout": True,
+            "upstream_exact": True,
+            "network_provider_calls_made": False,
+            "fixture_outputs_promoted": False,
+            **values,
+        }
+        return cls(**body, receipt_sha256=sha256_hex(body))
 
 
 def _git(root: Path, *arguments: str, check: bool = True) -> str:
@@ -191,6 +305,8 @@ def _independent_reproduction_status(
     path: Path | None,
     *,
     source_revision: str,
+    source_tree_id: str,
+    dependency_lock_sha256: str,
 ) -> tuple[bool, str]:
     if path is None:
         return False, "receipt=missing"
@@ -205,23 +321,20 @@ def _independent_reproduction_status(
         return False, "receipt=invalid_json"
     if not isinstance(payload, dict):
         return False, "receipt=object_required"
-    required = {
-        "schema_version": "E.REPRODUCTION.1",
-        "source_revision": source_revision,
-        "independent_machine": True,
-        "clean_checkout": True,
-        "full_tests_passed": True,
-        "dependency_check_passed": True,
-        "readiness_local_checks_passed": True,
-    }
-    mismatches = [key for key, expected in required.items() if payload.get(key) != expected]
-    artifact_sha256 = payload.get("artifact_sha256")
-    if not isinstance(artifact_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", artifact_sha256):
-        mismatches.append("artifact_sha256")
-    expected_fields = set(required) | {"artifact_sha256"}
-    if set(payload) != expected_fields:
-        mismatches.append("receipt_fields")
-    return not mismatches, f"mismatches={sorted(set(mismatches))}"
+    try:
+        receipt = IndependentReproductionReceipt.model_validate(payload)
+    except ValueError:
+        return False, "receipt=schema_or_digest_invalid"
+    mismatches = []
+    if receipt.source_revision != source_revision:
+        mismatches.append("source_revision")
+    if receipt.source_tree_id != source_tree_id:
+        mismatches.append("source_tree_id")
+    if receipt.dependency_lock_sha256 != dependency_lock_sha256:
+        mismatches.append("dependency_lock_sha256")
+    if mismatches:
+        return False, f"mismatches={mismatches}"
+    return True, f"receipt_sha256={receipt.receipt_sha256}"
 
 
 def _upstream_counts(root: Path) -> tuple[int | None, int | None]:
@@ -343,6 +456,10 @@ def build_report(
         else None
     )
     revision = _git(root, "rev-parse", "HEAD")
+    source_tree_id = _git(root, "rev-parse", "HEAD^{tree}")
+    dependency_lock_sha256 = sha256(
+        (root / "requirements-dev.lock").read_bytes()
+    ).hexdigest()
     license_present = any(path in tracked_set for path in ("LICENSE", "LICENSE.md", "LICENSE.txt"))
 
     blockers = [
@@ -369,6 +486,8 @@ def build_report(
     reproduction_passed, reproduction_detail = _independent_reproduction_status(
         independent_reproduction,
         source_revision=revision,
+        source_tree_id=source_tree_id,
+        dependency_lock_sha256=dependency_lock_sha256,
     )
     if not reproduction_passed:
         blockers.append("INDEPENDENT_CLEAN_MACHINE_REPRODUCTION_NOT_RETAINED")
@@ -376,6 +495,8 @@ def build_report(
     return {
         "schema_version": "E.READINESS.1",
         "source_revision": revision,
+        "source_tree_id": source_tree_id,
+        "dependency_lock_sha256": dependency_lock_sha256,
         "working_tree_clean": clean,
         "remote_url": remote_url,
         "remote_origin": {
