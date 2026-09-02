@@ -3,6 +3,7 @@ import ipaddress
 import json
 import os
 import runpy
+from http import HTTPStatus
 from pathlib import Path
 
 import pytest
@@ -115,7 +116,7 @@ def strict_boundary(application=None):
         ({"CONTENT_LENGTH": " 1"}, "400 Bad Request", "INVALID_CONTENT_LENGTH"),
         ({"CONTENT_LENGTH": "+1"}, "400 Bad Request", "INVALID_CONTENT_LENGTH"),
         ({"CONTENT_LENGTH": "00"}, "400 Bad Request", "INVALID_CONTENT_LENGTH"),
-        ({"CONTENT_LENGTH": str(MAX_JSON_BODY_BYTES + 1)}, "413 Content Too Large", "REQUEST_BODY_TOO_LARGE"),
+        ({"CONTENT_LENGTH": str(MAX_JSON_BODY_BYTES + 1)}, f"413 {HTTPStatus(413).phrase}", "REQUEST_BODY_TOO_LARGE"),
     ],
 )
 def test_strict_proxy_boundary_rejects_direct_or_ambiguous_requests(

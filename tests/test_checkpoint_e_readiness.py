@@ -32,7 +32,8 @@ def test_repository_readiness_checks_pass_locally_but_final_submission_stays_blo
         "blocked_evidence_must_not_be_filled_with_fixtures": True,
         "simulation_is_not_provider_evidence": True,
     }
-    assert "LICENSE_OWNER_DECISION_REQUIRED" in report["blockers"]
+    assert "LICENSE_OWNER_DECISION_REQUIRED" not in report["blockers"]
+    assert report["license_present"] is True
     assert all(
         marker in report["blockers"]
         for marker in load_readiness_module().EVIDENCE_MARKERS
@@ -51,7 +52,7 @@ def test_readiness_cli_emits_machine_readable_blocked_report():
 
     assert report["local_repository_checks_pass"] is True
     assert report["final_submission_ready"] is False
-    assert report["license_present"] is False
+    assert report["license_present"] is True
     remote = report["remote_origin"]
     assert remote["configured"] is True
     assert remote["expected_repository"] == "sasipriya1221/sasipriya1221-ECOCOMMIT"
