@@ -155,6 +155,36 @@ immutable. Non-transient provider responses, completed correction failures, and
 local contract-validation failures are terminal evidence. Provider failures are
 never replaced with fixtures.
 
+Current operational state: run `33590028177` completed attempt 2 with two
+terminal rows (`C002` pass, `A002` fail), 78 typed provider deferrals, no full
+gate, and no receipt. Do not launch attempt 3 immediately: attempt 2 converted
+only one of 79 deferred cases while HTTP 429s remained pervasive. After confirmed
+Groq quota/capacity recovery, use GitHub's **Re-run failed jobs** on that same run
+so only the 78 deferrals and dependent aggregate resume.
+
+The locally inspected Candidate 3 artifacts share verified manifest SHA-256
+`773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934`.
+This is an identity pin, not a gate receipt.
+
+Before any later retry decision, run the non-mutating verifier over every
+retained aggregate/case artifact and supply the manifest, source, and run ID as
+out-of-band pins:
+
+```powershell
+.venv\Scripts\python.exe scripts\checkpoint_a_diagnostics.py <artifact...> `
+  --expected-manifest-sha256 <sha256> `
+  --expected-source-revision fd26a52a21dc8431133c50be76d7d1ecaf0d099b `
+  --expected-run-id 33590028177 `
+  --run-status completed --provider-condition throttled
+```
+
+This command strictly reloads and semantically recomputes terminal rows. It
+labels absent rows `UNRESOLVED_NOT_ASSUMED_PROVIDER_DEFERRED` unless their own
+retained reports establish the provider classification. It never dispatches a
+workflow. A future `READY_TO_REQUEST_AUTHORIZED_RETRY` result additionally needs
+a digest-bound, timestamped healthy-provider observation and proves readiness to
+request a retry only—not authorization or a performed retry.
+
 Aggregation must read every shard through the strict verifier. It recomputes
 contracts, validator reports, semantic decisions, metrics, missing IDs, and the
 exact frozen gate. A passing receipt binds the result artifact SHA-256, manifest,
