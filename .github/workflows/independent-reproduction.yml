@@ -28,13 +28,19 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-      - name: Record clean reproduction start
+      - name: Establish exact public-main tracking and record start
         shell: bash
         run: |
           set -euo pipefail
+          SOURCE_SHA="${{ github.event.workflow_run.head_sha }}"
           mkdir -p artifacts/reproduction
           date -u +'%Y-%m-%dT%H:%M:%SZ' > artifacts/reproduction/started_at.txt
-          test "$(git rev-parse HEAD)" = "${{ github.event.workflow_run.head_sha }}"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+          test "$(git rev-parse origin/main)" = "$SOURCE_SHA"
+          git checkout -B main "$SOURCE_SHA"
+          git branch --set-upstream-to=origin/main main
+          test "$(git rev-list --left-right --count '@{upstream}...HEAD')" = "0	0"
           test -z "$(git status --porcelain --untracked-files=no)"
       - name: Install hash-locked dependencies
         shell: bash
@@ -79,14 +85,16 @@ jobs:
           import os
           import platform
           import subprocess
+          import sys
           import tarfile
           import xml.etree.ElementTree as ET
           from datetime import datetime, timezone
           from pathlib import Path
 
-          from scripts.checkpoint_e_readiness import IndependentReproductionReceipt
-
           root = Path.cwd()
+          sys.path.insert(0, str(root / "scripts"))
+          from checkpoint_e_readiness import IndependentReproductionReceipt
+
           out = root / "artifacts" / "reproduction"
 
           def sha(path: Path) -> str:
