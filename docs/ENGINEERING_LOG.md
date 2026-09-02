@@ -956,6 +956,36 @@ in `evidence/checkpoint-a-candidate-1-obsolete-queued.json`. Cancelling it requi
 GitHub account authority unavailable to the local work; it must not be resumed or
 allowed to redefine Candidate 1's immutable attempt-15 failure.
 
+## 2026-09-02 — release readiness trusted and echoed any configured origin
+
+### What broke or remained unsafe
+
+The final-readiness checker treated any non-empty `remote.origin.url` as a remote.
+A no-hardlink clone whose origin was a local Windows path could therefore satisfy
+the remote-presence condition. The report also emitted the raw configured value,
+which could retain a credential if an operator had embedded one in an HTTPS URL.
+Neither behavior proves that the intended public repository is configured.
+
+### How it was fixed
+
+- Normalize only HTTPS, GitHub SCP-style SSH, or `ssh://git@github.com` origins.
+- Require the exact expected `sasipriya1221/sasipriya1221-ECOCOMMIT` identity for
+  final readiness.
+- Reject local/file paths, HTTP, alternate hosts, credentials, ports, query or
+  fragment data, malformed paths, and mismatched repositories.
+- Emit only the canonical expected HTTPS URL after identity verification; raw
+  invalid values are reduced to non-sensitive configuration/status fields.
+- Add parametrized regressions for every accepted transport and rejected origin
+  class, while keeping local structural validation distinct from final readiness.
+
+### Regression evidence and limitation
+
+The expanded E scope passes **26/26**, and the complete working-tree suite passes
+**388/388** at `75401299e09514ad8134c2cf25b7646d9ec775bc`.
+This verifies local normalization, redaction, and blocking behavior. It does not
+prove the public remote contains the local commits, replace explicit push
+authorization, or create public CI/attestation evidence.
+
 ## Log discipline
 
 - New failures are appended; old failures are not erased.

@@ -258,6 +258,12 @@ independent-reproduction receipt as a bounded nonsymlinked strict JSON object
 with exactly the typed fields, and provides a strict `--mode final`. Today's
 real slots remain blocked, so final readiness remains false.
 
+Remote readiness is now identity-bound rather than presence-based. Only the
+expected public GitHub repository is accepted; local filesystem clones,
+mismatched/alternate hosts, insecure transports, credential-bearing URLs, and
+malformed remotes remain final blockers. The report emits only the canonical
+expected URL and never echoes a raw invalid origin that could contain a token.
+
 All repository workflows now:
 
 - pin third-party actions to full commit SHAs;

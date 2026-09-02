@@ -46,7 +46,11 @@ non-standard JSON before schema validation. The current tree additionally keeps
 recovered provider retries in Candidate 2's redacted attempt chronology and
 distinguishes terminal schema failure before versus after a correction request.
 It and a no-hardlink clone at `60c85f0b75574007a7bf1de9a8b4be7214c69a75`
-pass **369 / 369**.
+passed **369 / 369** at that historical hardening snapshot. The current release
+checker additionally accepts only the expected public GitHub repository as its
+remote, never emits a credential-bearing or local raw origin, and keeps a local
+clone or mismatched repository blocked from final readiness. The current working
+tree at `75401299e09514ad8134c2cf25b7646d9ec775bc` passed 388/388 tests.
 
 The current Razorpay order-boundary workflow also confines both credentials to
 the provider-execution step. Its later redacted-summary and artifact-upload steps
@@ -74,7 +78,11 @@ but not the frozen cases, evaluator criteria, or thresholds. The thresholds rema
 - autonomous coverage >= 55%; and
 - ambiguous clarification accuracy >= 80%.
 
-No competing provider run was started.
+A later independently launched score-recovery experiment ran from remote commit
+`1cc9fd199781de3974adbcb6099b77d89aec2206` and ended cancelled after partial
+provider deferrals. It was not Candidate 2, its automatic maximum-score repair
+was rejected during reconciliation, and its public metadata is retained without
+promoting any result. Candidate 2 itself has not been remotely evaluated.
 
 ## Validation environment
 
@@ -85,8 +93,8 @@ No competing provider run was started.
 | pytest | 8.4.2 |
 | Pydantic | 2.13.5 |
 | Node.js syntax check | v24.18.1 |
-| Latest fully validated code/test revision | `60c85f0b75574007a7bf1de9a8b4be7214c69a75` |
-| Public remote HEAD during validation | `6485d3b24f4967c178cce9b1a9b67cdf0230840c` |
+| Latest fully validated code/test revision | `75401299e09514ad8134c2cf25b7646d9ec775bc` |
+| Public remote HEAD during validation | `1cc9fd199781de3974adbcb6099b77d89aec2206` |
 | Provider/payment mode | Current local run made no provider call; retained prior evidence proves Razorpay Test authentication and order creation only |
 
 ## Local readiness matrix
@@ -98,7 +106,7 @@ No competing provider run was started.
 | Architecture | Components, data flow, trust boundaries, runtime modes, and sequential acceptance dependencies match the implementation | **LOCAL PASS** | No hosted/provider architecture is claimed |
 | Threat model | Authority, evidence, replay, concurrency, audit, secret, dependency, UI, provider, and benchmark threats have controls and residual risks | **LOCAL PASS** | Not a formal independent security audit |
 | Reproducibility | Exact runtime, test, and build-backend distributions plus published artifact SHA-256 values recorded; fresh virtual environment install, dependency consistency, and full test run supported | **LOCAL PASS** | Published wheels must still be obtained; independent reproduction is absent |
-| Clean clone | Separate no-hardlink clone at `60c85f0b75574007a7bf1de9a8b4be7214c69a75` passed 369/369 tests, readiness checks, and clean status | **LOCAL PASS** | Same host/operator; not independent-machine evidence |
+| Clean clone | Separate no-hardlink validation snapshots pass the full suite, readiness checks, and clean status; the last code-only snapshot at `75401299e09514ad8134c2cf25b7646d9ec775bc` is covered by the current 388-test result | **LOCAL PASS** | Same host/operator; not independent-machine evidence; a local origin is now explicitly non-public |
 | Engineering log | Real provider, semantic, schema, harness, product, documentation, and portability failures remain recorded with fixes and limitations | **LOCAL PASS** | Log is repository evidence, not external attestation |
 | Evidence framework | Six final evidence slots are machine-detectably blocked and forbid fixture/smoke substitution | **LOCAL PASS** | A/B/C/D integration and final artifacts unavailable |
 | Demo/pitch | Runbook and five-minute outline distinguish local simulation from provider/final evidence | **LOCAL PASS** | No final screenshots or video were produced |
@@ -121,9 +129,12 @@ No competing provider run was started.
 - Current preflight-authority, credential-ordering, and redirect-safety tree:
   **369/369 passed** in the working repository and the no-hardlink clone at
   `60c85f0b75574007a7bf1de9a8b4be7214c69a75`.
-- Current Candidate 2/provider focused suite: **49/49 passed**; Checkpoint B:
-  **115/115 passed**; workflow security: **7/7 passed**.
-- Current Checkpoint E-focused readiness regression: **13/13 passed**.
+- Current release-remote hardening tree: **388/388 passed** in the working
+  repository at `75401299e09514ad8134c2cf25b7646d9ec775bc`.
+- Current A/Candidate 2/provider focused suite: **62/62 passed**; Checkpoint B:
+  **115/115 passed**; Checkpoint C: **47/47 passed**; Checkpoint D: **76/76
+  passed**; workflow security: **7/7 passed**.
+- Current Checkpoint E-focused readiness regression: **26/26 passed**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.
 - Browser JavaScript syntax: **PASS**.
@@ -132,6 +143,9 @@ No competing provider run was started.
 - Clean-clone working tree after validation: **clean**.
 - Current tracked-tree and Git-history high-risk credential-marker scans:
   **no matches** for the defined Groq/OpenAI/Razorpay/private-key patterns.
+- The readiness report exposes only a canonical expected GitHub URL. Local,
+  credential-bearing, non-HTTPS, alternate-host, malformed-port, query-bearing,
+  and wrong-shape origins are rejected without echoing their raw values.
 
 These are local engineering results. They are not final checkpoint evidence.
 The current clean clone used the same host and operator, so the separate

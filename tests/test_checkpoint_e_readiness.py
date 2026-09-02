@@ -228,7 +228,7 @@ def test_checkpoint_e_report_distinguishes_order_boundary_from_payment_lifecycle
         "or reconciliation result is claimed"
     ) in normalized
     assert "No Razorpay credential, request, Test Mode transaction" not in normalized
-    assert "passed 369/369 tests" in normalized
+    assert "passed 388/388 tests" in normalized
 
 
 def test_digest_bound_checkpoint_c_protocol_files_force_lf_checkout():

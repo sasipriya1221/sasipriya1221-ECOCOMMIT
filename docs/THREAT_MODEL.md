@@ -118,6 +118,10 @@ access controls, clock discipline, backup, and recovery evidence.
   bootstrap are not implemented.
 - Provider workflows require named secrets and are manual-only; source pushes and
   pull requests cannot invoke them or receive provider credentials.
+- Final readiness accepts only the expected public GitHub repository as `origin`.
+  Local paths, alternate hosts, insecure or credential-bearing URLs, and
+  mismatched repositories are blockers; invalid raw origin values are not emitted
+  into readiness evidence.
 
 ## Remaining high-priority review
 
