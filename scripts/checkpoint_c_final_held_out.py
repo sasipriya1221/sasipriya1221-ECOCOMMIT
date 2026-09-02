@@ -50,6 +50,8 @@ def main() -> int:
         raise ValueError("out-of-band final registration digest pin is invalid")
     if args.expected_registration_sha256 != registration.registration_sha256:
         raise ValueError("final registration does not match the out-of-band digest pin")
+    if args.execution_id != registration.final_execution_id:
+        raise ValueError("final execution id does not match its preregistration")
     suite = load_final_suite(args.suite)
     metric_specification = load_final_metric_specification(args.metric_specification)
     candidate_manifest = load_final_decision_manifest(args.candidate_rows)

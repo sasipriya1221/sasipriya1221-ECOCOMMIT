@@ -21,6 +21,8 @@ def _registration():
         registration_id="c-final-registration",
         registered_at_utc=NOW,
         outcomes_observed_before_registration=False,
+        final_execution_id="c-final-execution",
+        final_execution_nonce_sha256="8" * 64,
         final_suite_sha256="a" * 64,
         final_case_ids_sha256="b" * 64,
         final_case_count=40,
@@ -143,3 +145,14 @@ def test_registration_digest_detects_post_registration_rule_changes():
     payload["acceptance_rule"] = changed_rule
     with pytest.raises(ValidationError, match="registration digest is invalid"):
         CheckpointCFinalRegistration.model_validate(payload)
+
+
+def test_registration_rejects_candidate_as_its_own_comparator():
+    registration = _registration()
+    values = registration.model_dump(exclude={"registration_sha256"})
+    values["acceptance_rule"] = registration.acceptance_rule.model_copy(
+        update={"comparator_id": registration.candidate_id}
+    )
+
+    with pytest.raises(ValidationError, match="identities must be distinct"):
+        CheckpointCFinalRegistration.create(**values)

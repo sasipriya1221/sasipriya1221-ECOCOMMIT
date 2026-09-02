@@ -209,7 +209,7 @@ The authoritative evidence loader now requires `D.EVIDENCE.PINS.2` and raw-row
 derived `C.FINAL.HELD_OUT.EVIDENCE.1`. Legacy caller-metric C evidence, old pin
 schemas, A→B→C revision/hash mismatch, and re-pinned aggregate tampering fail
 closed. Deployment-focused tests pass **32/32**, the complete D-specific
-selection passes **111/111**, and the integrated repository passes **465/465**
+selection passes **111/111**, and the integrated repository passes **468/468**
 locally. This is preparation only; hosted D is **NOT RUN**.
 
 ## Remaining blockers

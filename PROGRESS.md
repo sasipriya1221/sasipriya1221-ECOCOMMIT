@@ -234,6 +234,13 @@ deferred cases while pervasive HTTP 429s continued. After confirmed Groq
 quota/capacity recovery, continuation may resume only this run's 78 failed jobs.
 Checkpoint A remains **BLOCKED / NOT PASSED**.
 
+The local non-mutating Candidate 3 diagnostic strictly recomputes retained rows
+and exposes self-consistency separately as `computed_gate_passed`. It can report
+authoritative `gate_passed`/`PASSED` or receipt possibility only for an exactly
+completed run with all manifest, source, and run-ID pins supplied out of band.
+Retry readiness additionally requires a digest-bound healthy-provider
+observation no more than 30 minutes old; it never dispatches a retry.
+
 ## Checkpoint B
 
 B1–B7 remain locally validated: policy mapping, authoritative evidence,
@@ -339,6 +346,8 @@ A separate final protocol now requires, before outcomes are observed:
 - passing A and B receipt hashes plus the integrated candidate revision;
 - the candidate and comparator execution-protocol hashes plus a separately
   retained comparator-selection receipt hash;
+- one exact final execution ID and execution nonce hash, with distinct candidate
+  and comparator identities;
 - a quantitative TEL-reduction margin, legitimate-completion and selective-
   reliability floors, an autonomous-coverage floor, latency/error/missing-data/
   irreversible-loss ceilings, tie handling, rationale, and statistical method;
@@ -355,15 +364,16 @@ The local final path is no longer limited to a caller-created metric snapshot. A
 write-once `C.FINAL.HELD_OUT.EVIDENCE.1` CLI accepts an out-of-band pinned frozen
 registration, exact held-out suite and metric/TEL/cost-source hashes, passing A/B
 receipt files, complete candidate/comparator raw decision rows, and paired
-write-once execution receipts. Those receipts bind one shared execution nonce,
-attempt 1, the frozen protocols and comparator selection, complete row manifests,
-and exact GitHub Actions artifact references. The runner rejects fixtures/
+write-once execution receipts. The registration freezes one execution ID and
+nonce hash before outcomes; both manifests and both attempt-1 receipts must match
+them while binding the frozen protocols and comparator selection, complete row
+manifests, and exact GitHub Actions artifact references. The runner rejects fixtures/
 simulated inputs, enforces exact unique case coverage and the A→B→C revision/hash
 chain, re-scores every case, and derives both aggregate snapshots and the
 preregistered decision internally. Output publication is atomic and identical
-replay returns the same bytes; conflicts fail closed. The focused C scope passes
-**64/64**. No real suite, rows, receipts, or one-shot execution were supplied, so
-C remains **NOT RUN / BLOCKED**.
+replay returns the same bytes; conflicts fail closed. The C-only test-module
+selection passes **56/56**. No real suite, rows, receipts, or one-shot execution
+were supplied, so C remains **NOT RUN / BLOCKED**.
 
 ## Checkpoint D
 
@@ -406,7 +416,7 @@ service was created.
 The authoritative D loader now requires `D.EVIDENCE.PINS.2` and the new raw-row
 `C.FINAL.HELD_OUT.EVIDENCE.1`; legacy caller-metric C evidence, old pins,
 cross-link mismatches, and re-pinned aggregate tampering fail closed. The focused
-D suite passes **111/111**, and the complete local suite passes **465/465**.
+D suite passes **111/111**, and the complete local suite passes **468/468**.
 Hosted TLS scans,
 reverse-proxy rendering on the chosen host, edge controls, backup/restore,
 monitoring, real A/B/C receipts, and a hosted integrated run remain **NOT RUN**.

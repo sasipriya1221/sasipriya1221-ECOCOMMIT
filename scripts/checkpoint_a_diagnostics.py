@@ -5,7 +5,7 @@ import json
 import re
 from collections import Counter
 from copy import deepcopy
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +24,7 @@ from ecocommit.validator import FidelityValidator
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 SOURCE_REVISION_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 RUN_ID_PATTERN = re.compile(r"^[0-9]{1,20}$")
+PROVIDER_HEALTH_MAX_AGE = timedelta(minutes=30)
 
 
 def _terminal_category(row: dict[str, Any]) -> str:
@@ -111,26 +112,36 @@ def _retry_readiness(
     passed_cases: int,
     unresolved_cases: int,
     run_status: str,
+    identity_fully_pinned: bool,
     provider_condition: str,
+    assessed_at_utc: datetime,
     provider_health_observed_at: datetime | None,
     provider_health_reference_sha256: str | None,
 ) -> dict[str, object]:
     maximum_possible_passes = passed_cases + unresolved_cases
     threshold_passes = int(CRITERIA["case_pass_rate_min"] * 80)
-    if gate_passed:
-        decision = "NO_RETRY_NEEDED_GATE_PASSED"
-    elif full_run or maximum_possible_passes < threshold_passes:
-        decision = "NOT_READY_TERMINAL_RESULT"
-    elif run_status in {"queued", "in_progress"}:
+    if run_status in {"queued", "in_progress"}:
         decision = "NOT_READY_CONFLICTING_ATTEMPT_ACTIVE"
     elif run_status == "unknown":
         decision = "NOT_READY_RUN_STATUS_UNVERIFIED"
+    elif run_status != "completed":
+        decision = "NOT_READY_RUN_NOT_COMPLETED"
+    elif not identity_fully_pinned:
+        decision = "NOT_READY_EVIDENCE_IDENTITY_UNPINNED"
+    elif gate_passed:
+        decision = "NO_RETRY_NEEDED_GATE_PASSED"
+    elif full_run or maximum_possible_passes < threshold_passes:
+        decision = "NOT_READY_TERMINAL_RESULT"
     elif provider_condition == "throttled":
         decision = "NOT_READY_PROVIDER_BLOCKER_PERSISTS"
     elif provider_condition != "healthy":
         decision = "NOT_READY_PROVIDER_CONDITION_UNVERIFIED"
     elif provider_health_observed_at is None or provider_health_reference_sha256 is None:
         decision = "NOT_READY_PROVIDER_HEALTH_UNPINNED"
+    elif provider_health_observed_at > assessed_at_utc:
+        decision = "NOT_READY_PROVIDER_HEALTH_TIME_INVALID"
+    elif assessed_at_utc - provider_health_observed_at > PROVIDER_HEALTH_MAX_AGE:
+        decision = "NOT_READY_PROVIDER_HEALTH_STALE"
     else:
         decision = "READY_TO_REQUEST_AUTHORIZED_RETRY"
     return {
@@ -140,6 +151,10 @@ def _retry_readiness(
         "retry_action_performed": False,
         "run_status": run_status,
         "provider_condition": provider_condition,
+        "assessed_at_utc": assessed_at_utc.isoformat(),
+        "provider_health_max_age_seconds": int(
+            PROVIDER_HEALTH_MAX_AGE.total_seconds()
+        ),
         "provider_health_observed_at_utc": (
             provider_health_observed_at.isoformat()
             if provider_health_observed_at is not None
@@ -159,11 +174,23 @@ def diagnose(
     expected_run_id: str | None = None,
     run_status: str = "unknown",
     provider_condition: str = "unknown",
+    assessed_at_utc: datetime | None = None,
     provider_health_observed_at: datetime | None = None,
     provider_health_reference_sha256: str | None = None,
 ) -> dict[str, object]:
     if not paths:
         raise ValueError("at least one artifact is required")
+    assessed_at = assessed_at_utc or datetime.now(UTC)
+    if assessed_at.tzinfo is None or assessed_at.utcoffset() is None:
+        raise ValueError("retry assessment time must be timezone-aware")
+    assessed_at = assessed_at.astimezone(UTC)
+    if provider_health_observed_at is not None:
+        if (
+            provider_health_observed_at.tzinfo is None
+            or provider_health_observed_at.utcoffset() is None
+        ):
+            raise ValueError("provider health observation time must be timezone-aware")
+        provider_health_observed_at = provider_health_observed_at.astimezone(UTC)
     frozen = _clear_cases() + _ambiguous_cases()
     frozen_by_id = {gold.case_id: gold for gold in frozen}
     validator = FidelityValidator()
@@ -217,6 +244,12 @@ def diagnose(
 
     assert retained_manifest is not None
     ordered, missing, metrics, full_run, passed = compute_gate(frozen, by_id)
+    identity_fully_pinned = all(
+        (expected_manifest_sha256, expected_source_revision, expected_run_id)
+    )
+    authoritative_passed = (
+        passed and identity_fully_pinned and run_status == "completed"
+    )
     terminal = Counter()
     semantic = Counter()
     failed_cases: list[dict[str, object]] = []
@@ -243,7 +276,9 @@ def diagnose(
         passed_cases=metrics["passed_cases"],
         unresolved_cases=len(missing),
         run_status=run_status,
+        identity_fully_pinned=identity_fully_pinned,
         provider_condition=provider_condition,
+        assessed_at_utc=assessed_at,
         provider_health_observed_at=provider_health_observed_at,
         provider_health_reference_sha256=provider_health_reference_sha256,
     )
@@ -257,19 +292,20 @@ def diagnose(
             "manifest_sha256": expected_manifest_sha256,
             "source_revision": expected_source_revision,
             "run_id": expected_run_id,
-            "out_of_band_identity_fully_pinned": all(
-                (expected_manifest_sha256, expected_source_revision, expected_run_id)
-            ),
+            "out_of_band_identity_fully_pinned": identity_fully_pinned,
         },
         "status": (
             "PASSED"
+            if authoritative_passed
+            else "BLOCKED_NOT_PASSED"
             if passed
             else "FAILED_NOT_PASSED"
             if full_run
             else "BLOCKED_NOT_PASSED"
         ),
-        "gate_passed": passed,
-        "complete_receipt_possible": passed,
+        "gate_passed": authoritative_passed,
+        "computed_gate_passed": passed,
+        "complete_receipt_possible": authoritative_passed,
         "terminal_rows": len(ordered),
         "passed_rows": metrics["passed_cases"],
         "failed_rows": len(failed_cases),

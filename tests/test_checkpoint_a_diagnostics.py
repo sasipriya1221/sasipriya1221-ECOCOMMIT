@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -12,6 +12,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+import checkpoint_a_diagnostics
 from checkpoint_a_diagnostics import diagnose
 from checkpoint_a_live import _ambiguous_cases, _clear_cases, semantic_case_pass
 from checkpoint_a_protocol import bind_row, build_manifest, canonical_sha256
@@ -77,9 +78,15 @@ def _passing_row(gold, manifest):
     )
 
 
-def _artifact(tmp_path: Path) -> tuple[Path, dict, list]:
+def _artifact(tmp_path: Path, *, run_id: str | None = None) -> tuple[Path, dict, list]:
     frozen = _clear_cases() + _ambiguous_cases()
     manifest = build_manifest(frozen, _provider())
+    if run_id is not None:
+        manifest["workflow"]["run_id"] = run_id
+        unsigned = {
+            key: value for key, value in manifest.items() if key != "manifest_sha256"
+        }
+        manifest["manifest_sha256"] = canonical_sha256(unsigned)
     path = tmp_path / "attempt.json"
     path.write_text(
         json.dumps(
@@ -95,13 +102,13 @@ def _artifact(tmp_path: Path) -> tuple[Path, dict, list]:
 
 
 def test_diagnostics_recompute_rows_and_keep_missing_cases_unresolved(tmp_path):
-    path, manifest, _ = _artifact(tmp_path)
+    path, manifest, _ = _artifact(tmp_path, run_id="33590028177")
 
     report = diagnose(
         [path],
         expected_manifest_sha256=manifest["manifest_sha256"],
         expected_source_revision=manifest["source_revision"],
-        expected_run_id=None,
+        expected_run_id="33590028177",
         run_status="completed",
         provider_condition="throttled",
     )
@@ -160,7 +167,7 @@ def test_diagnostics_reject_tampered_semantics_even_with_rehashed_row(tmp_path):
 
 
 def test_retry_readiness_needs_completed_run_and_pinned_healthy_observation(tmp_path):
-    path, manifest, _ = _artifact(tmp_path)
+    path, manifest, _ = _artifact(tmp_path, run_id="123")
     observed = datetime(2026, 9, 2, 6, 0, tzinfo=UTC)
 
     active = diagnose(
@@ -174,11 +181,41 @@ def test_retry_readiness_needs_completed_run_and_pinned_healthy_observation(tmp_
         "NOT_READY_CONFLICTING_ATTEMPT_ACTIVE"
     )
 
+    cancelled = diagnose(
+        [path],
+        expected_manifest_sha256=manifest["manifest_sha256"],
+        expected_source_revision=manifest["source_revision"],
+        expected_run_id="123",
+        run_status="cancelled",
+        provider_condition="healthy",
+        assessed_at_utc=observed + timedelta(minutes=5),
+        provider_health_observed_at=observed,
+        provider_health_reference_sha256="a" * 64,
+    )
+    assert cancelled["retry_readiness"]["decision"] == (
+        "NOT_READY_RUN_NOT_COMPLETED"
+    )
+
+    unpinned = diagnose(
+        [path],
+        run_status="completed",
+        provider_condition="healthy",
+        assessed_at_utc=observed + timedelta(minutes=5),
+        provider_health_observed_at=observed,
+        provider_health_reference_sha256="a" * 64,
+    )
+    assert unpinned["retry_readiness"]["decision"] == (
+        "NOT_READY_EVIDENCE_IDENTITY_UNPINNED"
+    )
+
     ready = diagnose(
         [path],
         expected_manifest_sha256=manifest["manifest_sha256"],
+        expected_source_revision=manifest["source_revision"],
+        expected_run_id="123",
         run_status="completed",
         provider_condition="healthy",
+        assessed_at_utc=observed + timedelta(minutes=5),
         provider_health_observed_at=observed,
         provider_health_reference_sha256="a" * 64,
     )
@@ -188,3 +225,67 @@ def test_retry_readiness_needs_completed_run_and_pinned_healthy_observation(tmp_
     assert ready["retry_readiness"]["eligible"] is True
     assert ready["retry_readiness"]["authorization_required"] is True
     assert ready["retry_readiness"]["retry_action_performed"] is False
+
+    stale = diagnose(
+        [path],
+        expected_manifest_sha256=manifest["manifest_sha256"],
+        expected_source_revision=manifest["source_revision"],
+        expected_run_id="123",
+        run_status="completed",
+        provider_condition="healthy",
+        assessed_at_utc=observed + timedelta(hours=1),
+        provider_health_observed_at=observed,
+        provider_health_reference_sha256="a" * 64,
+    )
+    assert stale["retry_readiness"]["decision"] == (
+        "NOT_READY_PROVIDER_HEALTH_STALE"
+    )
+
+
+def test_computed_all_pass_cannot_promote_without_completed_pinned_identity(
+    tmp_path,
+    monkeypatch,
+):
+    path, manifest, _ = _artifact(tmp_path, run_id="456")
+    all_pass_metrics = {
+        "passed_cases": 80,
+        "case_pass_rate": 1.0,
+        "autonomous_coverage": 1.0,
+        "selective_semantic_reliability": 1.0,
+        "ambiguous_clarification_accuracy": 1.0,
+    }
+    monkeypatch.setattr(
+        checkpoint_a_diagnostics,
+        "compute_gate",
+        lambda frozen, rows: (
+            list(rows.values()),
+            [],
+            all_pass_metrics,
+            True,
+            True,
+        ),
+    )
+
+    unpinned = diagnose([path], run_status="completed")
+    assert unpinned["computed_gate_passed"] is True
+    assert unpinned["gate_passed"] is False
+    assert unpinned["complete_receipt_possible"] is False
+    assert unpinned["status"] == "BLOCKED_NOT_PASSED"
+    assert unpinned["retry_readiness"]["decision"] == (
+        "NOT_READY_EVIDENCE_IDENTITY_UNPINNED"
+    )
+
+    pinned = diagnose(
+        [path],
+        expected_manifest_sha256=manifest["manifest_sha256"],
+        expected_source_revision=manifest["source_revision"],
+        expected_run_id="456",
+        run_status="completed",
+    )
+    assert pinned["computed_gate_passed"] is True
+    assert pinned["gate_passed"] is True
+    assert pinned["complete_receipt_possible"] is True
+    assert pinned["status"] == "PASSED"
+    assert pinned["retry_readiness"]["decision"] == (
+        "NO_RETRY_NEEDED_GATE_PASSED"
+    )

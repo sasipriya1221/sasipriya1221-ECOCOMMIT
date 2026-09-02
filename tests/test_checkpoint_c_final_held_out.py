@@ -206,6 +206,8 @@ def _inputs(tmp_path: Path):
     registration = CheckpointCFinalRegistration.create(
         registration_id="c-final-held-out-test-registration",
         registered_at_utc=NOW + timedelta(minutes=2),
+        final_execution_id=EXECUTION_ID,
+        final_execution_nonce_sha256=EXECUTION_NONCE_SHA256,
         final_suite_sha256=suite.canonical_hash(),
         final_case_ids_sha256=final_case_ids_sha256(suite),
         final_case_count=len(suite.cases),
@@ -476,6 +478,19 @@ def test_final_held_out_requires_preregistered_comparator_receipt(tmp_path):
     )
 
     with pytest.raises(ValueError, match="protocol is not preregistered"):
+        _build(values)
+
+
+def test_final_held_out_rejects_a_relabelled_shared_execution_nonce(tmp_path):
+    values = _inputs(tmp_path)
+    alternate_nonce = "9" * 64
+    for key in ("candidate_receipt", "comparator_receipt"):
+        receipt = values[key]
+        body = receipt.model_dump(exclude={"receipt_sha256"})
+        body["execution_nonce_sha256"] = alternate_nonce
+        values[key] = CheckpointCFinalDecisionReceipt.create(**body)
+
+    with pytest.raises(ValueError, match="execution nonce is not preregistered"):
         _build(values)
 
 

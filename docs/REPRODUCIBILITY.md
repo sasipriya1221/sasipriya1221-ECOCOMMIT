@@ -308,8 +308,10 @@ Do not execute the authoritative final comparison until A and B both have
 genuine passing receipts. Before observing candidate or comparator outcomes,
 freeze the final suite, metric/TEL and cost definitions, acceptance choices,
 integrated source revision, exact A/B receipt hashes, candidate/comparator
-execution-protocol hashes, and comparator-selection receipt hash in the final
-registration. Publish or otherwise retain the registration SHA-256 out of band.
+execution-protocol hashes, comparator-selection receipt hash, one unique final
+execution ID, and its nonce hash in the final registration. Candidate and
+comparator identities must be distinct. Publish or otherwise retain the
+registration SHA-256 out of band.
 Run the final census once from complete raw decision rows and their independently
 retained execution receipts:
 
@@ -330,14 +332,18 @@ retained execution receipts:
   --output evidence\final\checkpoint-c-final.json
 ```
 
-The candidate/comparator receipts must share one execution nonce, specify attempt
-1, bind their complete raw manifests plus the preregistered protocols/selection,
-and name exact GitHub Actions artifacts. The final runner recomputes both sides
-from the raw rows, enforces exact case coverage and the A→B→registration
-revision/hash chain, and writes only `C.FINAL.HELD_OUT.EVIDENCE.1` atomically.
-Fixture/simulated cases, supplied aggregate metrics, missing or errored rows,
-re-registration after outcome inspection, later attempts, or conflicting output
-fail closed; byte-identical replay returns the retained digest.
+The `--execution-id` value, both manifests, and both receipts must match the
+execution ID frozen in `C.FINAL.REGISTRATION.2`; the receipt nonce hashes must
+also match the frozen nonce hash. Receipts specify attempt 1, bind complete raw
+manifests plus the preregistered protocols/selection, and name exact GitHub
+Actions artifacts. Preserve the external run history as the independent proof
+that the registered ID/nonce was not reused for a hidden rerun. The final runner
+recomputes both sides from the raw rows, enforces exact case coverage and the
+A→B→registration revision/hash chain, and writes only
+`C.FINAL.HELD_OUT.EVIDENCE.1` atomically. Fixture/simulated cases, supplied
+aggregate metrics, missing or errored rows, re-registration after outcome
+inspection, identity reuse, later attempts, or conflicting output fail closed;
+byte-identical replay returns the retained digest.
 
 ## Future Checkpoint D provider-Test run
 

@@ -73,10 +73,16 @@ class CheckpointCAcceptanceRule(BaseModel):
 class CheckpointCFinalRegistration(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    schema_version: Literal["C.FINAL.REGISTRATION.1"] = "C.FINAL.REGISTRATION.1"
+    schema_version: Literal["C.FINAL.REGISTRATION.2"] = "C.FINAL.REGISTRATION.2"
     registration_id: str = Field(min_length=1)
     registered_at_utc: datetime
     outcomes_observed_before_registration: Literal[False] = False
+    final_execution_id: str = Field(
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+    )
+    final_execution_nonce_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     final_suite_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     final_case_ids_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     final_case_count: int = Field(gt=0)
@@ -98,6 +104,8 @@ class CheckpointCFinalRegistration(BaseModel):
 
     @model_validator(mode="after")
     def digest_is_valid(self):
+        if self.candidate_id == self.acceptance_rule.comparator_id:
+            raise ValueError("candidate and comparator identities must be distinct")
         expected = sha256_hex(self.model_dump(exclude={"registration_sha256"}))
         if self.registration_sha256 != expected:
             raise ValueError("Checkpoint C final registration digest is invalid")
@@ -106,7 +114,7 @@ class CheckpointCFinalRegistration(BaseModel):
     @classmethod
     def create(cls, **values) -> "CheckpointCFinalRegistration":
         body = {
-            "schema_version": "C.FINAL.REGISTRATION.1",
+            "schema_version": "C.FINAL.REGISTRATION.2",
             "outcomes_observed_before_registration": False,
             **values,
         }
@@ -490,8 +498,12 @@ def validate_final_decision_receipt(
     )
     if receipt.role != role:
         raise ValueError("final decision receipt has the wrong execution role")
+    if receipt.execution_id != registration.final_execution_id:
+        raise ValueError("final decision receipt execution id is not preregistered")
     if receipt.execution_id != manifest.execution_id:
         raise ValueError("final decision receipt belongs to another execution")
+    if receipt.execution_nonce_sha256 != registration.final_execution_nonce_sha256:
+        raise ValueError("final decision receipt execution nonce is not preregistered")
     if receipt.baseline_id != expected_baseline_id or manifest.baseline_id != expected_baseline_id:
         raise ValueError("final decision receipt baseline is not preregistered")
     if receipt.source_revision != registration.upstream.integrated_candidate_revision:
@@ -596,6 +608,8 @@ def derive_final_case_results(
         raise ValueError("final cost sources do not match their preregistration")
     if manifest.registration_sha256 != registration.registration_sha256:
         raise ValueError("final decision manifest belongs to another registration")
+    if manifest.execution_id != registration.final_execution_id:
+        raise ValueError("final decision manifest execution id is not preregistered")
     if manifest.final_suite_sha256 != suite_sha256:
         raise ValueError("final decision manifest belongs to another suite")
     if manifest.final_case_ids_sha256 != case_ids_sha256:
@@ -712,6 +726,8 @@ class CheckpointCFinalHeldOutEvidence(BaseModel):
             self.checkpoint_b_receipt,
             self.checkpoint_b_receipt_file_sha256,
         )
+        if self.execution_id != registration.final_execution_id:
+            raise ValueError("final held-out execution id is not preregistered")
         if (
             self.candidate_manifest.execution_id != self.execution_id
             or self.comparator_manifest.execution_id != self.execution_id

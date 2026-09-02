@@ -122,7 +122,7 @@ were not relabeled as part of the earlier live run.
 | Current full deterministic suite | **369 / 369 passed** |
 | Current no-hardlink clone at `60c85f0b75574007a7bf1de9a8b4be7214c69a75` using its hash-locked virtual environment | **369 / 369 passed**; compilation, `pip check`, JavaScript syntax, readiness structure, diff check, and clean status passed |
 | Current B8 finalizer regression | **25 / 25 passed** |
-| Current integrated local suite after finalizer/provenance hardening | **465 / 465 passed** |
+| Current integrated local suite after finalizer/provenance hardening | **468 / 468 passed** |
 
 Validation environment: Windows, Python 3.14.6, Pydantic 2.13.5, pytest 8.4.2.
 

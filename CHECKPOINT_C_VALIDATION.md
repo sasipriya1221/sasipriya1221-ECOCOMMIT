@@ -11,12 +11,14 @@ separately gated held-out run.
 
 The current tree also contains a separate final preregistration/evidence contract.
 It requires upstream receipt hashes, held-out suite/case/cost/metric hashes,
-candidate revision, candidate/comparator execution-protocol hashes, a separately
-retained comparator-selection receipt, TEL margin, autonomous-coverage and
-completion/reliability floors, latency/error/missing-data/irreversible-loss
-ceilings, tie handling, rationale, and statistical method before any outcome can
-validate. It structurally refuses fixture inputs and simulated cost or latency.
-No real values or outcomes have been filled into that contract.
+candidate revision, distinct candidate/comparator identities, the exact final
+execution ID and nonce hash, candidate/comparator execution-protocol hashes, a
+separately retained comparator-selection receipt, TEL margin, autonomous-
+coverage and completion/reliability floors, latency/error/missing-data/
+irreversible-loss ceilings, tie handling, rationale, and statistical method
+before any outcome can validate. It structurally refuses fixture inputs and
+simulated cost or latency. No real values or outcomes have been filled into that
+contract.
 
 ### Current boundary-hardening addendum
 
@@ -29,10 +31,12 @@ selection, complete case count, and exact GitHub Actions artifact references. It
 semantically re-scores all rows, derives TEL and every gate metric internally,
 and atomically publishes one write-once evidence file; identical replay is
 byte-stable and conflicting output fails closed. This closes parser,
-provenance, cherry-picking, and partial-publication gaps without choosing any
-real input, comparator, weight, or threshold. The current focused C suite passes
-**64/64** and the full deterministic suite passes **465/465**. This remains local
-framework evidence, not a final comparison or independent reproduction.
+provenance, relabelled-run, cherry-picking, and partial-publication gaps without
+choosing any real input, comparator, weight, or threshold. Both manifests and
+receipts must use the execution ID frozen in `C.FINAL.REGISTRATION.2`, and both
+receipt nonce hashes must equal its pre-outcome nonce hash. The current C-only
+test-module selection passes **56/56**. This remains local framework evidence,
+not a final comparison or independent reproduction.
 
 ## Validation boundary
 
@@ -105,7 +109,7 @@ one mutable factory.
 | C11 — validated integrated ECOCOMMIT candidate | BLOCKED | Checkpoints A and B are explicit prerequisites and are not both validated. The preliminary runner consumes no live A output and has no ECOCOMMIT candidate comparator. |
 | C12 — final held-out comparison | BLOCKED | The preliminary runner rejects every `FINAL_HELD_OUT` case and cannot mark C passed or publish a final comparison. |
 | C13 — quantitative acceptance decision rule | BLOCKED | No final TEL improvement margin/tie rule, autonomous-coverage/reliability/legitimate-completion floors, latency/irreversible-loss ceilings, error or missing-latency tolerance, or statistical decision method is frozen. These must be preregistered before any final outcomes are observed; no threshold is invented here. |
-| C14 — one-shot execution provenance | PASS (framework only) / BLOCKED (real receipts) | Candidate/comparator receipts must share one execution nonce, carry attempt 1, bind complete raw manifests and preregistered protocols/selection, and name exact retained Actions artifacts. No authentic final receipt exists. |
+| C14 — one-shot execution provenance | PASS (framework only) / BLOCKED (real receipts) | Registration freezes one exact execution ID and nonce hash before outcomes; distinct candidate/comparator receipts must match them, carry attempt 1, bind complete raw manifests and preregistered protocols/selection, and name exact retained Actions artifacts. No authentic final receipt or external no-retry proof exists. |
 
 ## Defects found and fixed
 
@@ -158,6 +162,11 @@ one mutable factory.
     artifact references; the held-out artifact revalidates all bindings.
 20. Replaced overwrite-prone final output with atomic exclusive publication and
     byte-identical replay, with regression coverage for conflict handling.
+21. Froze the exact final execution ID and execution nonce hash inside the
+    preregistration, then rejected manifests, receipts, or top-level evidence
+    that relabel another run under the frozen registration.
+22. Rejected candidate/comparator identity equality so a self-comparison cannot
+    satisfy the quantitative gate.
 
 ## Remaining blockers
 
@@ -176,6 +185,10 @@ one mutable factory.
   retain and hash its independent selection receipt.
 - Freeze and retain the exact candidate and comparator execution protocols
   before either final output exists.
+- Freeze one unique final execution ID and nonce hash before either outcome,
+  ensure the external runner retains the complete first attempt under those
+  values, and preserve provider/Actions history proving it was not silently
+  rerun. The local receipt schema cannot independently prove external history.
 - Preregister final TEL weights and economic-cost sources; the synthetic fixture
   values are not transferable to a claim.
 - Before observing any final outcomes, preregister the quantitative C acceptance
@@ -188,9 +201,9 @@ one mutable factory.
   validation wheels, but this is not independent reproduction.
 - Obtain genuine passing A and B evidence and a version-bound integrated candidate.
 - After those criteria are frozen, execute the separately gated final-held-out
-  comparison once under one execution nonce, retain both complete raw manifests
-  plus their attempt-1 execution receipts, and apply the preregistered decision
-  rule without tuning.
+  comparison once under the registered execution ID and nonce, retain both
+  complete raw manifests plus their attempt-1 execution receipts and external
+  run history, and apply the preregistered decision rule without tuning.
 
 ## PASS / BLOCKED / FAIL rule
 

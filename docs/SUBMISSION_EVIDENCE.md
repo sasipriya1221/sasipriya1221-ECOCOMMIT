@@ -78,9 +78,10 @@ webhook delivery, reconciliation, or settlement was executed.
   gated one-shot held-out run.
 - Framework state: a final preregistration/evidence contract now binds the
   required hashes, upstream receipts, candidate/comparator protocols, comparator
-  selection receipt, and quantitative rule—including autonomous coverage—before
-  outcomes. Paired attempt-1 receipts must share one execution nonce and bind
-  complete raw manifests plus exact Actions artifacts. No real registration,
+  selection receipt, distinct system identities, one exact execution ID/nonce
+  hash, and quantitative rule—including autonomous coverage—before outcomes.
+  Paired attempt-1 receipts must match those frozen execution identifiers and
+  bind complete raw manifests plus exact Actions artifacts. No real registration,
   execution receipts, values, or results exist.
 - Do not insert: the checked-in synthetic one-case fixture or preliminary harness
   output.

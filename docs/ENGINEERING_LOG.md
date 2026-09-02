@@ -1156,7 +1156,12 @@ pass and unchanged `A002` failure), 78 unresolved rows, no complete gate, and no
 receipt. The external job-log review remains the authority for classifying those
 78 as provider-deferred. Retry readiness stays closed while HTTP 429 throttling
 persists, when another attempt is active, or when run/provider health is not
-digest-bound; the tool never launches a retry.
+digest-bound. A post-review fix additionally requires all manifest/source/run
+identity pins, an exactly completed prior run, and a digest-bound healthy
+observation no older than 30 minutes; cancelled, future-observation, and stale-
+observation cases fail closed. A self-consistent computed pass is now reported
+separately and cannot become authoritative `PASSED` or receipt-ready without
+those external pins. The tool never launches a retry.
 
 Further local defects and omissions were fixed with regression coverage:
 
@@ -1171,6 +1176,12 @@ Further local defects and omissions were fixed with regression coverage:
   and gate now include those fields. Paired attempt-1 receipts share one nonce,
   bind complete raw manifests, and require strict Actions artifact references;
   final scoring remains internally recomputed and write-once.
+- A final C review found that the shared nonce and execution ID were not
+  themselves preregistered, allowing a discarded run to be relabelled locally.
+  `C.FINAL.REGISTRATION.2` now freezes both before outcomes, every manifest/
+  receipt/evidence layer must match them, and candidate/comparator identities
+  must differ. External Actions history is still required to prove no hidden
+  reuse of the registered nonce.
 - D's trusted-proxy middleware accepted integer spellings such as `+1` and did
   not explicitly reject transfer encoding. It now accepts canonical decimal
   counts/lengths only, rejects ambiguous framing, bounds API tokens, strips
@@ -1201,7 +1212,7 @@ correctly hashes actual input bytes, so the difference would make provenance
 platform-dependent. `.gitattributes` now forces LF for the lock and a regression
 protects that rule; the replacement clone must match the source lock digest.
 
-Focused regressions and the full working-tree suite pass **465/465**. No provider
+Focused regressions and the full working-tree suite pass **468/468**. No provider
 request, Candidate 3 retry, Checkout, webhook, public endpoint, deployment,
 license selection, paid service, final benchmark, screenshot, or video was
 performed. This work is prepared as local review commits and remains unpushed;

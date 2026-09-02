@@ -87,7 +87,7 @@ retry. B/C output writers are atomic/write-once; C execution receipts and the E
 reproduction receipt require exact Actions artifact references. Deployment
 parsing rejects ambiguous body framing, state/audit hard-link aliasing,
 noncanonical counts, and unsafe API tokens. The full local regression now passes
-**465/465**. None of these local changes has been pushed or promoted to final
+**468/468**. None of these local changes has been pushed or promoted to final
 evidence.
 
 ## Frozen-boundary check
@@ -174,9 +174,9 @@ failed row, 78 provider deferrals, and no complete aggregate or receipt.
   final-held-out C **9/9 passed**, complete D **97/97 passed**, and the combined
   repository **440/440 passed** in both the working tree and a fresh no-hardlink
   overlay clone at public `fd26a52a…` with upstream 0/0.
-- Current local A–E hardening tree: **465/465 passed**; E readiness **27/27**,
-  workflow security **8/8**, B8 finalizer **25/25**, C **64/64**, and D-specific
-  **111/111**.
+- Current local A–E hardening tree: **468/468 passed**; E readiness **27/27**,
+  workflow security **8/8**, B8 finalizer **25/25**, C-only **56/56**, and
+  D-specific **111/111**.
 - Fresh-environment dependency consistency: **PASS** (`pip check`).
 - Python byte-compilation: **PASS**.
 - Browser JavaScript syntax: **PASS**.

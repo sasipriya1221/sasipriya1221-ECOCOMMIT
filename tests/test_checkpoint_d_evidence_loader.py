@@ -135,6 +135,8 @@ def _legacy_c_evidence(a_sha: str, b_sha: str, *, pass_decision: bool = True):
     registration = CheckpointCFinalRegistration.create(
         registration_id="final-c-1",
         registered_at_utc=NOW,
+        final_execution_id="legacy-c-final-execution",
+        final_execution_nonce_sha256="a" * 64,
         final_suite_sha256="7" * 64,
         final_case_ids_sha256="8" * 64,
         final_case_count=10,
@@ -284,9 +286,13 @@ def _c_evidence(
         checkpoint_b_receipt_sha256=b_sha,
         integrated_candidate_revision=REVISION,
     )
+    execution_id = "c-final-d-loader-execution-001"
+    execution_nonce_sha256 = "7" * 64
     registration = CheckpointCFinalRegistration.create(
         registration_id="final-c-d-loader-1",
         registered_at_utc=NOW + timedelta(minutes=1),
+        final_execution_id=execution_id,
+        final_execution_nonce_sha256=execution_nonce_sha256,
         final_suite_sha256=suite.canonical_hash(),
         final_case_ids_sha256=final_case_ids_sha256(suite),
         final_case_count=len(suite.cases),
@@ -311,7 +317,6 @@ def _c_evidence(
             rationale="Frozen before the final exact-census outcomes.",
         ),
     )
-    execution_id = "c-final-d-loader-execution-001"
     candidate_manifest = CheckpointCFinalDecisionManifest.create(
         execution_id=execution_id,
         registration_sha256=registration.registration_sha256,
@@ -338,7 +343,6 @@ def _c_evidence(
             winning=False,
         ),
     )
-    execution_nonce_sha256 = "7" * 64
     candidate_receipt = CheckpointCFinalDecisionReceipt.create(
         role="CANDIDATE",
         execution_id=execution_id,

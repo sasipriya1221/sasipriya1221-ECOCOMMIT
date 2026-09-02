@@ -160,11 +160,14 @@ rejects final-held-out scenarios. A separate final preregistration/evidence mode
 binds A/B receipts, suite/case/cost/metric hashes, comparator/candidate identity,
 candidate/comparator protocol hashes, a comparator-selection receipt, and
 quantitative acceptance rules—including autonomous coverage—before outcomes,
-and refuses fixtures or simulated final inputs. Paired decision receipts bind
-one execution nonce, attempt 1, complete raw manifests, exact registered
-protocols/selection, and exact Actions artifacts. The writer derives all case
-scores/TEL/gates and atomically retains a byte-stable one-shot artifact. No real
-final registration, receipt, or result exists.
+and refuses fixtures or simulated final inputs. Registration also freezes one
+exact execution ID and nonce hash and requires distinct candidate/comparator
+identities. Paired decision receipts must match those frozen identifiers, bind
+attempt 1, complete raw manifests, exact registered protocols/selection, and
+exact Actions artifacts. The writer derives all case scores/TEL/gates and
+atomically retains a byte-stable one-shot artifact. External run history remains
+necessary to prove the registered attempt was not rerun. No real final
+registration, receipt, or result exists.
 
 ### D local product and prepared Test path
 

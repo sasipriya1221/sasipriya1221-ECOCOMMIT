@@ -181,9 +181,19 @@ out-of-band pins:
 This command strictly reloads and semantically recomputes terminal rows. It
 labels absent rows `UNRESOLVED_NOT_ASSUMED_PROVIDER_DEFERRED` unless their own
 retained reports establish the provider classification. It never dispatches a
-workflow. A future `READY_TO_REQUEST_AUTHORIZED_RETRY` result additionally needs
-a digest-bound, timestamped healthy-provider observation and proves readiness to
-request a retry only—not authorization or a performed retry.
+workflow. A future `READY_TO_REQUEST_AUTHORIZED_RETRY` result additionally
+requires all three out-of-band identity pins, an exactly `completed` prior run,
+and a digest-bound healthy-provider observation timestamped no more than 30
+minutes before the diagnostic. A cancelled run, missing identity pin, future or
+stale observation, unverifiable provider state, or active attempt remains not
+ready. Readiness proves only that requesting explicit retry authorization is
+reasonable—not authorization or a performed retry.
+
+The diagnostic exposes a self-consistency result as `computed_gate_passed`, but
+sets authoritative `gate_passed`, `status=PASSED`, and
+`complete_receipt_possible` only when the manifest/source/run identity is fully
+pinned and the prior run status is exactly `completed`. A digest that exists
+only inside the inspected artifact cannot authenticate itself.
 
 Aggregation must read every shard through the strict verifier. It recomputes
 contracts, validator reports, semantic decisions, metrics, missing IDs, and the
