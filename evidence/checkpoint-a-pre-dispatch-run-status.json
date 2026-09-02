@@ -1,0 +1,40 @@
+{
+  "schema_version": "A.EXTERNAL_RUN_STATUS.1",
+  "observed_at_utc": "2026-09-02T02:23:34Z",
+  "repository": "sasipriya1221/sasipriya1221-ECOCOMMIT",
+  "candidate_1_obsolete_run": {
+    "run_id": "33493409547",
+    "run_attempt": 27,
+    "status": "completed",
+    "conclusion": "failure",
+    "head_sha": "6485d3b24f4967c178cce9b1a9b67cdf0230840c",
+    "candidate_version": "A-CANDIDATE-1",
+    "promotion_eligible": false,
+    "retained_authoritative_failure_attempt": 15,
+    "run_url": "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33493409547"
+  },
+  "excluded_score_recovery_run": {
+    "run_id": "33556907712",
+    "run_attempt": 6,
+    "status": "completed",
+    "conclusion": "failure",
+    "head_sha": "1cc9fd199781de3974adbcb6099b77d89aec2206",
+    "candidate_2": false,
+    "promotion_eligible": false,
+    "resume_eligible": false,
+    "run_url": "https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33556907712"
+  },
+  "candidate_2": {
+    "identifier": "A-CANDIDATE-2",
+    "remote_run_observed": false,
+    "frozen_dataset_sha256": "968be3ed3a438a3a28a3402fa65c90a45cb564ed1adad2e6e51d852e24c5bb8b"
+  },
+  "non_claims": {
+    "candidate_1_status_changed_by_attempt_27": false,
+    "excluded_run_is_candidate_2": false,
+    "excluded_run_artifacts_inspected_or_promoted": false,
+    "checkpoint_a_pass": false,
+    "thresholds_changed": false,
+    "frozen_cases_changed": false
+  }
+}

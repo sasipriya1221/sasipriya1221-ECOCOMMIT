@@ -5,7 +5,7 @@ prerequisite. Acceptance remains sequential and evidence-gated.
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; remote score-recovery experiment CANCELLED; Candidate 2 BUILT + LOCALLY VALIDATED, NOT EVALUATED** | Commit/push authorization, fresh 80-case Candidate 2 provider run, and all four unchanged thresholds passing together |
+| A — frozen semantic gate | **Candidate 1 FAILED; excluded score-recovery experiment FAILED after later reruns; Candidate 2 BUILT + LOCALLY VALIDATED, NOT EVALUATED** | Intentional push, fresh 80-case Candidate 2 provider run, and all four unchanged thresholds passing together |
 | B — deterministic economic safety | **B1–B7 + durable single-host runtime LOCALLY VALIDATED; B8 order subgates live-validated; NOT PASSED** | Passing A receipt, genuine Test Checkout/capture/refund/webhook evidence, and an independently verified signing-key boundary |
 | C — comparative benchmark | **Framework + final preregistration contract LOCALLY VALIDATED; NOT PASSED** | Real frozen suite/costs/outputs, pre-outcome rule choices, passing A+B receipts, and one-shot held-out run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST EXECUTION PATH LOCALLY VALIDATED; NOT PASSED** | Real pinned A/B/C receipts, current credentials/human callback/webhooks, hosted security/operations, and final integrated evidence |
@@ -69,7 +69,14 @@ The account operator must cancel it in GitHub Actions and stop rerunning Candida
 `evidence/checkpoint-a-candidate-1-obsolete-queued.json`; no queue actor or future
 state is inferred.
 
-### Remote score-recovery experiment — cancelled and not promotable
+Pre-dispatch public metadata checked at `2026-09-02T02:23:34Z` now reports the
+same run completed with conclusion `failure` at attempt 27. It is no longer
+active and needs no cancellation. This later operational state cannot replace
+or improve the immutable attempt-15 mathematical failure. The current
+observation is retained separately in
+`evidence/checkpoint-a-pre-dispatch-run-status.json`.
+
+### Remote score-recovery experiment — failed after reruns and not promotable
 
 After Candidate 2 had been built locally, `origin/main` independently advanced to
 `1cc9fd199781de3974adbcb6099b77d89aec2206` and launched run `33556907712`.
@@ -93,6 +100,13 @@ cancellation actor or reason. The 11 published artifacts and their GitHub-publis
 archive digests are recorded without claiming that their contents were locally
 re-hashed or inspected in
 `evidence/checkpoint-a-run-33556907712-cancelled.json`.
+
+That file remains the immutable observation of attempt 1. Pre-dispatch public
+metadata checked at `2026-09-02T02:23:34Z` reports the same run completed with
+conclusion `failure` at attempt 6. The head SHA remains
+`1cc9fd199781de3974adbcb6099b77d89aec2206`. The later reruns still use the
+rejected earlier protocol and are not Candidate 2; no row or artifact from any
+attempt is eligible for Candidate 2 resume.
 
 The score-filling change was rejected during reconciliation. Exact text grounding
 does not prove maximum materiality or extraction confidence, and those values
@@ -135,7 +149,8 @@ commit-pinned and scopes the provider secret only to the validation steps.
 
 Candidate 2 has not been pushed, dispatched, or represented as live evidence.
 Run `33556907712` is explicitly excluded because it used a different, earlier
-protocol and ended cancelled.
+protocol; its retained attempt-1 observation ended cancelled and the current
+attempt-6 state is failure.
 Remote launch requires an intentional push/dispatch boundary and the configured
 provider secret.
 
@@ -287,10 +302,10 @@ five-minute video.
 ## Non-claims
 
 - Candidate 1 did not pass and will not be retried into a pass.
-- Candidate 1 run `33493409547` was observed queued at attempt 27 and must be
-  cancelled by an authorized GitHub operator; it is not resumable evidence.
-- Cancelled run `33556907712` is neither an A pass nor a Candidate 2 run; its
-  provider deferrals and cancelled jobs are not relabelled as semantic outcomes.
+- Candidate 1 run `33493409547` is completed with failure at attempt 27; it is
+  neither resumable evidence nor a replacement for the retained attempt-15 failure.
+- Excluded run `33556907712` is completed with failure at attempt 6 and is neither
+  an A pass nor a Candidate 2 run; none of its attempts or artifacts may be resumed.
 - Candidate 2 has not run remotely.
 - Provider deferrals are not semantic failures; contract failures are not
   provider deferrals.

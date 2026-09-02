@@ -79,10 +79,12 @@ but not the frozen cases, evaluator criteria, or thresholds. The thresholds rema
 - ambiguous clarification accuracy >= 80%.
 
 A later independently launched score-recovery experiment ran from remote commit
-`1cc9fd199781de3974adbcb6099b77d89aec2206` and ended cancelled after partial
-provider deferrals. It was not Candidate 2, its automatic maximum-score repair
-was rejected during reconciliation, and its public metadata is retained without
-promoting any result. Candidate 2 itself has not been remotely evaluated.
+`1cc9fd199781de3974adbcb6099b77d89aec2206`. Its retained attempt-1 observation
+ended cancelled after partial provider deferrals; public metadata checked before
+Candidate 2 dispatch reports the same excluded run completed with failure at
+attempt 6. It was not Candidate 2, its automatic maximum-score repair was rejected
+during reconciliation, and no attempt is promoted. Candidate 2 itself has not
+been remotely evaluated.
 
 ## Validation environment
 
