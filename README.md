@@ -11,13 +11,18 @@ economic contracts, abstains on unresolved material ambiguity, and places a
 deterministic safety boundary between model output and payment commitment.
 
 Payment behavior is explicit: **`SIMULATED_LOCAL`** remains the local/test
-backend, and a separate **`RAZORPAY_TEST_MODE`** adapter now sits behind the same
-safety boundary. Redacted Actions evidence validates Test authentication and one
-bound Test order, but no payment authorization, capture, refund, webhook, or
-settlement ran. B8 and Checkpoint B therefore remain blocked/not passed; there is
-no live-money path. A digest-bound Test Checkout handoff and capture/refund
-continuation are implemented locally but have not been exercised against the
-provider.
+backend, and a separate **`RAZORPAY_TEST_MODE`** adapter sits behind the same
+safety boundary. The earlier Razorpay Test order/Checkout authorization attempt
+from workflow run `33645687964` is retained as failed evidence but is
+**non-promotable** because the required source/run/transaction-bound
+certificate/key reference did not exist before that order and authorization.
+Public `main` at `36bd3b28cafcb915c41e07e792550e33fd0a54a1` fixes that defect by
+creating the provenance reference before any provider order call and adds a
+secret-safe, GET-only authorization verifier. Offline Regression run
+`33663013490` passed that exact source with **471/471 tests**. No fresh Test
+order, authorization, capture, refund, webhook, settlement, or real-money action
+has been performed after the fix, so B8 and Checkpoint B remain blocked/not
+passed.
 
 Checkpoint A remains not passed. Candidate 1 is mathematically failed. A later
 remote score-recovery experiment at run `33556907712` ended cancelled after
@@ -25,13 +30,13 @@ seven transient provider deferrals and is not an eligible frozen candidate; its
 automatic maximum-score filling was rejected rather than promoted. Candidate 2
 then ran as `33583323178`, but the retained attempts remained incomplete and
 exposed a general provider/correction resumability defect. Candidate 3 is the
-runner-only correction; it was fast-forward pushed at `fd26a52a…`, Offline
-Regression run `33589998688` passed, and fresh Candidate 3 run `33590028177` is
-incomplete after attempt 2. Its cumulative aggregate has one passing row, one
-failed row, 78 provider deferrals, and no receipt. No complete score or
-Checkpoint A pass is claimed. The local diagnostic can verify/recompute retained
-rows and assess retry readiness, but never dispatches a retry; another attempt is
-not justified while pervasive HTTP 429s remain.
+runner-only correction. Its public run `33590028177` ultimately concluded with
+failure after repeated attempts; the last retained promotable aggregate remains
+incomplete, with one passing row, one failed row, 78 provider deferrals, and no
+complete receipt. A workflow failure status alone does not substitute for the
+missing evidence. No complete score or Checkpoint A pass is claimed, and another
+provider retry is not justified until provider recovery from the pervasive HTTP
+429 condition is objectively demonstrated.
 
 ## Why ECOCOMMIT
 
@@ -83,13 +88,13 @@ matrix is in [Threat Model](docs/THREAT_MODEL.md).
 | Checkpoint | Engineering state | Acceptance state |
 |---|---|---|
 | A — offline specification/contracts | **BUILT + PASSED (offline scope)** | Frozen invariants retained |
-| A — live intent/fidelity gate | **Candidate 1 failed; Candidate 2 incomplete; Candidate 3 run `33590028177` attempt 2 incomplete/provider-blocked** | **NOT PASSED** |
-| B — deterministic economic safety | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
+| A — live intent/fidelity gate | **Candidate 1 failed; Candidate 2 incomplete; Candidate 3 run `33590028177` terminal/incomplete after provider deferrals** | **NOT PASSED** |
+| B — deterministic economic safety | **BUILT + LOCALLY VALIDATED; pre-authorization provenance defect fixed on public `main`** | **BLOCKED / NOT PASSED** |
 | C — comparative benchmark harness | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
 | D — API/UI/audit/operations | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
-| E — repository/submission evidence | **BUILT + LOCALLY VALIDATED** | **BLOCKED / NOT PASSED** |
+| E — repository/submission evidence | **BUILT + LOCALLY VALIDATED; Apache-2.0 selected** | **BLOCKED / NOT PASSED** |
 
-See [PROGRESS.md](PROGRESS.md) for the live evidence board. These terms are not
+See [PROGRESS.md](PROGRESS.md) for the evidence board. These terms are not
 interchangeable:
 
 - **BUILT**: implementation or documentation exists;
@@ -155,8 +160,10 @@ select only the opaque prepared operation ID. They cannot submit contracts,
 payment data, callbacks, evidence claims, credentials, or keys. See
 [Reproducibility](docs/REPRODUCIBILITY.md) for the exact future-run procedure.
 Evidence and all local configuration are validated before provider preflight;
-pending refunds remain retryable through exact refund-ID polling. This
-implementation and its fake-transport regressions are not live evidence.
+pending refunds remain retryable through exact refund-ID polling. The current
+public implementation also creates the source/run/transaction-bound
+certificate-key reference before any provider order call. This implementation
+and its fake-transport regressions are not live evidence.
 
 ## Evidence and reports
 
@@ -179,19 +186,21 @@ Run the repository-readiness checker with:
 ```
 
 It returns a local structural verdict separately from final submission readiness.
-Known evidence and legal blockers remain blockers rather than making the checker
-green by omission.
+Known evidence blockers remain blockers rather than making the checker green by
+omission.
 
 After real evidence is installed, strict final validation uses
 `scripts/checkpoint_e_readiness.py --mode final --independent-reproduction <receipt>`.
 
 ## Submission evidence status
 
-The final evidence slots are deliberately empty and blocked:
+The final evidence slots remain deliberately blocked until real, source-bound
+proof exists:
 
 - complete Checkpoint A final metrics — **BLOCKED**;
-- complete Razorpay Test Mode payment lifecycle — **BLOCKED** (authentication
-  and order-level evidence retained; authorization/capture/webhooks not run);
+- complete Razorpay Test Mode payment lifecycle — **BLOCKED** (the prior
+  authorization attempt is retained but non-promotable; the provenance fix is
+  public, and a fresh source-bound Test lifecycle has not yet run);
 - final ECOCOMMIT-versus-baseline comparison — **BLOCKED**;
 - integrated hosted product evidence — **BLOCKED**;
 - final screenshots — **BLOCKED**; and
@@ -215,13 +224,14 @@ captures, mocked provider output, or preliminary benchmark numbers.
 
 ## Safety and limitations
 
-- The actual Checkpoint A gate has not passed.
+- The actual Checkpoint A live gate has not passed.
 - B/C/D local success does not clear their dependency or final integration gates.
 - `SIMULATED_LOCAL` moves no real money. Durable SQLite-backed simulation/Test
   state is available only when explicitly configured.
-- The Razorpay adapter is Test Mode only. Retained evidence covers authentication
-  and order binding/idempotency, not payment authorization, capture, refund,
-  webhook delivery, reconciliation, or settlement.
+- The Razorpay adapter is Test Mode only. The earlier Test authorization is
+  retained as non-promotable evidence because it predates the required
+  certificate/key-reference provenance. No fresh post-fix authorization,
+  capture, refund, webhook, reconciliation, or settlement evidence is claimed.
 - SQLite WAL/FULL-sync state, cross-process idempotency, and OS-locked audit
   append are locally validated for one host. They are not high availability,
   a malicious-storage integrity boundary, backup/restore evidence, or a managed
@@ -234,7 +244,7 @@ captures, mocked provider output, or preliminary benchmark numbers.
 
 ## License
 
-No open-source license has been selected. Public visibility does not itself grant
-reuse rights. The repository owner must choose and add an appropriate license
-before claiming open-source/submission license readiness; this remains an explicit
-Checkpoint E blocker.
+ECOCOMMIT is released under the **Apache License, Version 2.0**. See
+[LICENSE](LICENSE) and the recorded [license decision](docs/LICENSE_DECISION.md).
+Open-source licensing does not change any payment, security, or checkpoint
+acceptance claim; those remain governed by the evidence gates above.
