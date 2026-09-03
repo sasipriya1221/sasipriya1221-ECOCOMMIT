@@ -58,6 +58,7 @@ def test_inline_credentialed_http_preflights_do_not_forward_auth_on_redirects():
     assert credentialed == [
         "candidate6-freeze.yml",
         "candidate6-holdout-decision.yml",
+        "candidate6-supervisor-kick.yml",
         "candidate6-supervisor.yml",
         "checkpoint-a-live.yml",
         "provider-preflight.yml",
@@ -130,6 +131,24 @@ def test_candidate6_supervisor_is_minimal_scheduled_fail_closed_and_duplicate_sa
     assert "STOP_HOLDOUT_RERUN_DETECTED" in workflow
     assert "STOP_INTERNAL_FAILED" in workflow
     assert "candidate6_supervisor_decision" in workflow
+
+
+def test_candidate6_supervisor_handoff_is_event_driven_secretless_and_narrow():
+    workflow = (WORKFLOWS / "candidate6-supervisor-kick.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert re.search(r"(?m)^  workflow_run:\s*$", trigger_block)
+    for name in (
+        "Candidate 6 - Development Qualification (Dispatcher)",
+        "Candidate 6 - Freeze Gate",
+        "Candidate 6 - Internal Holdout Qualification (Dispatcher)",
+        "Candidate 6 - Holdout Decision Receipt",
+    ):
+        assert name in trigger_block
+    assert "types: [completed]" in trigger_block
+    assert "candidate6-supervisor.yml/dispatches" in workflow
+    assert "secrets." not in workflow
+    assert "ECOCOMMIT_LLM_API_KEY" not in workflow
+    assert "RAZORPAY" not in workflow
 
 
 def test_offline_regression_covers_every_change_and_static_checks():
