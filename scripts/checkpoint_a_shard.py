@@ -138,7 +138,7 @@ def main() -> int:
     # provider failure is retried later as its own immutable case rather than
     # sleeping for many minutes while blocking every case behind it. This changes
     # only execution scheduling; the frozen case, model prompt and scoring stay intact.
-    max_attempts = max(1, int(os.getenv("ECOCOMMIT_LLM_CASE_MAX_ATTEMPTS", "2")))
+    max_attempts = max(1, int(os.getenv("ECOCOMMIT_LLM_CASE_MAX_ATTEMPTS", "3")))
     max_retry_delay = max(0.0, float(os.getenv("ECOCOMMIT_LLM_CASE_MAX_RETRY_DELAY", "15")))
     provider = OpenAICompatibleIntentProvider(
         args.base_url,
@@ -150,6 +150,8 @@ def main() -> int:
     )
     validator = FidelityValidator()
     manifest = build_manifest(frozen, provider)
+    from checkpoint_a_candidate5 import verify_registration
+    verify_registration(manifest)
     selected = frozen[args.start:args.end]
     selected_by_id = {gold.case_id: gold for gold in selected}
     frozen_index_by_id = {gold.case_id: i for i, gold in enumerate(frozen)}
@@ -192,6 +194,7 @@ def main() -> int:
                     "kind": row.get("error_kind"),
                     "code": row.get("error_code"),
                     "message": row.get("error"),
+                    "provider_trace": row.get("provider_trace", []),
                 },
             )
             print(json.dumps({"deferred": gold.case_id, "reason": "transient_provider_error"}), flush=True)

@@ -137,6 +137,9 @@ def build_manifest(
         ROOT / "scripts" / "checkpoint_a_protocol.py",
         ROOT / "scripts" / "checkpoint_a_shard.py",
         ROOT / "scripts" / "checkpoint_a_aggregate.py",
+        ROOT / "scripts" / "checkpoint_a_candidate5.py",
+        ROOT / ".github" / "workflows" / "checkpoint-a-live.yml",
+        ROOT / ".github" / "workflows" / "groq-preflight.yml",
         ROOT / "src" / "ecocommit" / "_canonical.py",
         ROOT / "src" / "ecocommit" / "checkpoint_a_evidence.py",
         ROOT / "src" / "ecocommit" / "interpreter.py",
@@ -167,8 +170,9 @@ def build_manifest(
             "max_completion_tokens": provider.max_completion_tokens,
             "max_attempts": provider.max_attempts,
             "max_schema_corrections": provider.max_schema_corrections,
-            "max_retry_delay_seconds": provider.max_retry_delay,
+            "max_retry_delay_seconds": float(provider.max_retry_delay),
             "max_response_bytes": provider.max_response_bytes,
+            "request_timeout_seconds": float(provider.timeout),
         },
     }
     manifest["manifest_sha256"] = canonical_sha256(manifest)

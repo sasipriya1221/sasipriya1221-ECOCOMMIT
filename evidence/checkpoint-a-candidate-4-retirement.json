@@ -1,0 +1,11 @@
+{
+  "schema_version": "A.RETIREMENT.1",
+  "candidate_version": "A-CANDIDATE-4",
+  "status": "PREREGISTERED / SUPERSEDED / NEVER RUN",
+  "superseded_by": "A-CANDIDATE-5",
+  "historical_preregistration_source": "d7c1acf9c1762a63f50cbf8b120083e956307b92",
+  "historical_preregistration_sha256": "fdf1b8d376a18afbef93e48e8161891c1333d1cea474e2a74f2cc0688daea3dd",
+  "candidate_4_provider_calls": 0,
+  "verification": "Source-filtered Actions history at d7c1acf contains only Offline Regression 33740496666 and Independent Clean-Machine Reproduction 33740536540, both successful attempt 1; no provider or evaluation run.",
+  "reason": "Offline retained Candidate 3 metadata proves all ten target generations hit the 1024-token ceiling. Candidate 4 only added a correction opportunity at that same ceiling; it is retired without rewriting its preregistration or running it."
+}

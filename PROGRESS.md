@@ -13,7 +13,7 @@ Status vocabulary is strict:
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / NOT RUN; NOT PASSED** | Validate the Candidate 4 bounded schema-correction remediation offline, then run one fresh manual-only 80-case Candidate 4 evaluation with the unchanged frozen dataset/prompt/model/schema/evaluator/thresholds. A typed A receipt exists only if all four unchanged gates pass. |
+| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 PREPARED OFFLINE / NOT RUN; NOT PASSED** | Freeze and publish Candidate 5 preregistration with real implementation hashes, obtain green exact-source CI and provider preflight, then dispatch exactly one fresh manual 80-case evaluation. A typed A receipt exists only if all four unchanged gates pass. |
 | B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | A passing typed A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
@@ -97,23 +97,30 @@ The frozen 90% case-pass criterion requires at least **72/80** passing cases. Ca
 
 No further Groq retry is justified for Candidate 3. Re-running terminal failures until a different stochastic answer appears would discard retained evidence and convert the benchmark into retry-until-lucky score recovery.
 
-### Candidate 4 — preregistered, no provider run yet
+### Candidate 4 — PREREGISTERED / SUPERSEDED / NEVER RUN
 
-Candidate 4 (`A-CANDIDATE-4`) is a fresh candidate justified by the **general schema-conformance failure class** observed in five Candidate 3 terminal rows. Its preregistration is retained at `evidence/checkpoint-a-candidate-4-preregistration.json` before any Candidate 4 provider call.
+Candidate 4 is explicitly retired in `evidence/checkpoint-a-candidate-4-retirement.json`. Its historical preregistration at source `d7c1acf9c1762a63f50cbf8b120083e956307b92` is preserved byte-for-byte. Source-filtered public Actions history contains only successful offline CI `33740496666` and independent reproduction `33740536540`; there was no Candidate 4 provider/preflight/evaluation run.
 
-Candidate 4 changes only bounded schema-conformance recovery and fresh artifact namespacing:
+### Candidate 5 — prepared offline, awaiting public preregistration and live gates
 
-- schema-invalid candidates may receive at most **two** model correction requests instead of one;
-- the total per-case provider-attempt ceiling is **three**, so the second correction opportunity is bounded;
-- the correction message itself is unchanged;
-- the first schema-valid candidate is immediately terminal and is **never** regenerated because of semantic score dissatisfaction;
-- transient provider failures remain typed infrastructure deferrals;
-- Candidate 3 artifacts are never resumed into Candidate 4; and
-- Candidate 4 uses `checkpoint-a-candidate-4-*` artifacts in a fresh workflow run.
+Candidate 5 (`A-CANDIDATE-5`) introduces **UNIFORM_OUTPUT_BUDGET_REMEDIATION** after a zero-provider-call audit of retained Candidate 3 artifact `9875163068`. The downloaded archive and result JSON exactly match the published hashes above. `evidence/checkpoint-a-candidate-5-offline-audit.json` retains the nine relevant rows, provider traces, exact failure descriptions and timeout audit.
 
-Unchanged and still frozen: all 80 cases and their digest, system prompt, compact schema, strict JSON schema, Groq endpoint, `qwen/qwen3.6-27b`, reasoning effort `none`, JSON-object mode, 1,024 completion-token budget, semantic evaluator, and all four thresholds. The runtime manifest additionally binds `max_schema_corrections` and the exact source/runner hashes.
+All ten retained attempts for C004/C011/C012/C013/C014 have `finish_reason=length` and exactly 1,024 completion tokens. Both attempts of C011–C014 and the correction of C004 report eight missing fields at `clauses.6`, the seventh clause. C004's initial attempt also reports two `normalized_value` string-type errors. **Invalid raw response bodies were not retained**: only candidate hashes, usage, finish reasons and schema issues exist. The missing-field locations support late structured-output incompleteness; they do not establish the exact missing token count or prove there were no further intended clauses. The uniform 2,048-token ceiling is bounded operational headroom above the observed cutoff, not a measured minimum or a guarantee of semantic success.
 
-The Candidate 4 workflow remains **manual `workflow_dispatch` only**. The preregistration/source push does not consume Groq calls. No Candidate 4 semantic result or pass is claimed until the complete fresh 80-case run exists and passes every frozen threshold.
+The four separate unaddressed risks were recomputed from retained schema-valid contracts:
+
+- C019: `VALIDATED`, but no `COUNTERPARTY` clause grounds **certified suppliers**; the contract instead contains `CERTIFICATION: certified`. Required semantic check 3 fails.
+- C024: the same missing **certified suppliers** counterparty, in the food-safe conveyor-belt instruction. Required semantic check 3 fails despite `VALIDATED`.
+- C033: **provided that food-safety certification is current** appears as a condition and dependency, with no exception clause or `exception_to` link. The frozen validator returns `REJECTED / EXCEPTION_NOT_PRESERVED` instead of `VALIDATED`.
+- A002: clarification status and `MATERIAL_VAGUENESS` were correctly returned. **if needed** has `exception_to` links but no dependency clause or `depends_on` link, so the frozen dependency requirement fails.
+
+Candidate 5 applies 2,048 tokens uniformly to all 80 cases and every permitted correction, with at most two schema corrections and three total provider attempts. The first schema-valid output remains terminal even when semantically wrong. The dataset/digest, prompt, Groq endpoint, `qwen/qwen3.6-27b`, reasoning `none`, JSON-object mode, contract schemas, evaluator, and all four thresholds remain unchanged. No case-specific logic, gold feedback, semantic regeneration, threshold tuning or retry-until-pass is permitted.
+
+To enforce the user's immediate mathematical-stop requirement without status polling, the fresh run processes the existing frozen order serially. It checks only conservative impossibility bounds between cases and never dispatches another case after a threshold is unreachable. Deferred cases remain unknown; no partial score is a pass. There is no restore/resume path; workflow reruns are rejected. The artifact namespace is `checkpoint-a-candidate-5`; one source-bound non-benchmark provider preflight must succeed before evaluation.
+
+Timeout audit: three 60-second request allowances plus at most two 15-second retry sleeps give a nominal 210-second envelope. The old eight-minute case job had 270 seconds of nominal setup/teardown margin, but a socket timeout is not a hard wall-clock bound. Candidate 5 adds a uniform 240-second case-process deadline. The serial evaluation job has 360 minutes: 80 hard case deadlines require at most 320 minutes, leaving 40 minutes for setup, process overhead, aggregation and artifact upload. A deadline is an infrastructure deferral, never a semantic pass. The 60-second request timeout remains unchanged; retained traces contain no latency measurements. A full 2,048-token completion would require approximately 34.14 tokens/s before overhead, so provider availability/latency is still an external preflight condition.
+
+Validation: **38 focused regressions passed** and the complete repository gate passed **486/486 tests**. Coverage includes budget, bounded correction, terminality, namespace, manifest and automatic stop. Dependency consistency, Python compilation and whitespace checks passed. Hosted CI will perform the required JavaScript and clean-source checks. Final preregistration binding is pending. Provider calls during audit and preparation: **zero**. No B8/C/D live work was performed.
 
 **Checkpoint A remains BLOCKED / NOT PASSED.**
 

@@ -87,6 +87,7 @@ def main() -> int:
         provider_config.get("base_url", ""),
         "manifest-validation-only",
         provider_config.get("model", ""),
+        timeout=provider_config.get("request_timeout_seconds", 60),
         reasoning_effort=provider_config.get("reasoning_effort"),
         max_completion_tokens=provider_config.get("max_completion_tokens"),
         use_json_schema=provider_config.get("json_schema"),

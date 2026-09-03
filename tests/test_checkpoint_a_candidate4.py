@@ -83,16 +83,13 @@ def test_candidate4_allows_two_schema_corrections_but_accepts_first_valid_candid
     assert all(len(payload["messages"]) == 3 for payload in requests[1:])
 
 
-def test_candidate4_workflow_is_manual_fresh_and_preregistered():
-    workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "checkpoint-a-live.yml").read_text(encoding="utf-8")
-
-    assert "workflow_dispatch:" in workflow
-    assert "push:" not in workflow
-    assert "checkpoint-a-candidate-4-case-${{ matrix.case }}-attempt-*" in workflow
-    assert "checkpoint-a-candidate-4-results-attempt-${{ github.run_attempt }}" in workflow
-    assert "checkpoint_a_candidate_4_results_attempt_${GITHUB_RUN_ATTEMPT}.json" in workflow
-    assert "ECOCOMMIT_LLM_CASE_MAX_ATTEMPTS: '3'" in workflow
-    assert "ECOCOMMIT_LLM_MAX_SCHEMA_CORRECTIONS: '2'" in workflow
+def test_candidate4_historical_preregistration_remains_unchanged():
+    from hashlib import sha256
+    root = Path(__file__).resolve().parents[1]
+    historical = root / "evidence/checkpoint-a-candidate-4-preregistration.json"
+    retirement = json.loads((root / "evidence/checkpoint-a-candidate-4-retirement.json").read_text())
+    assert sha256(historical.read_bytes()).hexdigest() == retirement["historical_preregistration_sha256"]
+    assert retirement["status"] == "PREREGISTERED / SUPERSEDED / NEVER RUN"
 
 
 def test_candidate4_production_receipt_keeps_frozen_gate():

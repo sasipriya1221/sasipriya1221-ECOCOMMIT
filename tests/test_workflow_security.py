@@ -55,7 +55,7 @@ def test_inline_credentialed_http_preflights_do_not_forward_auth_on_redirects():
         assert ".geturl()" in text, path.name
         assert ".full_url" in text, path.name
 
-    assert credentialed == ["provider-preflight.yml", "razorpay-test-preflight.yml"]
+    assert credentialed == ["checkpoint-a-live.yml", "provider-preflight.yml", "razorpay-test-preflight.yml"]
 
 
 def test_secret_bearing_workflows_require_explicit_manual_dispatch():

@@ -407,24 +407,26 @@ def test_unstructured_provider_error_text_cannot_forge_a_deferral():
     assert not _is_transient_provider_error(row)
 
 
-def test_candidate_3_workflow_is_fresh_immutable_and_secret_scoped():
+def test_current_candidate_workflow_is_fresh_immutable_and_secret_scoped():
     workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "checkpoint-a-live.yml").read_text(
         encoding="utf-8"
     )
 
-    assert "checkpoint-a-candidate-3-case-${{ matrix.case }}-attempt-*" in workflow
-    assert "checkpoint-a-candidate-3-results-attempt-${{ github.run_attempt }}" in workflow
-    assert "checkpoint_a_candidate_3_results_attempt_${GITHUB_RUN_ATTEMPT}.json" in workflow
+    assert "checkpoint-a-candidate-5-results-attempt-${{ github.run_attempt }}" in workflow
+    assert "--output-dir artifacts/checkpoint-a-candidate-5" in workflow
+    assert "--resume" not in workflow
+    assert "checkpoint-a-candidate-3" not in workflow
+    assert "checkpoint-a-candidate-4" not in workflow
     assert "checkpoint-a-candidate-2-case-${{ matrix.case }}-attempt-*" not in workflow
     assert "checkpoint_a_candidate_2_results_attempt" not in workflow
     assert "checkpoint-a-case-${{ matrix.case }}" not in workflow
     assert "overwrite: true" not in workflow
-    assert workflow.count("ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}") == 2
+    assert workflow.count("ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}") == 1
     assert "actions/checkout@v4" not in workflow
     assert "actions/setup-python@v5" not in workflow
     assert "actions/download-artifact@v4" not in workflow
     assert "actions/upload-artifact@v4" not in workflow
-    assert workflow.count("persist-credentials: false") == 3
+    assert workflow.count("persist-credentials: false") == 1
 
 
 def test_typed_a_receipt_enforces_frozen_candidate_dataset_and_thresholds():

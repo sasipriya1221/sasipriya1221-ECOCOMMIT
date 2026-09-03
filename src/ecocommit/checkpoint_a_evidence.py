@@ -45,7 +45,7 @@ class CheckpointAEvidenceReceipt(BaseModel):
     @model_validator(mode="after")
     def passed_receipt_is_coherent(self):
         if self.verification_mode == "FROZEN_AGGREGATE":
-            if self.candidate_version not in {"A-CANDIDATE-3", "A-CANDIDATE-4"}:
+            if self.candidate_version not in {"A-CANDIDATE-3", "A-CANDIDATE-4", "A-CANDIDATE-5"}:
                 raise ValueError("production A receipt must identify an eligible frozen candidate")
             if self.dataset_sha256 != FROZEN_A_DATASET_SHA256:
                 raise ValueError("production A receipt dataset digest is not frozen")

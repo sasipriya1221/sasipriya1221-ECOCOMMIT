@@ -1,0 +1,1176 @@
+{
+  "schema_version": "A.OFFLINE_AUDIT.1",
+  "audited_at_utc": "2026-09-03T13:37:32.403235+00:00",
+  "provider_calls": 0,
+  "audited_repository_source": "d7c1acf9c1762a63f50cbf8b120083e956307b92",
+  "retained_run_id": "33590028177",
+  "retained_attempt": 11,
+  "retained_artifact_id": "9875163068",
+  "archive_sha256": "e92787fc2dae0023b6c7fa0a1240f606e3a948fbca6b7f6ef22e27c9e8fddaa6",
+  "aggregate_json_sha256": "e1b2afd0fdc9bccd05f8dbbe492f59845be170f03246f7646c8ab1fbfc8d0f33",
+  "retained_manifest": {
+    "evidence_schema_version": "A.EVIDENCE.2",
+    "candidate_version": "A-CANDIDATE-3",
+    "source_revision": "fd26a52a21dc8431133c50be76d7d1ecaf0d099b",
+    "workflow": {
+      "run_id": "33590028177",
+      "workflow_ref": "sasipriya1221/sasipriya1221-ECOCOMMIT/.github/workflows/checkpoint-a-live.yml@refs/heads/main"
+    },
+    "dataset": {
+      "count": 80,
+      "sha256": "968be3ed3a438a3a28a3402fa65c90a45cb564ed1adad2e6e51d852e24c5bb8b"
+    },
+    "prompt_sha256": "0642b8214c99d7d4ec9eaf6b6cff49fe6fd4fb6a7f22422a243d5ec28814e963",
+    "contract_schema_sha256": "0e6668b63eb2deaba22d9dab47e600b8fc4528048340b152ebc61a60015fd549",
+    "evaluator_sha256": "12a0ef97f2ab8b721b029029473e5625fd11b4f0df8b5ca66f14b41bf5f050cc",
+    "runner_sha256": "e6f6ca16c2c89a089d9a3c408e63fc0360926f7128ea078b1f4555eb325d8578",
+    "criteria": {
+      "case_pass_rate_min": 0.9,
+      "selective_semantic_reliability_min": 0.95,
+      "autonomous_coverage_min": 0.55,
+      "ambiguous_clarification_accuracy_min": 0.8
+    },
+    "criteria_sha256": "eb6564e3d3d4c0f0ab466eb07d2f66556b738274863e07a7274278e739a6101b",
+    "provider": {
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "qwen/qwen3.6-27b",
+      "reasoning_effort": "none",
+      "json_schema": false,
+      "max_completion_tokens": 1024,
+      "max_attempts": 2,
+      "max_retry_delay_seconds": 15.0,
+      "max_response_bytes": 1048576
+    },
+    "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934"
+  },
+  "truncation_cases": {
+    "C004": {
+      "id": "C004",
+      "instruction": "Buy 500 S17-certified bearings from certified suppliers for no more than ₹8 lakh and ensure delivery within five days.",
+      "passed": false,
+      "error_kind": "candidate_contract_error",
+      "error_code": "SCHEMA_INVALID_AFTER_CORRECTION",
+      "correction_attempted": true,
+      "error": "candidate contract invalid after bounded correction (clauses.6.provenance:missing, clauses.6.materiality:missing, clauses.6.confidence:missing, clauses.6.hardness:missing, clauses.6.policy_class:missing, clauses.6.negated:missing, clauses.6.depends_on:missing, clauses.6.exception_to:missing)",
+      "provider_trace": [
+        {
+          "attempt": 1,
+          "candidate_sha256": "a6867d518e61bce5b19cbf925c086313ce09853151d469a8dd3d94ca75c45645",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-7e2942ac-5e7e-41cc-b113-9048f92a8703",
+          "usage": {
+            "prompt_tokens": 818,
+            "completion_tokens": 1024,
+            "total_tokens": 1842
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.2.normalized_value",
+              "code": "string_type"
+            },
+            {
+              "location": "clauses.4.normalized_value",
+              "code": "string_type"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "candidate_sha256": "49d488b70aab575cc11bba3efc48e97f316a6c7738abe68e7cf4fdb51a99af34",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-1ee1b339-fba2-495d-91d9-10ef36cc71e8",
+          "usage": {
+            "prompt_tokens": 898,
+            "completion_tokens": 1024,
+            "total_tokens": 1922
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.6.provenance",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.materiality",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.confidence",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.hardness",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.policy_class",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.negated",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.depends_on",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.exception_to",
+              "code": "missing"
+            }
+          ]
+        }
+      ],
+      "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+      "case_sha256": "afe435a5f20f6735f14b67576ec7997d596c922ddf285c9037996bef3209b449",
+      "row_sha256": "20d56953743d8f24c1b49c8b82d2bc6f9f8e2686c06a64b6787a05682291c3fc"
+    },
+    "C011": {
+      "id": "C011",
+      "instruction": "Buy 80 medical-grade power modules from approved suppliers for no more than ₹9 lakh and ensure delivery within ten days.",
+      "passed": false,
+      "error_kind": "candidate_contract_error",
+      "error_code": "SCHEMA_INVALID_AFTER_CORRECTION",
+      "correction_attempted": true,
+      "error": "candidate contract invalid after bounded correction (clauses.6.provenance:missing, clauses.6.materiality:missing, clauses.6.confidence:missing, clauses.6.hardness:missing, clauses.6.policy_class:missing, clauses.6.negated:missing, clauses.6.depends_on:missing, clauses.6.exception_to:missing)",
+      "provider_trace": [
+        {
+          "attempt": 1,
+          "candidate_sha256": "64e0cb634e8887850880ed7d75b3a30d34e7a0191b7595aaafe2d1eea9b6ae2a",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-e1796ee6-32e3-4476-86a7-11cec07ea6d1",
+          "usage": {
+            "prompt_tokens": 815,
+            "completion_tokens": 1024,
+            "total_tokens": 1839
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.6.provenance",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.materiality",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.confidence",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.hardness",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.policy_class",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.negated",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.depends_on",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.exception_to",
+              "code": "missing"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "candidate_sha256": "29dbf8e8ba4ffdd3b7269ef4b5216235a577cc53dc78e729dab2c52fd798222c",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-35e834f2-1a45-4c76-ac2e-902fb3ebc43d",
+          "usage": {
+            "prompt_tokens": 944,
+            "completion_tokens": 1024,
+            "total_tokens": 1968
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.6.provenance",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.materiality",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.confidence",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.hardness",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.policy_class",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.negated",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.depends_on",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.exception_to",
+              "code": "missing"
+            }
+          ]
+        }
+      ],
+      "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+      "case_sha256": "aac22072dcad606f8682601603185566c32cc263ae2a64f665922885e046eca4",
+      "row_sha256": "63d5377b533a2333c8a7971ba22576ec71e000fa12ac1cfd31efcda1a060f0e1"
+    },
+    "C012": {
+      "id": "C012",
+      "instruction": "Buy 80 medical-grade power modules from Vendor A for no more than ₹9 lakh and ensure delivery within ten days.",
+      "passed": false,
+      "error_kind": "candidate_contract_error",
+      "error_code": "SCHEMA_INVALID_AFTER_CORRECTION",
+      "correction_attempted": true,
+      "error": "candidate contract invalid after bounded correction (clauses.6.provenance:missing, clauses.6.materiality:missing, clauses.6.confidence:missing, clauses.6.hardness:missing, clauses.6.policy_class:missing, clauses.6.negated:missing, clauses.6.depends_on:missing, clauses.6.exception_to:missing)",
+      "provider_trace": [
+        {
+          "attempt": 1,
+          "candidate_sha256": "42f0c3462bdd2abacd067d0d76050134c6c513cf5cf641b7d12263b960653fcf",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-79db1b4f-7ff6-48ed-9ba5-10f5f98acc4c",
+          "usage": {
+            "prompt_tokens": 815,
+            "completion_tokens": 1024,
+            "total_tokens": 1839
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.6.provenance",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.materiality",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.confidence",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.hardness",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.policy_class",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.negated",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.depends_on",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.exception_to",
+              "code": "missing"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "candidate_sha256": "078b3391f516f735a2ac69cbbfd9b6e2dd84557bc6070430b9d9a1cf84324445",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-8958f186-04b8-4592-9bc3-6fca6d5fc922",
+          "usage": {
+            "prompt_tokens": 944,
+            "completion_tokens": 1024,
+            "total_tokens": 1968
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.6.provenance",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.materiality",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.confidence",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.hardness",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.policy_class",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.negated",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.depends_on",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.exception_to",
+              "code": "missing"
+            }
+          ]
+        }
+      ],
+      "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+      "case_sha256": "234a674062c29eb467cb3ef74e753be38aea30223faf4c644889192f43b5c6ab",
+      "row_sha256": "a3691dd7d7d328f6be86324bb562865999ac4f3b84eb59786afdbd35c33a9037"
+    },
+    "C013": {
+      "id": "C013",
+      "instruction": "Buy 80 medical-grade power modules from domestic suppliers for no more than ₹9 lakh and ensure delivery within ten days.",
+      "passed": false,
+      "error_kind": "candidate_contract_error",
+      "error_code": "SCHEMA_INVALID_AFTER_CORRECTION",
+      "correction_attempted": true,
+      "error": "candidate contract invalid after bounded correction (clauses.6.provenance:missing, clauses.6.materiality:missing, clauses.6.confidence:missing, clauses.6.hardness:missing, clauses.6.policy_class:missing, clauses.6.negated:missing, clauses.6.depends_on:missing, clauses.6.exception_to:missing)",
+      "provider_trace": [
+        {
+          "attempt": 1,
+          "candidate_sha256": "9133be049eab545da092c17f3b2ea0c33fe61931e0905ef7027be46063e9479b",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-03b88a42-55c3-44f0-a28a-e3f287ba210b",
+          "usage": {
+            "prompt_tokens": 815,
+            "completion_tokens": 1024,
+            "total_tokens": 1839
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.6.provenance",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.materiality",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.confidence",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.hardness",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.policy_class",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.negated",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.depends_on",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.exception_to",
+              "code": "missing"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "candidate_sha256": "9133be049eab545da092c17f3b2ea0c33fe61931e0905ef7027be46063e9479b",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-4c7c3875-6501-423c-bf58-701930566725",
+          "usage": {
+            "prompt_tokens": 944,
+            "completion_tokens": 1024,
+            "total_tokens": 1968
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.6.provenance",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.materiality",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.confidence",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.hardness",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.policy_class",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.negated",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.depends_on",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.exception_to",
+              "code": "missing"
+            }
+          ]
+        }
+      ],
+      "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+      "case_sha256": "eec48c1277bdad5af99d5664d759a13833c29992433d728f2f60c6ad01a48cdb",
+      "row_sha256": "c60818b9ba8c2beeb50ae408a470bcbcbaf98ba869347d0f2ca0a80f07ca0b6c"
+    },
+    "C014": {
+      "id": "C014",
+      "instruction": "Buy 80 medical-grade power modules from certified suppliers for no more than ₹9 lakh and ensure delivery within ten days.",
+      "passed": false,
+      "error_kind": "candidate_contract_error",
+      "error_code": "SCHEMA_INVALID_AFTER_CORRECTION",
+      "correction_attempted": true,
+      "error": "candidate contract invalid after bounded correction (clauses.6.provenance:missing, clauses.6.materiality:missing, clauses.6.confidence:missing, clauses.6.hardness:missing, clauses.6.policy_class:missing, clauses.6.negated:missing, clauses.6.depends_on:missing, clauses.6.exception_to:missing)",
+      "provider_trace": [
+        {
+          "attempt": 1,
+          "candidate_sha256": "fc2555046d818ca0e6725b995efe48672205354ce90c25abdcca91d5aee27c22",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-077e9c14-14c4-4a36-b141-f93b2199ae35",
+          "usage": {
+            "prompt_tokens": 815,
+            "completion_tokens": 1024,
+            "total_tokens": 1839
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.6.provenance",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.materiality",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.confidence",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.hardness",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.policy_class",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.negated",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.depends_on",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.exception_to",
+              "code": "missing"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "candidate_sha256": "db36cd96f3ea9af0e23fbf05089fcf26a2a77edc75eb07b4549b3902250b04c5",
+          "finish_reason": "length",
+          "request_id": "chatcmpl-273eaa99-3170-4b3d-aff8-72be85dcae51",
+          "usage": {
+            "prompt_tokens": 944,
+            "completion_tokens": 1024,
+            "total_tokens": 1968
+          },
+          "outcome": "schema_invalid",
+          "issues": [
+            {
+              "location": "clauses.6.provenance",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.materiality",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.confidence",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.hardness",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.policy_class",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.negated",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.depends_on",
+              "code": "missing"
+            },
+            {
+              "location": "clauses.6.exception_to",
+              "code": "missing"
+            }
+          ]
+        }
+      ],
+      "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+      "case_sha256": "241c6061239afdcce2911dc2d908ed1f479341fc52ff7ad1e54708bce57c7143",
+      "row_sha256": "a10c2eb67d2695cc6966406078db7b90ea486863a05098be4671a58ff353e3a8"
+    }
+  },
+  "raw_payload_availability": "Invalid raw response bodies were not retained by the source interpreter. The aggregate retains candidate hashes, finish reasons, usage and schema issues. No raw tail inspection or missing-token estimate is claimed. Schema-valid contracts for the other four failures are retained below.",
+  "headroom_rationale": "All ten attempts exhausted 1024 tokens. Both attempts of C011-C014 and the correction of C004 report eight missing fields at clauses.6, the seventh clause. This supports late structured-output incompleteness, not a measured remaining token count or proof that no further clauses were intended. C004 initial output additionally had normalized_value string-type errors. Uniform 2048 is bounded operational headroom above the demonstrated boundary, not an estimated minimum or a guarantee of completion.",
+  "unaddressed_failures": {
+    "C019": {
+      "id": "C019",
+      "instruction": "Buy 40 fire-rated network cabinets from certified suppliers for no more than ₹5 lakh and ensure delivery within Friday.",
+      "passed": false,
+      "detail": {
+        "validator_status": "VALIDATED",
+        "expected_status": "VALIDATED",
+        "coverage": 1.0,
+        "faithfulness": 1.0,
+        "selective_risk": 0.0,
+        "required_checks": [
+          true,
+          true,
+          false,
+          true,
+          true
+        ],
+        "exception_ok": true,
+        "dependency_ok": true,
+        "findings": []
+      },
+      "contract": {
+        "instruction": "Buy 40 fire-rated network cabinets from certified suppliers for no more than ₹5 lakh and ensure delivery within Friday.",
+        "clauses": [
+          {
+            "clause_id": "prod_01",
+            "clause_type": "PRODUCT",
+            "normalized_value": "fire-rated network cabinets",
+            "source_span": {
+              "text": "fire-rated network cabinets",
+              "start": 7,
+              "end": 34
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "qty_01",
+            "clause_type": "QUANTITY",
+            "normalized_value": "40",
+            "source_span": {
+              "text": "40",
+              "start": 4,
+              "end": 6
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "cert_01",
+            "clause_type": "CERTIFICATION",
+            "normalized_value": "certified",
+            "source_span": {
+              "text": "certified",
+              "start": 40,
+              "end": 49
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 0.9,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "amt_01",
+            "clause_type": "AMOUNT",
+            "normalized_value": "500000 INR",
+            "source_span": {
+              "text": "no more than ₹5 lakh",
+              "start": 64,
+              "end": 84
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "temp_01",
+            "clause_type": "TEMPORAL",
+            "normalized_value": "within Friday",
+            "source_span": {
+              "text": "within Friday",
+              "start": 105,
+              "end": 118
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "auth_01",
+            "clause_type": "AUTHORIZATION",
+            "normalized_value": "Buy",
+            "source_span": {
+              "text": "Buy",
+              "start": 0,
+              "end": 3
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          }
+        ],
+        "schema_version": "0.1"
+      },
+      "provider_trace": [
+        {
+          "attempt": 1,
+          "outcome": "provider_error",
+          "code": "HTTP_429",
+          "transient": true
+        },
+        {
+          "attempt": 2,
+          "candidate_sha256": "3b073181f857c78598cfda7a90abe471b9f9c9fea965b177dcd28ec71fcb2c78",
+          "finish_reason": "stop",
+          "request_id": "chatcmpl-7949a23b-885e-48f1-887a-804a0d158cd0",
+          "usage": {
+            "prompt_tokens": 814,
+            "completion_tokens": 946,
+            "total_tokens": 1760
+          },
+          "outcome": "accepted"
+        }
+      ],
+      "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+      "case_sha256": "7ef95e0c24153ac6eecfd829e603c9e04c1d9474217104b4ed9d64b2da3bc5eb",
+      "contract_sha256": "a705905e54e2b517f3214c8547c91c0d9a53dc8e98ec76f8cb6a0d29858601f3",
+      "row_sha256": "130177479adb1204e43d4dfd25e01602fcea89564e3f0c40ff97ac8038731ed7"
+    },
+    "C024": {
+      "id": "C024",
+      "instruction": "Buy 25 food-safe conveyor belts from certified suppliers for no more than ₹4 lakh and ensure delivery within 14 days.",
+      "passed": false,
+      "detail": {
+        "validator_status": "VALIDATED",
+        "expected_status": "VALIDATED",
+        "coverage": 1.0,
+        "faithfulness": 1.0,
+        "selective_risk": 0.0,
+        "required_checks": [
+          true,
+          true,
+          false,
+          true,
+          true
+        ],
+        "exception_ok": true,
+        "dependency_ok": true,
+        "findings": []
+      },
+      "contract": {
+        "instruction": "Buy 25 food-safe conveyor belts from certified suppliers for no more than ₹4 lakh and ensure delivery within 14 days.",
+        "clauses": [
+          {
+            "clause_id": "prod_01",
+            "clause_type": "PRODUCT",
+            "normalized_value": "food-safe conveyor belts",
+            "source_span": {
+              "text": "food-safe conveyor belts",
+              "start": 7,
+              "end": 31
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "qty_01",
+            "clause_type": "QUANTITY",
+            "normalized_value": "25",
+            "source_span": {
+              "text": "25",
+              "start": 4,
+              "end": 6
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "cert_01",
+            "clause_type": "CERTIFICATION",
+            "normalized_value": "certified",
+            "source_span": {
+              "text": "certified",
+              "start": 37,
+              "end": 46
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 0.9,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "amt_01",
+            "clause_type": "AMOUNT",
+            "normalized_value": "400000 INR",
+            "source_span": {
+              "text": "no more than ₹4 lakh",
+              "start": 61,
+              "end": 81
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "temp_01",
+            "clause_type": "TEMPORAL",
+            "normalized_value": "within 14 days",
+            "source_span": {
+              "text": "within 14 days",
+              "start": 102,
+              "end": 116
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "auth_01",
+            "clause_type": "AUTHORIZATION",
+            "normalized_value": "Buy",
+            "source_span": {
+              "text": "Buy",
+              "start": 0,
+              "end": 3
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          }
+        ],
+        "schema_version": "0.1"
+      },
+      "provider_trace": [
+        {
+          "attempt": 1,
+          "outcome": "provider_error",
+          "code": "HTTP_429",
+          "transient": true
+        },
+        {
+          "attempt": 2,
+          "candidate_sha256": "7ee450eb50f194aaeb9f5dca8832101daa16726c57f8140c0632dbc0c95ac113",
+          "finish_reason": "stop",
+          "request_id": "chatcmpl-8a469acc-5be9-4509-9e8a-395f967e3469",
+          "usage": {
+            "prompt_tokens": 817,
+            "completion_tokens": 954,
+            "total_tokens": 1771
+          },
+          "outcome": "accepted"
+        }
+      ],
+      "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+      "case_sha256": "60837d76c307f4dd97be8fbe23986e50536246a0b4da61a157606e9221829b64",
+      "contract_sha256": "d24f53ddf2935a92a47f23825d0771af2d4ba9457d87ddd27ecf3ecbcb144651",
+      "row_sha256": "87c6bfb668a0f391e335bd3b8e5e0f110c94f4f1fa7127d0a12ad21dd83b3503"
+    },
+    "C033": {
+      "id": "C033",
+      "instruction": "Buy 400 packaging seals for no more than ₹2 lakh, provided that food-safety certification is current.",
+      "passed": false,
+      "detail": {
+        "validator_status": "REJECTED",
+        "expected_status": "VALIDATED",
+        "coverage": 1.0,
+        "faithfulness": 1.0,
+        "selective_risk": 0.0,
+        "required_checks": [],
+        "exception_ok": false,
+        "dependency_ok": true,
+        "findings": [
+          {
+            "code": "EXCEPTION_NOT_PRESERVED",
+            "message": "Instruction contains an exception marker but no exception structure exists",
+            "severity": "high",
+            "clause_id": null
+          }
+        ]
+      },
+      "contract": {
+        "instruction": "Buy 400 packaging seals for no more than ₹2 lakh, provided that food-safety certification is current.",
+        "clauses": [
+          {
+            "clause_id": "prod_01",
+            "clause_type": "PRODUCT",
+            "normalized_value": "packaging seals",
+            "source_span": {
+              "text": "packaging seals",
+              "start": 8,
+              "end": 23
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "qty_01",
+            "clause_type": "QUANTITY",
+            "normalized_value": "400",
+            "source_span": {
+              "text": "400",
+              "start": 4,
+              "end": 7
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "amt_01",
+            "clause_type": "AMOUNT",
+            "normalized_value": "200000 INR",
+            "source_span": {
+              "text": "no more than ₹2 lakh",
+              "start": 28,
+              "end": 48
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "cert_01",
+            "clause_type": "CERTIFICATION",
+            "normalized_value": "food-safety certification is current",
+            "source_span": {
+              "text": "food-safety certification is current",
+              "start": 64,
+              "end": 100
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "cond_01",
+            "clause_type": "CONDITION",
+            "normalized_value": "food-safety certification is current",
+            "source_span": {
+              "text": "provided that food-safety certification is current",
+              "start": 50,
+              "end": 100
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "dep_01",
+            "clause_type": "DEPENDENCY",
+            "normalized_value": "purchase depends on certification",
+            "source_span": {
+              "text": "provided that",
+              "start": 50,
+              "end": 63
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 1.0,
+            "confidence": 1.0,
+            "hardness": "HARD",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [
+              "cert_01"
+            ],
+            "exception_to": []
+          }
+        ],
+        "schema_version": "0.1"
+      },
+      "provider_trace": [
+        {
+          "attempt": 1,
+          "candidate_sha256": "63f561e9a3325094a7ff71745e7e44cc215242607238f87e48131f268431f2d6",
+          "finish_reason": "stop",
+          "request_id": "chatcmpl-68779bd2-73a4-4120-8a0c-5d5026c18a66",
+          "usage": {
+            "prompt_tokens": 814,
+            "completion_tokens": 977,
+            "total_tokens": 1791
+          },
+          "outcome": "accepted"
+        }
+      ],
+      "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+      "case_sha256": "04192d16291f9a4de9de8199f051814deacd9e578f512d3112a13a75f4823978",
+      "contract_sha256": "bf6cb940ffe1880da64273b14f8ce492b6b2d353478f44f91e65af2f79de01fb",
+      "row_sha256": "5a1ead365397fdf70695c383cb6239c4eba66c2895987c3e2b8b59d7895d1821"
+    },
+    "A002": {
+      "id": "A002",
+      "instruction": "Choose a reliable supplier and spend a little more if needed.",
+      "passed": false,
+      "detail": {
+        "validator_status": "CLARIFICATION_REQUIRED",
+        "expected_status": "CLARIFICATION_REQUIRED",
+        "coverage": 1.0,
+        "faithfulness": 1.0,
+        "selective_risk": 0.3,
+        "required_checks": [],
+        "exception_ok": true,
+        "dependency_ok": false,
+        "findings": [
+          {
+            "code": "MATERIAL_VAGUENESS",
+            "message": "Instruction contains economically material open-textured language that requires clarification before autonomous financial authority",
+            "severity": "clarify",
+            "clause_id": null
+          }
+        ]
+      },
+      "contract": {
+        "instruction": "Choose a reliable supplier and spend a little more if needed.",
+        "clauses": [
+          {
+            "clause_id": "c1",
+            "clause_type": "COUNTERPARTY",
+            "normalized_value": "reliable supplier",
+            "source_span": {
+              "text": "reliable supplier",
+              "start": 9,
+              "end": 26
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 0.9,
+            "confidence": 0.6,
+            "hardness": "SOFT",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "c2",
+            "clause_type": "AMOUNT",
+            "normalized_value": "a little more",
+            "source_span": {
+              "text": "a little more",
+              "start": 37,
+              "end": 50
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 0.8,
+            "confidence": 0.5,
+            "hardness": "SOFT",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "c3",
+            "clause_type": "AUTHORIZATION",
+            "normalized_value": "spend",
+            "source_span": {
+              "text": "spend",
+              "start": 31,
+              "end": 36
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 0.9,
+            "confidence": 0.9,
+            "hardness": "SOFT",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": []
+          },
+          {
+            "clause_id": "c4",
+            "clause_type": "CONDITION",
+            "normalized_value": "if needed",
+            "source_span": {
+              "text": "if needed",
+              "start": 51,
+              "end": 60
+            },
+            "provenance": "EXPLICIT_USER",
+            "materiality": 0.7,
+            "confidence": 0.8,
+            "hardness": "SOFT",
+            "policy_class": null,
+            "negated": false,
+            "depends_on": [],
+            "exception_to": [
+              "c2",
+              "c3"
+            ]
+          }
+        ],
+        "schema_version": "0.1"
+      },
+      "provider_trace": [
+        {
+          "attempt": 1,
+          "candidate_sha256": "ed10e8b4b937a885e386b541dddc6e1a6200bfb096dba28fbd153eb873c5670e",
+          "finish_reason": "stop",
+          "request_id": "chatcmpl-258c74a6-324c-4639-ac0b-47c2a19ac4f1",
+          "usage": {
+            "prompt_tokens": 797,
+            "completion_tokens": 642,
+            "total_tokens": 1439
+          },
+          "outcome": "accepted"
+        }
+      ],
+      "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+      "case_sha256": "98894711427694fd6fd1f50f4d9943dd6637d8b54d8880616142375e11b723e3",
+      "contract_sha256": "8d9ce2272032e4d29af9dda1c71fe3028b49fd182baa617d06475045475af4cd",
+      "row_sha256": "5dbfc71fcb1cdebe5ef7c4210b38f8dbbe7e19fb7079686170f302902be78c29"
+    }
+  },
+  "failure_details": {
+    "C019": "VALIDATED, but the third required check fails: no COUNTERPARTY clause grounds certified suppliers. The contract instead contains CERTIFICATION certified.",
+    "C024": "VALIDATED, but the third required check fails: no COUNTERPARTY clause grounds certified suppliers. The contract instead contains CERTIFICATION certified.",
+    "C033": "The provided that food-safety certification is current condition is encoded as CONDITION and DEPENDENCY, with no EXCEPTION clause or exception_to link. exception_ok is false and the validator returns REJECTED / EXCEPTION_NOT_PRESERVED instead of VALIDATED.",
+    "A002": "CLARIFICATION_REQUIRED and MATERIAL_VAGUENESS were correctly returned. The if needed clause has exception_to links but no DEPENDENCY clause or depends_on link, so dependency_ok is false. Clarification status was not missed."
+  },
+  "all_four_semantic_results_recomputed_from_retained_contracts": true,
+  "frozen_digests_verified_unchanged": true,
+  "existing_timeout_preflight": {
+    "request_timeout_seconds": 60,
+    "max_total_attempts": 3,
+    "max_inter_attempt_delays": 2,
+    "max_delay_seconds_each": 15,
+    "nominal_provider_envelope_seconds": 210,
+    "case_job_timeout_seconds": 480,
+    "nominal_setup_teardown_margin_seconds": 270,
+    "caveat": "urllib timeout is a socket-operation timeout, not a hard end-to-end deadline. Retained metadata has no generation latency. 2048 tokens in 60 seconds requires about 34.14 tokens/s excluding overhead. Readiness must be checked after public preregistration. A separate case-process deadline will bound wall time."
+  },
+  "audit_sha256": "e747d85f219ec57b47779d99d31507db71bce8ed300de5dc0efdf58ee80002cc"
+}
