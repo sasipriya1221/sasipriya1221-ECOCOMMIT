@@ -339,6 +339,7 @@ def test_model_default_fields_must_still_be_explicit(missing_field, monkeypatch)
 
 
 def test_only_one_schema_correction_is_attempted_even_with_larger_retry_budget(monkeypatch):
+    monkeypatch.delenv("ECOCOMMIT_LLM_MAX_SCHEMA_CORRECTIONS", raising=False)
     instruction = "Buy bearings."
     malformed = _provider_body(instruction)
     raw = json.loads(malformed["choices"][0]["message"]["content"])

@@ -1,0 +1,18 @@
+{
+  "schema_version": "A.PREFLIGHT_BLOCKED.1",
+  "candidate_version": "A-CANDIDATE-5",
+  "source_revision": "7334ff98f07f894d589169b3f134aa0c21b5be7f",
+  "workflow_run_id": "33763004651",
+  "workflow_attempt": 1,
+  "job_id": "100673723915",
+  "conclusion": "BLOCKED_BEFORE_PROVIDER",
+  "provider_calls": 0,
+  "evaluation_dispatches": 0,
+  "failure": "Offline unit test test_only_one_schema_correction_is_attempted_even_with_larger_retry_budget inherited ECOCOMMIT_LLM_MAX_SCHEMA_CORRECTIONS=2 and observed three fixture requests while asserting the default of two. Secret verification and provider execution steps were skipped.",
+  "repair": "Isolate that legacy default-setting test by clearing the correction-budget environment override within its monkeypatch fixture. No provider/runtime/evaluator/benchmark/preregistration bytes change.",
+  "validation_after_repair": "486/486 offline tests pass with the exact Candidate 5 preflight environment.",
+  "initial_job_log_sha256": "6e62382f6ea5c2a171bea4f98d8b6348c2b19d8b3ecdf2a005a980a755ac2d6a",
+  "frozen_runner_sha256": "e107a433beffe00b81c77eeaec058b823f74a53602ff336daa199ecd9c65cb32",
+  "preregistration_sha256": "8f2e8c56f929b90c8597a637de6fd38098b724837da2352ce1c8e693c4fc3958",
+  "next_action": "Green CI at the test-only repair source, then a fresh first-attempt provider preflight. Never rerun the blocked workflow; retain it as zero-provider infrastructure history."
+}

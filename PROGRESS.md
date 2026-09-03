@@ -124,6 +124,10 @@ Validation: **38 focused regressions passed** and the complete repository gate p
 
 Implementation source: `af12143d7ac41a02eb774a12b4ff74709cdc4e76`. Runner SHA-256: `e107a433beffe00b81c77eeaec058b823f74a53602ff336daa199ecd9c65cb32`. Offline frozen manifest SHA-256: `1c2f62e912434a6ba130edaadaaf24551868c1bbf9a8abac4a0db3266b5b4215`. Canonical preregistration SHA-256: `8f2e8c56f929b90c8597a637de6fd38098b724837da2352ce1c8e693c4fc3958`. The evidence-only registration commit necessarily follows the implementation commit; runtime receipts bind their exact public execution revision/run and retain these frozen configuration/runner hashes. No CI, provider readiness, evaluation result or A pass is claimed yet for this new source.
 
+Public preregistration/source commit `7334ff98f07f894d589169b3f134aa0c21b5be7f` passed exact-source offline CI `33762874444` and independent clean-machine reproduction `33762910331`, both attempt 1. The first readiness workflow `33763004651` stopped **before any provider call** because a legacy default-one-correction unit test inherited the Candidate 5 two-correction environment. Secret verification, Groq execution and health-receipt upload were skipped. Its failure history is retained in `evidence/checkpoint-a-candidate-5-preflight-blocked-33763004651.json`.
+
+The only repair is to isolate that legacy unit test's default setting. The complete **486/486** suite now passes under the actual preflight environment. Production runner bytes, all frozen semantic settings and the original Candidate 5 preregistration remain unchanged. A fresh preflight will be dispatched only after CI is green at this test-only repair source. Candidate 5 evaluation dispatches remain **zero**; no Candidate 1-4 retry occurred.
+
 **Checkpoint A remains BLOCKED / NOT PASSED.**
 
 ---
