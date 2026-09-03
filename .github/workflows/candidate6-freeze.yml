@@ -41,7 +41,7 @@ jobs:
           python -m pip install --require-hashes -r requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e .
           python -m pip check
-      - name: Verify pre-freeze repository state
+      - name: Verify pre-freeze repository state and development source provenance
         shell: python
         env:
           GH_TOKEN: ${{ github.token }}
@@ -49,8 +49,10 @@ jobs:
           DEVELOPMENT_RUN_ID: ${{ inputs.development_run_id }}
           DEVELOPMENT_RUN_ATTEMPT: ${{ inputs.development_run_attempt }}
         run: |
-          import json, os, re, subprocess
-          from urllib.request import Request, urlopen
+          import hashlib, json, os, re, subprocess
+          from pathlib import Path
+          from urllib.error import HTTPError
+          from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
           sha = os.environ['CANDIDATE_SHA']
           run_id = os.environ['DEVELOPMENT_RUN_ID']
@@ -63,13 +65,46 @@ jobs:
               raise SystemExit('checked-out candidate SHA mismatch')
 
           base = 'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
           def get(path):
               req = Request(base + path, headers={'Accept': 'application/vnd.github+json'})
-              req.add_unredirected_header('Authorization', 'Bearer ' + os.environ['GH_TOKEN'])
+              req.add_unredirected_header('Authorization', 'Bearer ' + token)
               with urlopen(req, timeout=30) as response:
                   if response.geturl() != req.full_url:
                       raise SystemExit('GitHub evidence redirect rejected')
                   return json.load(response)
+          class NoRedirect(HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          def job_log_bytes(job_id):
+              req = Request(base + '/actions/jobs/' + str(job_id) + '/logs', headers={'Accept': 'application/vnd.github+json'})
+              req.add_unredirected_header('Authorization', 'Bearer ' + token)
+              try:
+                  build_opener(NoRedirect).open(req, timeout=30)
+              except HTTPError as exc:
+                  if exc.code not in (301, 302, 303, 307, 308):
+                      raise
+                  location = exc.headers.get('Location')
+                  if not location or not location.startswith('https://'):
+                      raise SystemExit('invalid GitHub job-log redirect')
+              else:
+                  raise SystemExit('expected GitHub job-log redirect')
+              with urlopen(Request(location), timeout=30) as response:
+                  return response.read(16 * 1024 * 1024 + 1)
+          def extract_sha(text):
+              matches = []
+              lines = text.splitlines()
+              for index, line in enumerate(lines):
+                  if 'git log -1 --format=%H' not in line:
+                      continue
+                  for following in lines[index + 1:index + 4]:
+                      match = re.search(r'(?:^|\s)([0-9a-f]{40})(?:\s|$)', following)
+                      if match:
+                          matches.append(match.group(1)); break
+              unique = sorted(set(matches))
+              if len(unique) != 1:
+                  raise SystemExit('development checkout SHA not uniquely proven by job log')
+              return unique[0]
 
           branch = get('/branches/candidate6-internal-qualification')
           if branch['commit']['sha'] != sha:
@@ -78,6 +113,26 @@ jobs:
               runs = get('/actions/workflows/' + workflow + '/runs?per_page=1')
               if runs.get('total_count', 0) != 0:
                   raise SystemExit('Candidate-6 holdout has prior workflow history; one-shot freeze refused')
+
+          jobs = get('/actions/runs/' + run_id + '/attempts/' + run_attempt + '/jobs?per_page=100')
+          qualify = [j for j in jobs.get('jobs', []) if j.get('name') == 'qualify']
+          if len(qualify) != 1 or qualify[0].get('status') != 'completed':
+              raise SystemExit('unique completed development job not proven')
+          raw = job_log_bytes(qualify[0]['id'])
+          if len(raw) > 16 * 1024 * 1024:
+              raise SystemExit('development job log exceeds evidence bound')
+          proven_sha = extract_sha(raw.decode('utf-8-sig'))
+          if proven_sha != sha:
+              raise SystemExit('development job-log source SHA mismatch')
+          provenance = {
+              'method': 'immutable-job-log',
+              'development_run_id': int(run_id),
+              'development_run_attempt': int(run_attempt),
+              'job_id': qualify[0]['id'],
+              'candidate_sha': proven_sha,
+              'job_log_sha256': hashlib.sha256(raw).hexdigest(),
+          }
+          Path('/tmp/development-provenance.json').write_text(json.dumps(provenance, indent=2, sort_keys=True) + '\n', encoding='utf-8')
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -100,22 +155,27 @@ jobs:
           evidence = root / 'artifacts' / 'development'
           aggregate_path = evidence / 'aggregate.json'
           binding_path = evidence / 'source-binding.json'
-          if not aggregate_path.exists() or not binding_path.exists():
-              raise SystemExit('complete development aggregate and source binding are required')
+          provenance_path = Path('/tmp/development-provenance.json')
+          if not aggregate_path.exists() or not provenance_path.exists():
+              raise SystemExit('complete development aggregate and immutable source provenance are required')
           aggregate = json.loads(aggregate_path.read_text(encoding='utf-8'))
-          binding = json.loads(binding_path.read_text(encoding='utf-8'))
+          provenance = json.loads(provenance_path.read_text(encoding='utf-8'))
+          if provenance.get('candidate_sha') != os.environ['CANDIDATE_SHA']:
+              raise SystemExit('development provenance source SHA mismatch')
+          if str(provenance.get('development_run_id')) != os.environ['DEVELOPMENT_RUN_ID'] or str(provenance.get('development_run_attempt')) != os.environ['DEVELOPMENT_RUN_ATTEMPT']:
+              raise SystemExit('development provenance run mismatch')
 
-          unsigned_binding = {k: v for k, v in binding.items() if k != 'binding_sha256'}
-          if binding.get('binding_sha256') != canonical_sha256(unsigned_binding):
-              raise SystemExit('development source binding digest mismatch')
-          if binding.get('candidate') != 'A-CANDIDATE-6':
-              raise SystemExit('development candidate identity mismatch')
-          if binding.get('candidate_sha') != os.environ['CANDIDATE_SHA']:
-              raise SystemExit('development evidence source SHA mismatch')
-          if str(binding.get('dispatcher_run_id')) != os.environ['DEVELOPMENT_RUN_ID']:
-              raise SystemExit('development evidence run ID mismatch')
-          if str(binding.get('dispatcher_run_attempt')) != os.environ['DEVELOPMENT_RUN_ATTEMPT']:
-              raise SystemExit('development evidence run attempt mismatch')
+          binding_sha = None
+          if binding_path.exists():
+              binding = json.loads(binding_path.read_text(encoding='utf-8'))
+              unsigned_binding = {k: v for k, v in binding.items() if k != 'binding_sha256'}
+              if binding.get('binding_sha256') != canonical_sha256(unsigned_binding):
+                  raise SystemExit('development source binding digest mismatch')
+              if binding.get('candidate') != 'A-CANDIDATE-6' or binding.get('candidate_sha') != os.environ['CANDIDATE_SHA']:
+                  raise SystemExit('development source binding identity mismatch')
+              if str(binding.get('dispatcher_run_id')) != os.environ['DEVELOPMENT_RUN_ID'] or str(binding.get('dispatcher_run_attempt')) != os.environ['DEVELOPMENT_RUN_ATTEMPT']:
+                  raise SystemExit('development source binding run mismatch')
+              binding_sha = hashlib.sha256(binding_path.read_bytes()).hexdigest()
 
           if not (
               aggregate.get('qualification_state') == 'COMPLETE'
@@ -145,7 +205,9 @@ jobs:
               'development_run_id': int(os.environ['DEVELOPMENT_RUN_ID']),
               'development_run_attempt': int(os.environ['DEVELOPMENT_RUN_ATTEMPT']),
               'development_aggregate_sha256': hashlib.sha256(aggregate_path.read_bytes()).hexdigest(),
-              'development_source_binding_sha256': hashlib.sha256(binding_path.read_bytes()).hexdigest(),
+              'development_source_binding_sha256': binding_sha,
+              'development_source_provenance_sha256': hashlib.sha256(provenance_path.read_bytes()).hexdigest(),
+              'development_job_log_sha256': provenance['job_log_sha256'],
               'holdout_provider_calls_before_freeze': 0,
               'official_benchmark_calls_before_freeze': 0,
               'holdout_qualification_executions_before_freeze': 0,
@@ -205,6 +267,7 @@ jobs:
         run: |
           mkdir -p artifacts/freeze
           test ! -f /tmp/candidate6-freeze-receipt.json || cp /tmp/candidate6-freeze-receipt.json artifacts/freeze/candidate6-freeze-receipt.json
+          test ! -f /tmp/development-provenance.json || cp /tmp/development-provenance.json artifacts/freeze/development-provenance.json
           printf '%s\n' '${{ steps.commit_freeze.outputs.receipt_commit_sha }}' > artifacts/freeze/receipt-commit-sha.txt
       - name: Upload freeze transition evidence
         if: always()
