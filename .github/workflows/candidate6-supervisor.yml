@@ -102,31 +102,89 @@ jobs:
         if: steps.inspect.outputs.phase == 'DEVELOPMENT_COMPLETE'
         shell: python
         env:
+          GH_TOKEN: ${{ github.token }}
           CANDIDATE_HEAD: ${{ steps.inspect.outputs.candidate_head }}
           DEVELOPMENT_RUN_ID: ${{ steps.inspect.outputs.development_run_id }}
           DEVELOPMENT_RUN_ATTEMPT: ${{ steps.inspect.outputs.development_run_attempt }}
         run: |
           import hashlib, json, os, sys
           from pathlib import Path
+          from urllib.error import HTTPError
+          from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
           sys.path.insert(0, str(Path('supervisor').resolve()))
-          from scripts.candidate6_supervisor_decision import canonical_sha256, decide
+          from scripts.candidate6_supervisor_decision import canonical_sha256, decide, extract_checked_out_sha
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          api = 'https://api.github.com/repos/' + repo
+          def get_json(path):
+              req = Request(api + path, headers={'Accept': 'application/vnd.github+json'})
+              req.add_unredirected_header('Authorization', 'Bearer ' + token)
+              with urlopen(req, timeout=30) as response:
+                  if response.geturl() != req.full_url:
+                      raise SystemExit('GitHub evidence redirect rejected')
+                  return json.load(response)
+          class NoRedirect(HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          def job_log_bytes(job_id):
+              req = Request(api + '/actions/jobs/' + str(job_id) + '/logs', headers={'Accept': 'application/vnd.github+json'})
+              req.add_unredirected_header('Authorization', 'Bearer ' + token)
+              try:
+                  build_opener(NoRedirect).open(req, timeout=30)
+              except HTTPError as exc:
+                  if exc.code not in (301, 302, 303, 307, 308):
+                      raise
+                  location = exc.headers.get('Location')
+                  if not location or not location.startswith('https://'):
+                      raise SystemExit('invalid GitHub job-log redirect')
+              else:
+                  raise SystemExit('expected GitHub job-log redirect')
+              with urlopen(Request(location), timeout=30) as response:
+                  return response.read(16 * 1024 * 1024 + 1)
 
           root = Path('artifacts/development')
           aggregate_path = root / 'aggregate.json'
           binding_path = root / 'source-binding.json'
-          if not aggregate_path.exists() or not binding_path.exists():
-              raise SystemExit('development evidence artifact incomplete')
+          if not aggregate_path.exists():
+              raise SystemExit('development aggregate evidence missing')
           aggregate = json.loads(aggregate_path.read_text(encoding='utf-8'))
-          binding = json.loads(binding_path.read_text(encoding='utf-8'))
-          unsigned_binding = {k: v for k, v in binding.items() if k != 'binding_sha256'}
-          if binding.get('binding_sha256') != canonical_sha256(unsigned_binding):
-              raise SystemExit('development source binding digest invalid')
-          if binding.get('candidate') != 'A-CANDIDATE-6':
-              raise SystemExit('development candidate binding invalid')
-          if binding.get('candidate_sha') != os.environ['CANDIDATE_HEAD']:
-              raise SystemExit('Candidate-6 branch differs from development source; no automatic freeze')
-          if str(binding.get('dispatcher_run_id')) != os.environ['DEVELOPMENT_RUN_ID'] or str(binding.get('dispatcher_run_attempt')) != os.environ['DEVELOPMENT_RUN_ATTEMPT']:
-              raise SystemExit('development workflow provenance mismatch')
+
+          provenance = None
+          if binding_path.exists():
+              binding = json.loads(binding_path.read_text(encoding='utf-8'))
+              unsigned_binding = {k: v for k, v in binding.items() if k != 'binding_sha256'}
+              if binding.get('binding_sha256') != canonical_sha256(unsigned_binding):
+                  raise SystemExit('development source binding digest invalid')
+              if binding.get('candidate') != 'A-CANDIDATE-6':
+                  raise SystemExit('development candidate binding invalid')
+              if binding.get('candidate_sha') != os.environ['CANDIDATE_HEAD']:
+                  raise SystemExit('Candidate-6 branch differs from development source; no automatic freeze')
+              if str(binding.get('dispatcher_run_id')) != os.environ['DEVELOPMENT_RUN_ID'] or str(binding.get('dispatcher_run_attempt')) != os.environ['DEVELOPMENT_RUN_ATTEMPT']:
+                  raise SystemExit('development workflow provenance mismatch')
+              provenance = {
+                  'method': 'source-binding-artifact',
+                  'sha256': hashlib.sha256(binding_path.read_bytes()).hexdigest(),
+              }
+          else:
+              jobs = get_json('/actions/runs/' + os.environ['DEVELOPMENT_RUN_ID'] + '/attempts/' + os.environ['DEVELOPMENT_RUN_ATTEMPT'] + '/jobs?per_page=100')
+              qualify = [j for j in jobs.get('jobs', []) if j.get('name') == 'qualify']
+              if len(qualify) != 1 or qualify[0].get('status') != 'completed':
+                  raise SystemExit('unique completed development job not proven')
+              raw = job_log_bytes(qualify[0]['id'])
+              if len(raw) > 16 * 1024 * 1024:
+                  raise SystemExit('development job log exceeds evidence bound')
+              text = raw.decode('utf-8-sig')
+              checkout_sha = extract_checked_out_sha(text)
+              if checkout_sha != os.environ['CANDIDATE_HEAD']:
+                  raise SystemExit('Candidate-6 branch differs from checkout proven by development log')
+              provenance = {
+                  'method': 'immutable-job-log',
+                  'job_id': qualify[0]['id'],
+                  'sha256': hashlib.sha256(raw).hexdigest(),
+                  'candidate_sha': checkout_sha,
+              }
+              Path('artifacts/supervisor/development-log-provenance.json').write_text(json.dumps(provenance, indent=2, sort_keys=True) + '\n', encoding='utf-8')
 
           receipt = {
               'stage': 'development',
@@ -140,7 +198,7 @@ jobs:
               'development_run_attempt': int(os.environ['DEVELOPMENT_RUN_ATTEMPT']),
               'candidate_sha': os.environ['CANDIDATE_HEAD'],
               'aggregate_sha256': hashlib.sha256(aggregate_path.read_bytes()).hexdigest(),
-              'source_binding_sha256': hashlib.sha256(binding_path.read_bytes()).hexdigest(),
+              'source_provenance': provenance,
           }
           receipt['receipt_sha256'] = canonical_sha256(receipt)
           decision = decide('development', receipt)
@@ -240,7 +298,7 @@ jobs:
           runs = get('/actions/workflows/candidate6-holdout-dispatch.yml/runs?per_page=1')
           if runs.get('total_count', 0) != 0:
               with open('artifacts/supervisor/holdout-state.json', 'w', encoding='utf-8') as fh:
-                  json.dump({'state': 'HOLDOUT_ALREADY_HAS_HISTORY', 'run': runs['workflow_runs'][0]}, fh, indent=2, sort_keys=True)
+                  json.dump({'state': 'HOLDOUT_ALREADY_HAS_HISTORY', 'run_id': runs['workflow_runs'][0]['id'], 'status': runs['workflow_runs'][0]['status'], 'conclusion': runs['workflow_runs'][0].get('conclusion')}, fh, indent=2, sort_keys=True)
               raise SystemExit(0)
           payload = json.dumps({'ref': 'main', 'inputs': {'candidate_ref': os.environ['CANDIDATE_REF']}}, separators=(',', ':')).encode()
           req = Request(base + '/actions/workflows/candidate6-holdout-dispatch.yml/dispatches', data=payload, headers={'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST')
