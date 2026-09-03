@@ -8,7 +8,22 @@ from scripts.candidate6_official_reachability import (
 )
 
 
+def _observed_state_valid(c: OfficialCounts) -> bool:
+    return (
+        c.total == c.clear_total + c.ambiguous_total
+        and c.processed == c.clear_processed + c.ambiguous_processed
+        and 0 <= c.clear_processed <= c.clear_total
+        and 0 <= c.ambiguous_processed <= c.ambiguous_total
+        and 0 <= c.correct_autonomous <= c.clear_processed
+        and 0 <= c.ambiguous_correct <= c.ambiguous_processed
+        and c.case_passes == c.correct_autonomous + c.ambiguous_correct
+        and 0 <= c.correct_autonomous <= c.autonomous <= c.processed
+    )
+
+
 def _brute_reachable(c: OfficialCounts, t: OfficialThresholds) -> bool:
+    if not _observed_state_valid(c):
+        return False
     clear_remaining = c.clear_total - c.clear_processed
     ambiguous_remaining = c.ambiguous_total - c.ambiguous_processed
     # Clear future rows: 0=fail/non-autonomous, 1=correct autonomous.
@@ -60,12 +75,12 @@ def test_existing_wrong_autonomous_case_cannot_be_repaired_when_reliability_is_u
     c = OfficialCounts(
         total=10, clear_total=7, ambiguous_total=3,
         processed=9, clear_processed=6, ambiguous_processed=3,
-        case_passes=8, autonomous=7, correct_autonomous=6, ambiguous_correct=3,
+        case_passes=9, autonomous=7, correct_autonomous=6, ambiguous_correct=3,
     )
     assert reachable(c, OfficialThresholds()) is False
 
 
-def test_exact_bound_matches_bruteforce_for_small_valid_states():
+def test_exact_bound_matches_bruteforce_for_small_states():
     thresholds = OfficialThresholds(case_pass=0.75, selective_reliability=0.75, autonomous_coverage=0.50, clarification_accuracy=0.50)
     for clear_total in range(1, 4):
         for ambiguous_total in range(1, 3):
