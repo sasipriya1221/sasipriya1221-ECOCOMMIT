@@ -21,10 +21,17 @@ def canonical_sha256(value: Any) -> str:
 
 def _valid_receipt_envelope(receipt: dict[str, Any]) -> bool:
     expected = receipt.get("receipt_sha256")
-    if expected is None:
-        return True
+    if not isinstance(expected, str) or len(expected) != 64:
+        return False
     unsigned = {k: v for k, v in receipt.items() if k != "receipt_sha256"}
-    return isinstance(expected, str) and expected == canonical_sha256(unsigned)
+    return expected == canonical_sha256(unsigned)
+
+
+def _typed_stage(receipt: dict[str, Any], stage: str) -> bool:
+    declared = receipt.get("stage")
+    if declared is None:
+        return stage in {"development", "holdout"}
+    return declared == stage
 
 
 def decide(stage: str, receipt: dict[str, Any] | None) -> Decision:
@@ -32,6 +39,8 @@ def decide(stage: str, receipt: dict[str, Any] | None) -> Decision:
         return Decision("STOP", "MISSING_RECEIPT")
     if not isinstance(receipt, dict) or not _valid_receipt_envelope(receipt):
         return Decision("STOP", "INVALID_RECEIPT_HASH")
+    if not _typed_stage(receipt, stage):
+        return Decision("STOP", "RECEIPT_STAGE_MISMATCH")
     if receipt.get("human_action_required") is True:
         return Decision("STOP_HUMAN", "HUMAN_ACTION_REQUIRED")
     status = str(receipt.get("status", receipt.get("qualification_state", ""))).upper()
