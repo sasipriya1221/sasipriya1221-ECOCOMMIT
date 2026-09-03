@@ -1,10 +1,27 @@
-from scripts.candidate6_supervisor_decision import canonical_sha256, decide
+from scripts.candidate6_supervisor_decision import canonical_sha256, decide, extract_checked_out_sha
 
 
 def signed(**payload):
     payload = dict(payload)
     payload["receipt_sha256"] = canonical_sha256(payload)
     return payload
+
+
+def test_checkout_provenance_parser_requires_unique_git_log_sha():
+    sha = "6d04d53e62c0593c1c93124080f4a22120da6a7f"
+    log = f"[command]/usr/bin/git log -1 --format=%H\n{sha}\n##[group]Removing auth\n"
+    assert extract_checked_out_sha(log) == sha
+
+
+def test_checkout_provenance_parser_fails_on_missing_or_conflicting_sha():
+    import pytest
+    with pytest.raises(ValueError):
+        extract_checked_out_sha("no checkout provenance")
+    with pytest.raises(ValueError):
+        extract_checked_out_sha(
+            "git log -1 --format=%H\n" + "1" * 40 + "\n"
+            "git log -1 --format=%H\n" + "2" * 40 + "\n"
+        )
 
 
 def test_development_pass_advances_only_when_complete():
