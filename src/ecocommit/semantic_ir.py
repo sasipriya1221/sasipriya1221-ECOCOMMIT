@@ -75,6 +75,11 @@ class AmbiguityKind(str, Enum):
     UNSUPPORTED_SEMANTIC_STRUCTURE = "UNSUPPORTED_SEMANTIC_STRUCTURE"
 
 
+EntityRef = Annotated[str, Field(pattern=r"^E\d+$")]
+ActionRef = Annotated[str, Field(pattern=r"^A\d+$")]
+PredicateRef = Annotated[str, Field(pattern=r"^P\d+$")]
+
+
 class SpanSource(BaseModel):
     kind: Literal["SPAN"] = "SPAN"
     quote: str = Field(min_length=1)
@@ -90,7 +95,7 @@ SourceGrounding = Annotated[Union[SpanSource, AbsenceSource], Field(discriminato
 
 
 class Entity(BaseModel):
-    id: str = Field(pattern=r"^E\d+$")
+    id: EntityRef
     kind: EntityKind
     text: str = Field(min_length=1)
     source: SpanSource
@@ -103,10 +108,10 @@ class Quantity(BaseModel):
 
 
 class Action(BaseModel):
-    id: str = Field(pattern=r"^A\d+$")
+    id: ActionRef
     kind: ActionKind
-    object: str
-    counterparty: str | None = None
+    object: EntityRef
+    counterparty: EntityRef | None = None
     quantity: Quantity | None = None
     source: SpanSource
 
@@ -119,15 +124,15 @@ class Money(BaseModel):
 
 class Constraint(BaseModel):
     id: str = Field(pattern=r"^C\d+$")
-    action: str
+    action: ActionRef
     kind: ConstraintKind
     money: Money
 
 
 class Predicate(BaseModel):
-    id: str = Field(pattern=r"^P\d+$")
+    id: PredicateRef
     kind: PredicateKind
-    subject: str
+    subject: EntityRef
     attribute: str | None = None
     operator: PredicateOperator
     value: str | None = None
@@ -136,7 +141,7 @@ class Predicate(BaseModel):
 
 class Atom(BaseModel):
     op: Literal["ATOM"]
-    predicate: str
+    predicate: PredicateRef
 
 
 class And(BaseModel):
@@ -162,7 +167,7 @@ Not.model_rebuild()
 
 class Guard(BaseModel):
     id: str = Field(pattern=r"^G\d+$")
-    action: str
+    action: ActionRef
     mode: Literal["ONLY_IF"] = "ONLY_IF"
     expr: BoolExpr
     source: SpanSource
@@ -170,8 +175,8 @@ class Guard(BaseModel):
 
 class Dependency(BaseModel):
     id: str = Field(pattern=r"^D\d+$")
-    action: str
-    prerequisite_action: str
+    action: ActionRef
+    prerequisite_action: ActionRef
     relation: Literal["AFTER_COMPLETION", "AFTER_SUCCESS"]
     source: SpanSource
 
