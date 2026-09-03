@@ -15,6 +15,8 @@ from ecocommit.interpreter import ProviderRequestError
 from ecocommit.semantic_compiler import ConservationError, compile_contract
 from ecocommit.semantic_validation import SemanticValidationError
 
+PROVIDER_DEFERRAL_STREAK_LIMIT = 3
+
 
 def _load(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
@@ -26,6 +28,16 @@ def _result_from_ir(instruction, ir):
         return Candidate6Result("CLARIFICATION_REQUIRED" if blocked else "COMPILED", contract, ir, frozenset(blocked))
     except (SemanticValidationError, ConservationError, ValueError) as exc:
         return Candidate6Result("REJECTED", None, ir, frozenset(), str(exc))
+
+
+def _write_summary(output_dir: Path, rows, scores, gold_rows, provider_attempts: int, mode: str, **extra) -> dict:
+    payload = aggregate(scores, gold_rows)
+    payload.update({"provider_attempts": provider_attempts, "mode": mode, **extra})
+    payload["provider_deferred_cases"] = sum(row["observed_status"] == "PROVIDER_DEFERRED" for row in rows)
+    payload["terminal_semantic_cases"] = len(scores)
+    (output_dir / "aggregate.json").write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    (output_dir / "rows.json").write_text(json.dumps(rows, indent=2, sort_keys=True), encoding="utf-8")
+    return payload
 
 
 def run(mode: str, output_dir: Path) -> int:
@@ -62,6 +74,7 @@ def run(mode: str, output_dir: Path) -> int:
     rows = []
     scores = []
     provider_attempts = 0
+    provider_deferral_streak = 0
     for case_id, instruction in cases:
         trace = []
         try:
@@ -79,7 +92,6 @@ def run(mode: str, output_dir: Path) -> int:
             result = Candidate6Result("PROVIDER_DEFERRED", None, None, frozenset(), exc.code)
 
         score = score_case(case_id, result, gold_by_id[case_id])
-        scores.append(score)
         row = {
             "case_id": case_id,
             "instruction_sha256": hashlib.sha256(instruction.encode()).hexdigest(),
@@ -94,17 +106,38 @@ def run(mode: str, output_dir: Path) -> int:
         (output_dir / f"{case_id}.json").write_text(json.dumps(row, indent=2, sort_keys=True), encoding="utf-8")
         rows.append(row)
 
+        if result.status == "PROVIDER_DEFERRED":
+            # Provider availability is infrastructure evidence, not semantic evidence.
+            # Do not spend the frozen semantic failure budget on 429/5xx/transport errors.
+            provider_deferral_streak += 1
+            if provider_deferral_streak >= PROVIDER_DEFERRAL_STREAK_LIMIT:
+                _write_summary(
+                    output_dir, rows, scores, gold_rows, provider_attempts, mode,
+                    stopped_early=True, stopped_after_case=case_id,
+                    qualification_state="PROVIDER_INCOMPLETE",
+                    infrastructure_reason="CONSECUTIVE_PROVIDER_DEFERRALS",
+                )
+                return 75
+            continue
+
+        provider_deferral_streak = 0
+        scores.append(score)
         current = aggregate(scores, gold_rows)
         if not current["reachable"]:
-            current.update({"stopped_early": True, "stopped_after_case": case_id, "provider_attempts": provider_attempts, "mode": mode})
-            (output_dir / "aggregate.json").write_text(json.dumps(current, indent=2, sort_keys=True), encoding="utf-8")
-            (output_dir / "rows.json").write_text(json.dumps(rows, indent=2, sort_keys=True), encoding="utf-8")
+            _write_summary(
+                output_dir, rows, scores, gold_rows, provider_attempts, mode,
+                stopped_early=True, stopped_after_case=case_id,
+                qualification_state="SEMANTICALLY_UNREACHABLE",
+            )
             return 2
 
-    final = aggregate(scores, gold_rows)
-    final.update({"stopped_early": False, "provider_attempts": provider_attempts, "mode": mode})
-    (output_dir / "aggregate.json").write_text(json.dumps(final, indent=2, sort_keys=True), encoding="utf-8")
-    (output_dir / "rows.json").write_text(json.dumps(rows, indent=2, sort_keys=True), encoding="utf-8")
+    final = _write_summary(
+        output_dir, rows, scores, gold_rows, provider_attempts, mode,
+        stopped_early=False,
+        qualification_state="COMPLETE" if len(scores) == len(gold_rows) else "PROVIDER_INCOMPLETE",
+    )
+    if len(scores) != len(gold_rows):
+        return 75
     return 0 if final["passed"] else 2
 
 
