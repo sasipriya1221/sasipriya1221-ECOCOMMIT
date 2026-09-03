@@ -13,7 +13,7 @@ Status vocabulary is strict:
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 PREREGISTERED / NOT RUN; NOT PASSED** | Publish the frozen Candidate 5 preregistration, obtain green exact-source CI and provider preflight, then dispatch exactly one fresh manual 80-case evaluation. A typed A receipt exists only if all four unchanged gates pass. |
+| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 INCOMPLETE / NOT PROMOTABLE; NOT PASSED** | The single fresh Candidate 5 run is complete as an execution attempt but incomplete as evidence: 35 terminal cases, 45 Groq HTTP 429 deferrals. Resolve provider capacity before any separately authorized, preregistered continuation; no automatic rerun or resume. A typed A receipt exists only if all four unchanged gates pass. |
 | B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | A passing typed A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
@@ -101,7 +101,7 @@ No further Groq retry is justified for Candidate 3. Re-running terminal failures
 
 Candidate 4 is explicitly retired in `evidence/checkpoint-a-candidate-4-retirement.json`. Its historical preregistration at source `d7c1acf9c1762a63f50cbf8b120083e956307b92` is preserved byte-for-byte. Source-filtered public Actions history contains only successful offline CI `33740496666` and independent reproduction `33740536540`; there was no Candidate 4 provider/preflight/evaluation run.
 
-### Candidate 5 — preregistered, awaiting public-source CI and provider gates
+### Candidate 5 — INCOMPLETE / NOT PASSED / NOT PROMOTABLE
 
 Candidate 5 (`A-CANDIDATE-5`) introduces **UNIFORM_OUTPUT_BUDGET_REMEDIATION** after a zero-provider-call audit of retained Candidate 3 artifact `9875163068`. The downloaded archive and result JSON exactly match the published hashes above. `evidence/checkpoint-a-candidate-5-offline-audit.json` retains the nine relevant rows, provider traces, exact failure descriptions and timeout audit.
 
@@ -122,11 +122,31 @@ Timeout audit: three 60-second request allowances plus at most two 15-second ret
 
 Validation: **38 focused regressions passed** and the complete repository gate passed **486/486 tests**. Coverage includes budget, bounded correction, terminality, namespace, manifest and automatic stop. Dependency consistency, Python compilation and whitespace checks passed. Hosted CI will perform the required JavaScript and clean-source checks. Candidate 5 preregistration has been frozen before any provider call at `evidence/checkpoint-a-candidate-5-preregistration.json`. Provider calls during audit and preparation: **zero**. No B8/C/D live work was performed.
 
-Implementation source: `af12143d7ac41a02eb774a12b4ff74709cdc4e76`. Runner SHA-256: `e107a433beffe00b81c77eeaec058b823f74a53602ff336daa199ecd9c65cb32`. Offline frozen manifest SHA-256: `1c2f62e912434a6ba130edaadaaf24551868c1bbf9a8abac4a0db3266b5b4215`. Canonical preregistration SHA-256: `8f2e8c56f929b90c8597a637de6fd38098b724837da2352ce1c8e693c4fc3958`. The evidence-only registration commit necessarily follows the implementation commit; runtime receipts bind their exact public execution revision/run and retain these frozen configuration/runner hashes. No CI, provider readiness, evaluation result or A pass is claimed yet for this new source.
+Implementation source: `af12143d7ac41a02eb774a12b4ff74709cdc4e76`. Runner SHA-256: `e107a433beffe00b81c77eeaec058b823f74a53602ff336daa199ecd9c65cb32`. Offline frozen manifest SHA-256: `1c2f62e912434a6ba130edaadaaf24551868c1bbf9a8abac4a0db3266b5b4215`. Canonical preregistration SHA-256: `8f2e8c56f929b90c8597a637de6fd38098b724837da2352ce1c8e693c4fc3958`. The evidence-only registration commit necessarily follows the implementation commit; runtime receipts bind their exact public execution revision/run and retain these frozen configuration/runner hashes. That preregistration preceded CI, provider readiness and evaluation; the final execution outcome follows below.
 
 Public preregistration/source commit `7334ff98f07f894d589169b3f134aa0c21b5be7f` passed exact-source offline CI `33762874444` and independent clean-machine reproduction `33762910331`, both attempt 1. The first readiness workflow `33763004651` stopped **before any provider call** because a legacy default-one-correction unit test inherited the Candidate 5 two-correction environment. Secret verification, Groq execution and health-receipt upload were skipped. Its failure history is retained in `evidence/checkpoint-a-candidate-5-preflight-blocked-33763004651.json`.
 
-The only repair is to isolate that legacy unit test's default setting. The complete **486/486** suite now passes under the actual preflight environment. Production runner bytes, all frozen semantic settings and the original Candidate 5 preregistration remain unchanged. A fresh preflight will be dispatched only after CI is green at this test-only repair source. Candidate 5 evaluation dispatches remain **zero**; no Candidate 1-4 retry occurred.
+The only repair is to isolate that legacy unit test's default setting. The complete **486/486** suite now passes under the actual preflight environment. Production runner bytes, all frozen semantic settings and the original Candidate 5 preregistration remain unchanged. At the test-repair checkpoint, a fresh provider preflight still required green exact-source CI; no evaluation had yet been dispatched and no Candidate 1-4 retry had occurred.
+
+#### Sole Candidate 5 execution — terminal infrastructure outcome
+
+Exact execution source: `3c34af1e855aba80a3a4d9ceb9450bc344a4fd67`. Offline CI `33763220483` and independent clean-machine reproduction `33763257621` both passed, with **486 tests and 8 repository checks** in the independent receipt. Its artifact is `9896409760`; archive SHA-256 `8e087223e7baf298f9b6530b919dfa7c35c6c3f6e14b22b4dee3f0ab3a4b2f9e`.
+
+Provider preflight `33763360449` passed on **one actual Groq request**, returning 1,097 completion tokens in 2.625638385 seconds under the frozen 2,048 cap. The health artifact is `9896432127`; archive SHA-256 `c1b99a7b12ceb0e136353c251245a8cedefdbdb6282f4719cd4ef79f0e1876bb`; receipt SHA-256 `b65eae9976ff0d8aa6eaad3217952e0313c22f6c3f0855dbdc9943d650e1f1b5`. This establishes readiness for that request, not uninterrupted capacity for 80 cases.
+
+Exactly **one** fresh evaluation was dispatched: [run 33763572533](https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33763572533), attempt **1**. All **80** frozen case indices were attempted. The final evidence has **35 terminal cases and 45 provider-deferred cases**. Every deferral trace includes `HTTP_429`; some interruptions occurred during schema correction. The 80 case artifacts retain **204 total provider attempts**, with no case exceeding **three**. All retained attempts respect the uniform completion ceiling and first-schema-valid terminality. There was no workflow rerun, resume, additional evaluation, Candidate 1-4 retry, or B8/C/D live execution.
+
+The aggregate is **incomplete**. No frozen threshold was proved mathematically unreachable by the conservative upper-bound check, and no full-run score is reported from these partial rows. **No A PASS and no typed A receipt exist.** The one-run authorization is consumed; provider availability/capacity must be addressed before considering a separately authorized, preregistered infrastructure continuation.
+
+Retained final artifact `9897481331` (`checkpoint-a-candidate-5-results-attempt-1`) includes all 80 case artifacts, logs, the runtime manifest, original preregistration, provider-health receipt, incomplete aggregate and typed decision. Exact pins:
+
+- archive SHA-256: `defb9656953ea64f7e2c4dbc332ade6d58fdb82b38198a5edc44b7bb1194c929`;
+- aggregate JSON SHA-256: `50a13de89f2ccf7cbe2813d8c32f34943da65483b72196094d8024f5ba6bd665`;
+- runtime manifest SHA-256: `45bc5df166a94a88a137613a6534e60f22cfe4360157fdc579e74000d0199d80`;
+- decision SHA-256: `c27f27aa0620fee2c313dabcbaf98e1a654174887f43db1d0c50a82119b37766`; and
+- independent local result-verification SHA-256: `dd7af06c4f3f2bd8ad1d736da74f615713b918a02dd53153415c0d2e8c76673e`.
+
+The archive digest matches GitHub's published digest. Offline verification recomputed all retained row digests and semantics with the unchanged evaluator, checked the complete 80-index attempt inventory, and verified the manifest, decision, bounded attempts and absence of a typed A receipt. Verification made zero provider calls. `evidence/checkpoint-a-candidate-5-incomplete.json` is the concise public outcome record; raw artifacts remain authoritative. Candidate 4's preregistration and Candidate 5's preregistration remain unchanged.
 
 **Checkpoint A remains BLOCKED / NOT PASSED.**
 
