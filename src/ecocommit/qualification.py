@@ -11,14 +11,20 @@ class QualificationCounts:
 
 def reachable(c:QualificationCounts,t:QualificationThresholds=QualificationThresholds())->bool:
     rem=c.total-c.processed
-    if c.case_passes+rem < ceil(t.case_pass*c.total): return False
-    # Reliability upper bound must account for remaining cases that could become correct autonomous.
-    best_correct=c.correct_autonomous+rem; best_auto=c.autonomous+rem
-    if best_auto and best_correct/best_auto < t.selective_reliability: return False
-    if c.autonomous+rem < ceil(t.autonomous_coverage*c.total): return False
+    if rem<0 or c.ambiguous_processed>c.ambiguous_total:return False
+    if any((c.fail_open,c.dropped_guards,c.dropped_exceptions,c.conservation_failures,c.unknown_authorized)):return False
+    if c.case_passes+rem < ceil(t.case_pass*c.total):return False
+    required_auto=ceil(t.autonomous_coverage*c.total)
+    needed_auto=max(0,required_auto-c.autonomous)
+    if needed_auto>rem:return False
+    # Exact optimistic reliability bound: only the minimum additional autonomous
+    # rows required for coverage are made autonomous, and every such row is correct.
+    # Remaining rows may abstain; they cannot repair an existing wrong autonomous row.
+    best_auto=c.autonomous+needed_auto
+    best_correct=c.correct_autonomous+needed_auto
+    if best_auto==0 or best_correct/best_auto<t.selective_reliability:return False
     amb_rem=c.ambiguous_total-c.ambiguous_processed
-    if c.ambiguous_total and c.ambiguous_correct+amb_rem < ceil(t.clarification_accuracy*c.ambiguous_total): return False
-    if any((c.fail_open,c.dropped_guards,c.dropped_exceptions,c.conservation_failures,c.unknown_authorized)): return False
+    if c.ambiguous_total and c.ambiguous_correct+amb_rem < ceil(t.clarification_accuracy*c.ambiguous_total):return False
     return True
 
 def final_pass(c:QualificationCounts,t:QualificationThresholds=QualificationThresholds())->bool:
