@@ -1,0 +1,23 @@
+{
+  "candidate": "A-CANDIDATE-6",
+  "development_provider_incomplete": "NOT_A_SEMANTIC_FAILURE_AND_MAY_CONTINUE_UNDER_DEVELOPMENT_PROTOCOL",
+  "holdout_provider_incomplete": "CANNOT_PASS_AND_CANNOT_BE_RERUN",
+  "holdout_rerun_permitted": false,
+  "holdout_result_on_provider_incomplete": "CANDIDATE 6 FAILED INTERNAL QUALIFICATION",
+  "official_checkpoint_a_eligibility_on_provider_incomplete": "NOT ELIGIBLE FOR OFFICIAL CHECKPOINT-A RUN",
+  "policy_sha256": "b1de45fcc06932b21ca830cea5e2642037b51738ccb447a6b8755b5117fec4b5",
+  "post_holdout_semantic_modification_permitted": false,
+  "schema_version": "C6.HOLDOUT.PROVIDER_INCOMPLETE.1",
+  "scope": "SEALED_INTERNAL_HOLDOUT_ONLY",
+  "thresholds": {
+    "ambiguous_clarification_accuracy": 0.9,
+    "autonomous_coverage": 0.6,
+    "case_pass_rate": 0.95,
+    "dropped_exceptions": 0,
+    "dropped_guards": 0,
+    "fail_open": 0,
+    "selective_semantic_reliability": 0.97,
+    "semantic_conservation_failures": 0,
+    "unknown_authorized": 0
+  }
+}
