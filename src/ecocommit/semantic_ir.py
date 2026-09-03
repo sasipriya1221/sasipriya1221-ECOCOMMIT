@@ -2,105 +2,332 @@ from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 from enum import Enum
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal, Mapping, Union
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class EntityKind(str, Enum):
-    OBJECT="OBJECT"; COUNTERPARTY="COUNTERPARTY"; PERSON="PERSON"; ORGANIZATION="ORGANIZATION"; DOCUMENT="DOCUMENT"; EVENT="EVENT"; RESOURCE="RESOURCE"; OTHER="OTHER"
+    OBJECT = "OBJECT"
+    COUNTERPARTY = "COUNTERPARTY"
+    PERSON = "PERSON"
+    ORGANIZATION = "ORGANIZATION"
+    DOCUMENT = "DOCUMENT"
+    EVENT = "EVENT"
+    RESOURCE = "RESOURCE"
+    OTHER = "OTHER"
+
+
 class ActionKind(str, Enum):
-    BUY="BUY"; ORDER="ORDER"; PAY="PAY"; TRANSFER="TRANSFER"; HIRE="HIRE"; BOOK="BOOK"; RENEW="RENEW"; RESERVE="RESERVE"; SELECT="SELECT"; RELEASE="RELEASE"; CANCEL="CANCEL"; COMMIT="COMMIT"
+    BUY = "BUY"
+    ORDER = "ORDER"
+    PAY = "PAY"
+    TRANSFER = "TRANSFER"
+    HIRE = "HIRE"
+    BOOK = "BOOK"
+    RENEW = "RENEW"
+    RESERVE = "RESERVE"
+    SELECT = "SELECT"
+    RELEASE = "RELEASE"
+    CANCEL = "CANCEL"
+    COMMIT = "COMMIT"
+
+
 class ConstraintKind(str, Enum):
-    MAX_TOTAL_COST="MAX_TOTAL_COST"; MAX_UNIT_COST="MAX_UNIT_COST"; MIN_TOTAL_COST="MIN_TOTAL_COST"; EXACT_TOTAL_COST="EXACT_TOTAL_COST"
+    MAX_TOTAL_COST = "MAX_TOTAL_COST"
+    MAX_UNIT_COST = "MAX_UNIT_COST"
+    MIN_TOTAL_COST = "MIN_TOTAL_COST"
+    EXACT_TOTAL_COST = "EXACT_TOTAL_COST"
+
+
 class PredicateKind(str, Enum):
-    STATE="STATE"; APPROVAL="APPROVAL"; EVENT="EVENT"; DOCUMENT_STATUS="DOCUMENT_STATUS"; COMPARISON="COMPARISON"; EXISTENCE="EXISTENCE"
+    STATE = "STATE"
+    APPROVAL = "APPROVAL"
+    EVENT = "EVENT"
+    DOCUMENT_STATUS = "DOCUMENT_STATUS"
+    COMPARISON = "COMPARISON"
+    EXISTENCE = "EXISTENCE"
+
+
 class PredicateOperator(str, Enum):
-    EQ="EQ"; NEQ="NEQ"; LT="LT"; LTE="LTE"; GT="GT"; GTE="GTE"; EXISTS="EXISTS"; OCCURRED="OCCURRED"; APPROVED="APPROVED"; VALID="VALID"; CURRENT="CURRENT"; RECEIVED="RECEIVED"
+    EQ = "EQ"
+    NEQ = "NEQ"
+    LT = "LT"
+    LTE = "LTE"
+    GT = "GT"
+    GTE = "GTE"
+    EXISTS = "EXISTS"
+    OCCURRED = "OCCURRED"
+    APPROVED = "APPROVED"
+    VALID = "VALID"
+    CURRENT = "CURRENT"
+    RECEIVED = "RECEIVED"
+
+
 class AmbiguityKind(str, Enum):
-    UNDEFINED_QUANTITY="UNDEFINED_QUANTITY"; UNDEFINED_BUDGET="UNDEFINED_BUDGET"; SUBJECTIVE_SELECTION_CRITERION="SUBJECTIVE_SELECTION_CRITERION"; UNCLEAR_COUNTERPARTY="UNCLEAR_COUNTERPARTY"; VAGUE_PERMISSION="VAGUE_PERMISSION"; AMBIGUOUS_CONDITION="AMBIGUOUS_CONDITION"; MISSING_REQUIRED_INFORMATION="MISSING_REQUIRED_INFORMATION"; UNSUPPORTED_SEMANTIC_STRUCTURE="UNSUPPORTED_SEMANTIC_STRUCTURE"
+    UNDEFINED_QUANTITY = "UNDEFINED_QUANTITY"
+    UNDEFINED_BUDGET = "UNDEFINED_BUDGET"
+    SUBJECTIVE_SELECTION_CRITERION = "SUBJECTIVE_SELECTION_CRITERION"
+    UNCLEAR_COUNTERPARTY = "UNCLEAR_COUNTERPARTY"
+    VAGUE_PERMISSION = "VAGUE_PERMISSION"
+    AMBIGUOUS_CONDITION = "AMBIGUOUS_CONDITION"
+    MISSING_REQUIRED_INFORMATION = "MISSING_REQUIRED_INFORMATION"
+    UNSUPPORTED_SEMANTIC_STRUCTURE = "UNSUPPORTED_SEMANTIC_STRUCTURE"
+
 
 class SpanSource(BaseModel):
-    kind: Literal["SPAN"]="SPAN"
+    kind: Literal["SPAN"] = "SPAN"
     quote: str = Field(min_length=1)
     occurrence: int = Field(default=1, ge=1)
+
+
 class AbsenceSource(BaseModel):
-    kind: Literal["ABSENCE"]="ABSENCE"
+    kind: Literal["ABSENCE"] = "ABSENCE"
     expected: str = Field(min_length=1)
+
+
 SourceGrounding = Annotated[Union[SpanSource, AbsenceSource], Field(discriminator="kind")]
 
+
 class Entity(BaseModel):
-    id: str = Field(pattern=r"^E\d+$"); kind: EntityKind; text: str = Field(min_length=1); source: SpanSource
+    id: str = Field(pattern=r"^E\d+$")
+    kind: EntityKind
+    text: str = Field(min_length=1)
+    source: SpanSource
+
+
 class Quantity(BaseModel):
-    raw_value: str = Field(min_length=1); raw_unit: str = Field(min_length=1); source: SpanSource
+    raw_value: str = Field(min_length=1)
+    raw_unit: str = Field(min_length=1)
+    source: SpanSource
+
+
 class Action(BaseModel):
-    id: str = Field(pattern=r"^A\d+$"); kind: ActionKind; object: str; counterparty: str|None=None; quantity: Quantity|None=None; source: SpanSource
+    id: str = Field(pattern=r"^A\d+$")
+    kind: ActionKind
+    object: str
+    counterparty: str | None = None
+    quantity: Quantity | None = None
+    source: SpanSource
+
+
 class Money(BaseModel):
-    raw_amount: str = Field(min_length=1); raw_currency: str = Field(min_length=1); source: SpanSource
+    raw_amount: str = Field(min_length=1)
+    raw_currency: str = Field(min_length=1)
+    source: SpanSource
+
+
 class Constraint(BaseModel):
-    id: str = Field(pattern=r"^C\d+$"); action: str; kind: ConstraintKind; money: Money
+    id: str = Field(pattern=r"^C\d+$")
+    action: str
+    kind: ConstraintKind
+    money: Money
+
+
 class Predicate(BaseModel):
-    id: str = Field(pattern=r"^P\d+$"); kind: PredicateKind; subject: str; attribute: str|None=None; operator: PredicateOperator; value: str|None=None; source: SpanSource
+    id: str = Field(pattern=r"^P\d+$")
+    kind: PredicateKind
+    subject: str
+    attribute: str | None = None
+    operator: PredicateOperator
+    value: str | None = None
+    source: SpanSource
+
 
 class Atom(BaseModel):
-    op: Literal["ATOM"]; predicate: str
+    op: Literal["ATOM"]
+    predicate: str
+
+
 class And(BaseModel):
-    op: Literal["AND"]; args: list["BoolExpr"] = Field(min_length=2)
+    op: Literal["AND"]
+    args: list["BoolExpr"] = Field(min_length=2)
+
+
 class Or(BaseModel):
-    op: Literal["OR"]; args: list["BoolExpr"] = Field(min_length=2)
+    op: Literal["OR"]
+    args: list["BoolExpr"] = Field(min_length=2)
+
+
 class Not(BaseModel):
-    op: Literal["NOT"]; arg: "BoolExpr"
-BoolExpr = Annotated[Union[Atom,And,Or,Not], Field(discriminator="op")]
-And.model_rebuild(); Or.model_rebuild(); Not.model_rebuild()
+    op: Literal["NOT"]
+    arg: "BoolExpr"
+
+
+BoolExpr = Annotated[Union[Atom, And, Or, Not], Field(discriminator="op")]
+And.model_rebuild()
+Or.model_rebuild()
+Not.model_rebuild()
+
 
 class Guard(BaseModel):
-    id: str = Field(pattern=r"^G\d+$"); action: str; mode: Literal["ONLY_IF"]="ONLY_IF"; expr: BoolExpr; source: SpanSource
+    id: str = Field(pattern=r"^G\d+$")
+    action: str
+    mode: Literal["ONLY_IF"] = "ONLY_IF"
+    expr: BoolExpr
+    source: SpanSource
+
+
 class Dependency(BaseModel):
-    id: str = Field(pattern=r"^D\d+$"); action: str; prerequisite_action: str; relation: Literal["AFTER_COMPLETION","AFTER_SUCCESS"]; source: SpanSource
+    id: str = Field(pattern=r"^D\d+$")
+    action: str
+    prerequisite_action: str
+    relation: Literal["AFTER_COMPLETION", "AFTER_SUCCESS"]
+    source: SpanSource
+
+
 class ExceptionTarget(BaseModel):
-    kind: Literal["ACTION","GUARD","CONSTRAINT"]; id: str
-class BlockEffect(BaseModel): effect: Literal["BLOCK_ACTION"]
-class AllowanceEffect(BaseModel): effect: Literal["ADD_MONETARY_ALLOWANCE"]; money: Money
-ExceptionEffect=Annotated[Union[BlockEffect,AllowanceEffect],Field(discriminator="effect")]
+    kind: Literal["ACTION", "GUARD", "CONSTRAINT"]
+    id: str
+
+
+class BlockEffect(BaseModel):
+    effect: Literal["BLOCK_ACTION"]
+
+
+class AllowanceEffect(BaseModel):
+    effect: Literal["ADD_MONETARY_ALLOWANCE"]
+    money: Money
+
+
+ExceptionEffect = Annotated[Union[BlockEffect, AllowanceEffect], Field(discriminator="effect")]
+
+
 class ExceptionRule(BaseModel):
-    id: str = Field(pattern=r"^X\d+$"); target: ExceptionTarget; when: BoolExpr; effect: ExceptionEffect; source: SpanSource
+    id: str = Field(pattern=r"^X\d+$")
+    target: ExceptionTarget
+    when: BoolExpr
+    effect: ExceptionEffect
+    source: SpanSource
+
+
 class AmbiguityTarget(BaseModel):
-    kind: Literal["ACTION_FIELD","PREDICATE","GUARD","CONSTRAINT","COUNTERPARTY","DEPENDENCY","NON_MATERIAL"]
-    id: str|None=None; field: str|None=None
+    # The model identifies semantic location only. It never labels materiality.
+    # PRESENTATION is the sole closed category deterministically treated as non-economic.
+    kind: Literal[
+        "ACTION_FIELD", "PREDICATE", "GUARD", "CONSTRAINT",
+        "COUNTERPARTY", "DEPENDENCY", "PRESENTATION",
+    ]
+    id: str | None = None
+    field: str | None = None
+
+
 class Ambiguity(BaseModel):
-    id: str = Field(pattern=r"^U\d+$"); kind: AmbiguityKind; target: AmbiguityTarget; source: SourceGrounding
+    id: str = Field(pattern=r"^U\d+$")
+    kind: AmbiguityKind
+    target: AmbiguityTarget
+    source: SourceGrounding
+
 
 class SemanticIR(BaseModel):
-    schema_version: Literal["semantic-ir-v1"]="semantic-ir-v1"
-    entities: list[Entity]=Field(default_factory=list)
-    actions: list[Action]=Field(min_length=1)
-    constraints: list[Constraint]=Field(default_factory=list)
-    predicates: list[Predicate]=Field(default_factory=list)
-    guards: list[Guard]=Field(default_factory=list)
-    dependencies: list[Dependency]=Field(default_factory=list)
-    exceptions: list[ExceptionRule]=Field(default_factory=list)
-    ambiguities: list[Ambiguity]=Field(default_factory=list)
+    schema_version: Literal["semantic-ir-v1"] = "semantic-ir-v1"
+    entities: list[Entity] = Field(default_factory=list)
+    actions: list[Action] = Field(min_length=1)
+    constraints: list[Constraint] = Field(default_factory=list)
+    predicates: list[Predicate] = Field(default_factory=list)
+    guards: list[Guard] = Field(default_factory=list)
+    dependencies: list[Dependency] = Field(default_factory=list)
+    exceptions: list[ExceptionRule] = Field(default_factory=list)
+    ambiguities: list[Ambiguity] = Field(default_factory=list)
 
-class Truth(str,Enum): TRUE="TRUE"; FALSE="FALSE"; UNKNOWN="UNKNOWN"
-def truth_not(v:Truth)->Truth: return {Truth.TRUE:Truth.FALSE,Truth.FALSE:Truth.TRUE,Truth.UNKNOWN:Truth.UNKNOWN}[v]
-def truth_and(values:list[Truth])->Truth:
-    if Truth.FALSE in values:return Truth.FALSE
-    if Truth.UNKNOWN in values:return Truth.UNKNOWN
+
+class Truth(str, Enum):
+    TRUE = "TRUE"
+    FALSE = "FALSE"
+    UNKNOWN = "UNKNOWN"
+
+
+def truth_not(value: Truth) -> Truth:
+    return {Truth.TRUE: Truth.FALSE, Truth.FALSE: Truth.TRUE, Truth.UNKNOWN: Truth.UNKNOWN}[value]
+
+
+def truth_and(values: list[Truth]) -> Truth:
+    if Truth.FALSE in values:
+        return Truth.FALSE
+    if Truth.UNKNOWN in values:
+        return Truth.UNKNOWN
     return Truth.TRUE
-def truth_or(values:list[Truth])->Truth:
-    if Truth.TRUE in values:return Truth.TRUE
-    if Truth.UNKNOWN in values:return Truth.UNKNOWN
+
+
+def truth_or(values: list[Truth]) -> Truth:
+    if Truth.TRUE in values:
+        return Truth.TRUE
+    if Truth.UNKNOWN in values:
+        return Truth.UNKNOWN
     return Truth.FALSE
 
-def normalize_money(raw_amount:str, raw_currency:str)->tuple[Decimal,str]:
-    c=raw_currency.strip().upper().replace("RS.","INR").replace("RS","INR").replace("₹","INR")
-    if c not in {"INR"}: raise ValueError("IR_CURRENCY_INVALID")
-    s=raw_amount.strip().lower().replace(",","").replace("₹","").replace("rs.","").replace("rs","").strip()
-    mult=Decimal(1)
-    if s.endswith("lakh"): mult=Decimal(100000); s=s[:-4].strip()
-    elif s.endswith("lakhs"): mult=Decimal(100000); s=s[:-5].strip()
-    elif s.endswith("crore"): mult=Decimal(10000000); s=s[:-5].strip()
-    try: amount=Decimal(s)*mult
-    except InvalidOperation as exc: raise ValueError("IR_MONEY_INVALID") from exc
-    if not amount.is_finite() or amount < 0: raise ValueError("IR_MONEY_INVALID")
-    return amount,c
+
+def eval_expr(expr: BoolExpr, predicate_values: Mapping[str, Truth]) -> Truth:
+    if expr.op == "ATOM":
+        return predicate_values.get(expr.predicate, Truth.UNKNOWN)
+    if expr.op == "NOT":
+        return truth_not(eval_expr(expr.arg, predicate_values))
+    values = [eval_expr(arg, predicate_values) for arg in expr.args]
+    return truth_and(values) if expr.op == "AND" else truth_or(values)
+
+
+_NUMBER_WORDS = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
+    "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18,
+    "nineteen": 19, "twenty": 20,
+}
+_UNIT_ALIASES = {
+    "unit": "unit", "units": "unit", "item": "unit", "items": "unit",
+    "piece": "unit", "pieces": "unit", "seat": "seat", "seats": "seat",
+    "room": "room", "rooms": "room", "day": "day", "days": "day",
+    "week": "week", "weeks": "week", "month": "month", "months": "month",
+    "year": "year", "years": "year",
+}
+
+
+def normalize_quantity(raw_value: str, raw_unit: str) -> tuple[Decimal, str]:
+    value_text = raw_value.strip().lower().replace(",", "")
+    if value_text in _NUMBER_WORDS:
+        value = Decimal(_NUMBER_WORDS[value_text])
+    else:
+        if value_text.startswith("minus "):
+            tail = value_text[6:].strip()
+            value = Decimal(-_NUMBER_WORDS[tail]) if tail in _NUMBER_WORDS else Decimal("NaN")
+        else:
+            try:
+                value = Decimal(value_text)
+            except InvalidOperation as exc:
+                raise ValueError("IR_QUANTITY_INVALID") from exc
+    if not value.is_finite() or value <= 0:
+        raise ValueError("IR_QUANTITY_INVALID")
+    unit_text = raw_unit.strip().lower()
+    unit = _UNIT_ALIASES.get(unit_text)
+    if unit is None:
+        # Product-specific count nouns are safe as opaque count units; blank/semantic
+        # transformations are not. Canonicalization is lower-case singular-ish text.
+        unit = unit_text[:-1] if unit_text.endswith("s") and len(unit_text) > 2 else unit_text
+    if not unit:
+        raise ValueError("IR_UNIT_INVALID")
+    return value, unit
+
+
+def normalize_money(raw_amount: str, raw_currency: str) -> tuple[Decimal, str]:
+    currency = raw_currency.strip().upper()
+    currency = {"₹": "INR", "RS": "INR", "RS.": "INR", "INR": "INR"}.get(currency, currency)
+    # '$' is intentionally not guessed; configured FX authority is outside semantic parsing.
+    if currency != "INR":
+        raise ValueError("IR_CURRENCY_INVALID")
+    text = raw_amount.strip().lower().replace(",", "")
+    for prefix in ("₹", "rs.", "rs"):
+        if text.startswith(prefix):
+            text = text[len(prefix):].strip()
+    multiplier = Decimal(1)
+    for suffix, value in (("lakhs", 100000), ("lakh", 100000), ("crores", 10000000), ("crore", 10000000)):
+        if text.endswith(suffix):
+            multiplier = Decimal(value)
+            text = text[:-len(suffix)].strip()
+            break
+    try:
+        amount = Decimal(text) * multiplier
+    except InvalidOperation as exc:
+        raise ValueError("IR_MONEY_INVALID") from exc
+    if not amount.is_finite() or amount < 0:
+        raise ValueError("IR_MONEY_INVALID")
+    return amount, currency
