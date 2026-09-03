@@ -13,7 +13,7 @@ Status vocabulary is strict:
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 INCOMPLETE / NOT PROMOTABLE; NOT PASSED** | The single fresh Candidate 5 run is complete as an execution attempt but incomplete as evidence: 35 terminal cases, 45 Groq HTTP 429 deferrals. Resolve provider capacity before any separately authorized, preregistered continuation; no automatic rerun or resume. A typed A receipt exists only if all four unchanged gates pass. |
+| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 FAILED (selective reliability); NOT PASSED** | Candidate 5 is permanently mathematically failed: best possible selective reliability is 46/49 = 93.88%, below 95%. Preserve the failure and missed-stop evidence; never rerun or resume Candidate 5 into a pass. A typed A receipt exists only if all four unchanged gates pass. |
 | B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | A passing typed A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
@@ -101,7 +101,7 @@ No further Groq retry is justified for Candidate 3. Re-running terminal failures
 
 Candidate 4 is explicitly retired in `evidence/checkpoint-a-candidate-4-retirement.json`. Its historical preregistration at source `d7c1acf9c1762a63f50cbf8b120083e956307b92` is preserved byte-for-byte. Source-filtered public Actions history contains only successful offline CI `33740496666` and independent reproduction `33740536540`; there was no Candidate 4 provider/preflight/evaluation run.
 
-### Candidate 5 — INCOMPLETE / NOT PASSED / NOT PROMOTABLE
+### Candidate 5 — mathematically FAILED / NOT PASSED
 
 Candidate 5 (`A-CANDIDATE-5`) introduces **UNIFORM_OUTPUT_BUDGET_REMEDIATION** after a zero-provider-call audit of retained Candidate 3 artifact `9875163068`. The downloaded archive and result JSON exactly match the published hashes above. `evidence/checkpoint-a-candidate-5-offline-audit.json` retains the nine relevant rows, provider traces, exact failure descriptions and timeout audit.
 
@@ -128,7 +128,7 @@ Public preregistration/source commit `7334ff98f07f894d589169b3f134aa0c21b5be7f` 
 
 The only repair is to isolate that legacy unit test's default setting. The complete **486/486** suite now passes under the actual preflight environment. Production runner bytes, all frozen semantic settings and the original Candidate 5 preregistration remain unchanged. At the test-repair checkpoint, a fresh provider preflight still required green exact-source CI; no evaluation had yet been dispatched and no Candidate 1-4 retry had occurred.
 
-#### Sole Candidate 5 execution — terminal infrastructure outcome
+#### Sole Candidate 5 execution — raw incomplete outcome, superseded by mathematical failure
 
 Exact execution source: `3c34af1e855aba80a3a4d9ceb9450bc344a4fd67`. Offline CI `33763220483` and independent clean-machine reproduction `33763257621` both passed, with **486 tests and 8 repository checks** in the independent receipt. Its artifact is `9896409760`; archive SHA-256 `8e087223e7baf298f9b6530b919dfa7c35c6c3f6e14b22b4dee3f0ab3a4b2f9e`.
 
@@ -136,7 +136,7 @@ Provider preflight `33763360449` passed on **one actual Groq request**, returnin
 
 Exactly **one** fresh evaluation was dispatched: [run 33763572533](https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33763572533), attempt **1**. All **80** frozen case indices were attempted. The final evidence has **35 terminal cases and 45 provider-deferred cases**. Every deferral trace includes `HTTP_429`; some interruptions occurred during schema correction. The 80 case artifacts retain **204 total provider attempts**, with no case exceeding **three**. All retained attempts respect the uniform completion ceiling and first-schema-valid terminality. There was no workflow rerun, resume, additional evaluation, Candidate 1-4 retry, or B8/C/D live execution.
 
-The aggregate is **incomplete**. No frozen threshold was proved mathematically unreachable by the conservative upper-bound check, and no full-run score is reported from these partial rows. **No A PASS and no typed A receipt exist.** The one-run authorization is consumed; provider availability/capacity must be addressed before considering a separately authorized, preregistered infrastructure continuation.
+The raw aggregate is **incomplete**, and its live guard reported no mathematical elimination. That preliminary classification is superseded by the stricter offline proof below. No partial score is treated as a final score. **No A PASS and no typed A receipt exist.** Candidate 5 must never be rerun or resumed into a pass.
 
 Retained final artifact `9897481331` (`checkpoint-a-candidate-5-results-attempt-1`) includes all 80 case artifacts, logs, the runtime manifest, original preregistration, provider-health receipt, incomplete aggregate and typed decision. Exact pins:
 
@@ -146,7 +146,15 @@ Retained final artifact `9897481331` (`checkpoint-a-candidate-5-results-attempt-
 - decision SHA-256: `c27f27aa0620fee2c313dabcbaf98e1a654174887f43db1d0c50a82119b37766`; and
 - independent local result-verification SHA-256: `dd7af06c4f3f2bd8ad1d736da74f615713b918a02dd53153415c0d2e8c76673e`.
 
-The archive digest matches GitHub's published digest. Offline verification recomputed all retained row digests and semantics with the unchanged evaluator, checked the complete 80-index attempt inventory, and verified the manifest, decision, bounded attempts and absence of a typed A receipt. Verification made zero provider calls. `evidence/checkpoint-a-candidate-5-incomplete.json` is the concise public outcome record; raw artifacts remain authoritative. Candidate 4's preregistration and Candidate 5's preregistration remain unchanged.
+The archive digest matches GitHub's published digest. Offline verification recomputed all retained row digests and semantics with the unchanged evaluator, checked the complete 80-index attempt inventory, and verified the manifest, decision, bounded attempts and absence of a typed A receipt. Verification made zero provider calls. `evidence/checkpoint-a-candidate-5-incomplete.json` preserves the preliminary raw-run classification. It is superseded by `evidence/checkpoint-a-candidate-5-failure.json`; the original artifacts are retained unchanged. Candidate 4's preregistration and Candidate 5's preregistration remain unchanged.
+
+#### Final adjudication — selective reliability cannot reach 95%
+
+A stricter offline proof using the unchanged frozen expected statuses establishes **Candidate 5 FAILED**, even though 45 cases remain provider-deferred. The three immutable `VALIDATED` but semantically incorrect terminal cases are **C019, C024 and C049**. There are 28 retained validated outputs, of which 25 are correct, and only 21 missing clear cases can add correct validated outputs. Even if all 21 were correct, the best possible selective reliability is **(25 + 21) / (28 + 21) = 46/49 = 93.877551%**, below the frozen **95%** minimum. The 24 missing ambiguous cases require `CLARIFICATION_REQUIRED`: validating them makes them semantically wrong and cannot improve this bound. This is a bound over every possible completion, not a reported partial-run score.
+
+**The stop guard added for Candidate 5 was too loose and missed the required early stop.** It incorrectly treated all missing cases, including ambiguous ones, as potential correct validated outputs. The tighter bound first becomes decisive after **C049**, the 49th scheduled case. The workflow continued through **31 additional cases / 87 additional provider attempts** before its raw incomplete conclusion. This is an implementation defect and a failure to honor the requested immediate mathematical stop; it is not attributed to Groq. The original runtime, preregistration, logs and raw decision are preserved, and no post-run score-recovery run or protocol rewrite was performed.
+
+The final failure proof is `evidence/checkpoint-a-candidate-5-failure.json`, canonical SHA-256 **`5e6237a7dd561c0fb9ff805dd7792787323b83b7179d2f103ae809d45f2135a8`**. It binds the same source/run/artifact/manifest, verified terminal row and contract hashes, earliest provable failure, and excess-attempt count. It supersedes the preliminary incomplete classification without rewriting it. Candidate 5 is permanently **FAILED / NOT PROMOTABLE**; provider retries cannot remove its immutable semantic failures. The usage-critical next action is to disclose this A failure and missed-stop defect. Any future candidate requires a separately authorized, newly preregistered change; no further Candidate 5 live work is permitted.
 
 **Checkpoint A remains BLOCKED / NOT PASSED.**
 

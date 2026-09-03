@@ -1,0 +1,123 @@
+{
+  "schema_version": "A.FAILURE.1",
+  "candidate_version": "A-CANDIDATE-5",
+  "conclusion": "FAILED",
+  "adjudication": "POST_RUN_OFFLINE_MATHEMATICAL_PROOF",
+  "source_revision": "3c34af1e855aba80a3a4d9ceb9450bc344a4fd67",
+  "workflow_run_id": "33763572533",
+  "workflow_attempt": 1,
+  "evaluation_dispatches": 1,
+  "aggregate_artifact_id": "9897481331",
+  "archive_sha256": "defb9656953ea64f7e2c4dbc332ade6d58fdb82b38198a5edc44b7bb1194c929",
+  "aggregate_json_sha256": "50a13de89f2ccf7cbe2813d8c32f34943da65483b72196094d8024f5ba6bd665",
+  "manifest_sha256": "45bc5df166a94a88a137613a6534e60f22cfe4360157fdc579e74000d0199d80",
+  "runner_sha256": "e107a433beffe00b81c77eeaec058b823f74a53602ff336daa199ecd9c65cb32",
+  "preregistration_sha256": "8f2e8c56f929b90c8597a637de6fd38098b724837da2352ce1c8e693c4fc3958",
+  "raw_workflow_decision": "INCOMPLETE",
+  "raw_decision_sha256": "c27f27aa0620fee2c313dabcbaf98e1a654174887f43db1d0c50a82119b37766",
+  "supersedes_preliminary_classification_file": "evidence/checkpoint-a-candidate-5-incomplete.json",
+  "scheduled_cases": 80,
+  "terminal_cases": 35,
+  "provider_deferred_cases": 45,
+  "typed_a_receipt_present": false,
+  "promotion_allowed": false,
+  "partial_metrics_interpreted_as_final_scores": false,
+  "frozen_failed_criterion": "selective_semantic_reliability_min",
+  "threshold": 0.95,
+  "terminal_incorrect_validated_cases": [
+    {
+      "id": "C019",
+      "row_sha256": "9f45e4a95113d66365b4210caa9120231b9bd01e1b162510ce9c881bd54e3c79",
+      "contract_sha256": "a705905e54e2b517f3214c8547c91c0d9a53dc8e98ec76f8cb6a0d29858601f3",
+      "detail": {
+        "validator_status": "VALIDATED",
+        "expected_status": "VALIDATED",
+        "coverage": 1.0,
+        "faithfulness": 1.0,
+        "selective_risk": 0.0,
+        "required_checks": [
+          true,
+          true,
+          false,
+          true,
+          true
+        ],
+        "exception_ok": true,
+        "dependency_ok": true,
+        "findings": []
+      }
+    },
+    {
+      "id": "C024",
+      "row_sha256": "97ffa01eecca3629af71e82745ebc60a5ca9eac0d0ef23e4fdcce9b98649e848",
+      "contract_sha256": "d24f53ddf2935a92a47f23825d0771af2d4ba9457d87ddd27ecf3ecbcb144651",
+      "detail": {
+        "validator_status": "VALIDATED",
+        "expected_status": "VALIDATED",
+        "coverage": 1.0,
+        "faithfulness": 1.0,
+        "selective_risk": 0.0,
+        "required_checks": [
+          true,
+          true,
+          false,
+          true,
+          true
+        ],
+        "exception_ok": true,
+        "dependency_ok": true,
+        "findings": []
+      }
+    },
+    {
+      "id": "C049",
+      "row_sha256": "a73891621a816f87272825e3ee15d0205748a76af26ef612f827a4bef6b74d1d",
+      "contract_sha256": "d826f16ba014de721240f125b05eed803c79c4d56bc74e5e41bcd68bf8d700d8",
+      "detail": {
+        "validator_status": "VALIDATED",
+        "expected_status": "VALIDATED",
+        "coverage": 1.0,
+        "faithfulness": 1.0,
+        "selective_risk": 0.0,
+        "required_checks": [
+          true
+        ],
+        "exception_ok": true,
+        "dependency_ok": false,
+        "findings": []
+      }
+    }
+  ],
+  "final_upper_bound_proof": {
+    "retained_validated": 28,
+    "retained_correct_validated": 25,
+    "missing_clear_cases": 21,
+    "missing_ambiguous_cases": 24,
+    "maximum_correct_validated": 46,
+    "best_denominator": 49,
+    "maximum_selective_semantic_reliability": 0.9387755102040817,
+    "reason": "Only the 21 missing clear cases can add correct VALIDATED outputs: 25 retained correct plus 21 = 46; 28 retained VALIDATED plus 21 = 49. Each missing ambiguous case has frozen expected_status=CLARIFICATION_REQUIRED. If VALIDATED it is necessarily semantically incorrect and worsens this ratio; if clarified it adds neither numerator nor denominator. Omitting an otherwise correct clear validation cannot improve a ratio below one. Thus 46/49 is an optimistic upper bound for every possible completion, already below 0.95."
+  },
+  "earliest_reconstructable_failure": {
+    "after_case_id": "C049",
+    "after_case_index": 48,
+    "after_scheduled_case_count": 49,
+    "retained_validated": 27,
+    "retained_correct_validated": 24,
+    "missing_clear_cases": 22,
+    "upper_bound_numerator": 46,
+    "upper_bound_denominator": 49,
+    "upper_bound": 0.9387755102040817
+  },
+  "stop_guard_disclosure": {
+    "live_guard_missed_failure": true,
+    "cause": "The live conservative bound treated every missing case as a possible correct VALIDATED result, ignoring that ambiguous gold cases require CLARIFICATION_REQUIRED. This loose bound did not prove impossibility when the tighter frozen-status-aware bound did.",
+    "additional_scheduled_cases_after_provable_failure": 31,
+    "additional_provider_attempts_after_provable_failure": 87,
+    "original_preregistration_and_runtime_unchanged": true,
+    "post_run_repair_or_rerun_performed": false
+  },
+  "future_action": "Stop Candidate 5. Preserve the failed benchmark and the stop-guard defect. No retry or resumption can remove its immutable incorrect validated outputs. Any future candidate requires a separately authorized and publicly preregistered change.",
+  "provider_calls_during_offline_adjudication": 0,
+  "evidence_sha256": "5e6237a7dd561c0fb9ff805dd7792787323b83b7179d2f103ae809d45f2135a8"
+}
