@@ -1,0 +1,46 @@
+name: Candidate 6 - Supervisor Handoff
+
+on:
+  workflow_run:
+    workflows:
+      - Candidate 6 - Development Qualification (Dispatcher)
+      - Candidate 6 - Freeze Gate
+      - Candidate 6 - Internal Holdout Qualification (Dispatcher)
+      - Candidate 6 - Holdout Decision Receipt
+    types: [completed]
+
+concurrency:
+  group: candidate6-supervisor-handoff
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Dispatch fail-closed supervisor
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import json, os
+          from urllib.request import Request, urlopen
+
+          base = 'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
+          payload = json.dumps({'ref': 'main'}, separators=(',', ':')).encode()
+          req = Request(
+              base + '/actions/workflows/candidate6-supervisor.yml/dispatches',
+              data=payload,
+              headers={
+                  'Accept': 'application/vnd.github+json',
+                  'Content-Type': 'application/json',
+              },
+              method='POST',
+          )
+          req.add_unredirected_header('Authorization', 'Bearer ' + os.environ['GH_TOKEN'])
+          with urlopen(req, timeout=30) as response:
+              if response.geturl() != req.full_url or response.status != 204:
+                  raise SystemExit('supervisor handoff dispatch failed')
