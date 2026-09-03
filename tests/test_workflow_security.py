@@ -125,7 +125,10 @@ def test_candidate6_supervisor_is_minimal_scheduled_fail_closed_and_duplicate_sa
     assert "ECOCOMMIT_LLM_API_KEY" not in workflow
     assert "RAZORPAY" not in workflow
     assert "freeze workflow already has history; automatic duplicate dispatch refused" in workflow
-    assert "HOLDOUT_ALREADY_HAS_HISTORY" in workflow
+    assert "holdout dispatcher already has history; duplicate dispatch refused" in workflow
+    assert "holdout decision workflow already has history; duplicate decision refused" in workflow
+    assert "STOP_HOLDOUT_RERUN_DETECTED" in workflow
+    assert "STOP_INTERNAL_FAILED" in workflow
     assert "candidate6_supervisor_decision" in workflow
 
 
