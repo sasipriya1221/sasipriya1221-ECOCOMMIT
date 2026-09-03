@@ -26,7 +26,7 @@ def test_checkout_never_persists_repository_credentials():
         for index, line in enumerate(lines):
             if "uses: actions/checkout@" not in line:
                 continue
-            nearby = "\n".join(lines[index + 1:index + 5])
+            nearby = "\n".join(lines[index + 1:index + 7])
             assert "persist-credentials: false" in nearby, path.name
 
 
