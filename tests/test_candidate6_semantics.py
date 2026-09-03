@@ -148,9 +148,10 @@ def test_early_stop_separates_ambiguous_reachability():
     assert not reachable(c)
 
 
-def test_reliability_reachability_does_not_assume_every_missing_case_autonomous():
-    c = QualificationCounts(total=60, processed=50, case_passes=49, autonomous=35, correct_autonomous=34, ambiguous_total=10, ambiguous_processed=8, ambiguous_correct=8)
-    # Coverage needs one extra autonomous case: best reliability is 35/36 < .97.
+def test_reliability_reachability_uses_only_minimum_needed_autonomous_rows():
+    c = QualificationCounts(total=60, processed=50, case_passes=49, autonomous=35, correct_autonomous=33, ambiguous_total=10, ambiguous_processed=8, ambiguous_correct=8)
+    # Coverage needs one additional autonomous case. Even if it is correct,
+    # best selective reliability is 34/36, still below 97%.
     assert not reachable(c)
 
 
