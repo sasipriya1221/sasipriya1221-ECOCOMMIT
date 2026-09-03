@@ -1,0 +1,451 @@
+{
+  "schema_version": "A.PREREGISTRATION.1",
+  "candidate_version": "A-CANDIDATE-5",
+  "status": "PREREGISTERED_NOT_RUN",
+  "registered_at_utc": "2026-09-03T13:45:09.904381+00:00",
+  "change_class": "UNIFORM_OUTPUT_BUDGET_REMEDIATION",
+  "supersedes": {
+    "candidate": "A-CANDIDATE-4",
+    "status": "PREREGISTERED / SUPERSEDED / NEVER RUN",
+    "historical_preregistration_unchanged": true
+  },
+  "artifact_namespace": "checkpoint-a-candidate-5",
+  "observed_truncation": {
+    "source_run_id": "33590028177",
+    "artifact_id": "9875163068",
+    "archive_sha256": "e92787fc2dae0023b6c7fa0a1240f606e3a948fbca6b7f6ef22e27c9e8fddaa6",
+    "aggregate_json_sha256": "e1b2afd0fdc9bccd05f8dbbe492f59845be170f03246f7646c8ab1fbfc8d0f33",
+    "audit_file_sha256": "fd12dd2d4d02054b1fcdda730a85a9579378c21709ab5819a48b31eed4bbd3a3",
+    "audit_sha256": "e747d85f219ec57b47779d99d31507db71bce8ed300de5dc0efdf58ee80002cc",
+    "cases": [
+      "C004",
+      "C011",
+      "C012",
+      "C013",
+      "C014"
+    ],
+    "attempts_observed": 10,
+    "all_finish_reason_length": true,
+    "all_completion_tokens": 1024,
+    "raw_payload_availability": "Invalid raw response bodies were not retained by the source interpreter. The aggregate retains candidate hashes, finish reasons, usage and schema issues. No raw tail inspection or missing-token estimate is claimed. Schema-valid contracts for the other four failures are retained below.",
+    "headroom_rationale": "All ten attempts exhausted 1024 tokens. Both attempts of C011-C014 and the correction of C004 report eight missing fields at clauses.6, the seventh clause. This supports late structured-output incompleteness, not a measured remaining token count or proof that no further clauses were intended. C004 initial output additionally had normalized_value string-type errors. Uniform 2048 is bounded operational headroom above the demonstrated boundary, not an estimated minimum or a guarantee of completion."
+  },
+  "known_unaddressed_semantic_risks": {
+    "C019": {
+      "finding": "VALIDATED, but the third required check fails: no COUNTERPARTY clause grounds certified suppliers. The contract instead contains CERTIFICATION certified.",
+      "directly_targeted_by_candidate_5": false
+    },
+    "C024": {
+      "finding": "VALIDATED, but the third required check fails: no COUNTERPARTY clause grounds certified suppliers. The contract instead contains CERTIFICATION certified.",
+      "directly_targeted_by_candidate_5": false
+    },
+    "C033": {
+      "finding": "The provided that food-safety certification is current condition is encoded as CONDITION and DEPENDENCY, with no EXCEPTION clause or exception_to link. exception_ok is false and the validator returns REJECTED / EXCEPTION_NOT_PRESERVED instead of VALIDATED.",
+      "directly_targeted_by_candidate_5": false
+    },
+    "A002": {
+      "finding": "CLARIFICATION_REQUIRED and MATERIAL_VAGUENESS were correctly returned. The if needed clause has exception_to links but no DEPENDENCY clause or depends_on link, so dependency_ok is false. Clarification status was not missed.",
+      "directly_targeted_by_candidate_5": false
+    }
+  },
+  "frozen_manifest": {
+    "evidence_schema_version": "A.EVIDENCE.2",
+    "candidate_version": "A-CANDIDATE-5",
+    "source_revision": "af12143d7ac41a02eb774a12b4ff74709cdc4e76",
+    "workflow": {
+      "run_id": null,
+      "workflow_ref": null
+    },
+    "dataset": {
+      "count": 80,
+      "sha256": "968be3ed3a438a3a28a3402fa65c90a45cb564ed1adad2e6e51d852e24c5bb8b"
+    },
+    "prompt_sha256": "0642b8214c99d7d4ec9eaf6b6cff49fe6fd4fb6a7f22422a243d5ec28814e963",
+    "contract_schema_sha256": "0e6668b63eb2deaba22d9dab47e600b8fc4528048340b152ebc61a60015fd549",
+    "evaluator_sha256": "12a0ef97f2ab8b721b029029473e5625fd11b4f0df8b5ca66f14b41bf5f050cc",
+    "runner_sha256": "e107a433beffe00b81c77eeaec058b823f74a53602ff336daa199ecd9c65cb32",
+    "criteria": {
+      "case_pass_rate_min": 0.9,
+      "selective_semantic_reliability_min": 0.95,
+      "autonomous_coverage_min": 0.55,
+      "ambiguous_clarification_accuracy_min": 0.8
+    },
+    "criteria_sha256": "eb6564e3d3d4c0f0ab466eb07d2f66556b738274863e07a7274278e739a6101b",
+    "provider": {
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "qwen/qwen3.6-27b",
+      "reasoning_effort": "none",
+      "json_schema": false,
+      "max_completion_tokens": 2048,
+      "max_attempts": 3,
+      "max_schema_corrections": 2,
+      "max_retry_delay_seconds": 15.0,
+      "max_response_bytes": 1048576,
+      "request_timeout_seconds": 60.0
+    },
+    "manifest_sha256": "1c2f62e912434a6ba130edaadaaf24551868c1bbf9a8abac4a0db3266b5b4215"
+  },
+  "implementation_binding": {
+    "implementation_source_revision": "af12143d7ac41a02eb774a12b4ff74709cdc4e76",
+    "implementation_source_tree": "1d91629f49a274f57c4342c25d3b62da4aa46865",
+    "source_files": [
+      {
+        "path": ".github/workflows/checkpoint-a-live.yml",
+        "sha256": "0ab266956a3580131a2d91aeae4bd201263c9b81832b68eb4f96bc99edb8308a"
+      },
+      {
+        "path": ".github/workflows/checkpoint-a-qwen-smoke.yml",
+        "sha256": "5decfcc8db607645b4ad0906736bdd8df4bb6ab4b0fcbbb98218b1f4967a7f21"
+      },
+      {
+        "path": ".github/workflows/checkpoint-a-smoke.yml",
+        "sha256": "1723c5404228c2990753c55c610bd8cad183d11e5d7beb5fb46edff85fa81333"
+      },
+      {
+        "path": ".github/workflows/groq-preflight.yml",
+        "sha256": "b13904b8280d53f4a583b2e934ccaeed440cdba8cac42ad99aa233bf14fd5aec"
+      },
+      {
+        "path": ".github/workflows/independent-reproduction.yml",
+        "sha256": "bb92bcf3a5888aa4a8b4ffd4d6e8b1ec5446409852b57d3a94385f0481f862fa"
+      },
+      {
+        "path": ".github/workflows/offline-regression.yml",
+        "sha256": "f97e7f5534dca171011f05d5bc117841f78763c62e8fa36d0fcea1397c2f4575"
+      },
+      {
+        "path": ".github/workflows/provider-preflight.yml",
+        "sha256": "8a1faefb731dadf2e93fb05c163354d570c1092c97da75b97496c50a3cb11ad1"
+      },
+      {
+        "path": ".github/workflows/razorpay-test-lifecycle.yml",
+        "sha256": "306c913437d2ba68aabef3dc075aa2620a21c94871ad9f4cbd42701c7c0fd63c"
+      },
+      {
+        "path": ".github/workflows/razorpay-test-preflight.yml",
+        "sha256": "71fdcc1ecae4d5018ad808b409d434b6836a00e5d99a84a4e6308184153159f8"
+      },
+      {
+        "path": "pyproject.toml",
+        "sha256": "f47ce9b1b2717c4340ca7ec2dc3176f8e4841ab252dcc26c40a7a9d9372d9e36"
+      },
+      {
+        "path": "requirements-dev.lock",
+        "sha256": "7dcc0856815fbe5a2de95aad5ee38638a8668775130fb17ea89d05e12a12ebf8"
+      },
+      {
+        "path": "scripts/checkpoint_a_aggregate.py",
+        "sha256": "f2f27c2174663caa268f7eeab47a6909cc800a7ee90c2cd010e92c04df6e0f76"
+      },
+      {
+        "path": "scripts/checkpoint_a_candidate5.py",
+        "sha256": "2b0b5628b8e443224b455a2584b83ac4e3aa232793dbc384e1be48fc2dd13b16"
+      },
+      {
+        "path": "scripts/checkpoint_a_constants.py",
+        "sha256": "53eab8ce2d0aa001c7a4cd658d1c9408e6187aeb4d4486de6e72e0421b647fa2"
+      },
+      {
+        "path": "scripts/checkpoint_a_diagnostics.py",
+        "sha256": "014f18b273c6863aff0d932f4b771f7c448c75cea5054e1b3a544b3be1a8d44f"
+      },
+      {
+        "path": "scripts/checkpoint_a_live.py",
+        "sha256": "3af998b438136454706cdf373f2c0f6e0bf264700dc7670b1345cf148ccdbdf9"
+      },
+      {
+        "path": "scripts/checkpoint_a_protocol.py",
+        "sha256": "45a22743d92e3509831114560bee3c9b3f1c5f9514fbd2faff4b2d775a6091c8"
+      },
+      {
+        "path": "scripts/checkpoint_a_shard.py",
+        "sha256": "a19cc5b05ee6304f046a0376b9da6899cf353a916e5e4392e2fef651e7324093"
+      },
+      {
+        "path": "scripts/checkpoint_a_transport_probe.py",
+        "sha256": "4068a6b3dbecb42f048c896b3814e103bc88fe0d46cb8f968c08873dea7b4d5b"
+      },
+      {
+        "path": "scripts/checkpoint_b8_finalize.py",
+        "sha256": "2b1d88fc77348b70e47c01d5ba0fcf7167db54411d209aeab9292efbaec449de"
+      },
+      {
+        "path": "scripts/checkpoint_b8_prepare_provenance.py",
+        "sha256": "87ce1f35eda0c2fd30f91a5db0b125b925e865897002a9be17ec27be1866d9b2"
+      },
+      {
+        "path": "scripts/checkpoint_b8_razorpay_continue.py",
+        "sha256": "f37d92128ee77ad495e8d645f1097b8768dae92d4afabd5d4bc8305786ddffc5"
+      },
+      {
+        "path": "scripts/checkpoint_b8_razorpay_live.py",
+        "sha256": "0102d15c7c6df89cec732bfcaf8513d8ac67d34b0291866cd5a16325595bef01"
+      },
+      {
+        "path": "scripts/checkpoint_b8_verify_authorization.py",
+        "sha256": "b48bf9b7e36c1e9d569ec63351ee86cac07c4f2dd7db394ff4d942fbe1e9b0f2"
+      },
+      {
+        "path": "scripts/checkpoint_b8_verify_preflight.py",
+        "sha256": "99e4d0f9d0254062a8fc94c69d7c234af15b5deece912408b337c2054f10dcac"
+      },
+      {
+        "path": "scripts/checkpoint_b8_webhook_evidence.py",
+        "sha256": "9e2202adb69acc4a06ac4f959f0d21a65250cd60c4bdb636a67238a80df0750d"
+      },
+      {
+        "path": "scripts/checkpoint_b8_webhook_server.py",
+        "sha256": "1a1427589eb6664207de82a773cf1cba2dbe332b13abcbef52a8eb986ab09364"
+      },
+      {
+        "path": "scripts/checkpoint_c_benchmark.py",
+        "sha256": "acff9d54273745677d15958f6632681b61d4fc5b7a55f052f2fb1f3108a70ee4"
+      },
+      {
+        "path": "scripts/checkpoint_c_final_held_out.py",
+        "sha256": "b11f0abed2ef7a012489215b002b06e9a307ddbde5c9eb6051d6f755fe1af68d"
+      },
+      {
+        "path": "scripts/checkpoint_d_demo.py",
+        "sha256": "11d3fde42c682ab56d2d2bd0fca5d0e93a1919a3301813c55db2726fa99f32b7"
+      },
+      {
+        "path": "scripts/checkpoint_d_evidence_status.py",
+        "sha256": "b5e92b4df33ed6f12086547f3321439773d7bcab3b127b8eac1e16d5c79a5916"
+      },
+      {
+        "path": "scripts/checkpoint_d_prepare_operation.py",
+        "sha256": "4615ba9d309565e358b083df6764fd6f532e90c8c4bfff15e82e3c1004c557c7"
+      },
+      {
+        "path": "scripts/checkpoint_d_server.py",
+        "sha256": "aad72f2ff7536adb7fbce72d9dba7b2953f4006d3abce27be559702a94d5735f"
+      },
+      {
+        "path": "scripts/checkpoint_e_readiness.py",
+        "sha256": "6d93e48a1eb5d4e46549d58702a220b89415a54d56129399cd5d358136de290a"
+      },
+      {
+        "path": "src/ecocommit/__init__.py",
+        "sha256": "c4e77256193f3e2a9540c83da8780e773d8211f34f7527a5e1555ff042f6d4b7"
+      },
+      {
+        "path": "src/ecocommit/_canonical.py",
+        "sha256": "7298bd9916fd81b3b12acde61d1ec05843ca4a73764b07f93ab7c0dcb38f3e0a"
+      },
+      {
+        "path": "src/ecocommit/api.py",
+        "sha256": "4f6943279b9a0aed77e447847cf0ec28b0c0d09924d9e509715e7874c9cadc38"
+      },
+      {
+        "path": "src/ecocommit/audit.py",
+        "sha256": "cb749a0c4ffd70864063b7d1b737b13562063c5af5f5a4a149722dc66c9c1405"
+      },
+      {
+        "path": "src/ecocommit/b8_provenance.py",
+        "sha256": "3b5a4094d7e6877bf412b74b8afc5c8e352de6ea72a824aae0af9fbb9abda7c3"
+      },
+      {
+        "path": "src/ecocommit/certificates.py",
+        "sha256": "4c9ac1d87dd2e1416be5e8a683e9e8235f6aa37807e2b3613053a7050f1eab77"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_a_evidence.py",
+        "sha256": "be92947f23468113c7e3004d3aaa2b25884ad02b9602408f8d4ec532b814898c"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_b_evidence.py",
+        "sha256": "4ea25b44bc48bda7761eb70c4702dd770625848ae0bb6376fb978c6d4370785f"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_b_integration.py",
+        "sha256": "2ba0ad110687ed8df0b28f6f3f354de2db9a4cbdffeb6865ff19453b50ad87a3"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_c_baselines.py",
+        "sha256": "d6b8a3b6f2ce2b2602bce793d4cb8ce1e0a2046fa7a5705a6b9c6fba7fdce8eb"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_c_final.py",
+        "sha256": "98c8dff1663dac9158fe8859ca567f9d6af40a587f1ca71efc85688667c8e443"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_c_metrics.py",
+        "sha256": "69107cc304da8a1c8ace8c080063251fd72d0735c034ec75534b0c842c422d68"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_c_models.py",
+        "sha256": "40563f6ba8e177bf2fa824f6f15d86a59df960b4c030716a5bcdbbba1a2f8421"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_c_runner.py",
+        "sha256": "11a02a4e30e97036e11c51e235331c0757217a2bcde4e069becb3cf8b5a00114"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_d_evidence.py",
+        "sha256": "17155f91aaebeb17323bff63177816441341e0aefe39364037ea29596603004f"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_d_workflow.py",
+        "sha256": "7cbf0e81a1e3c453642a4d2405ed0e982f7da927d8f709168fe558eb8863f156"
+      },
+      {
+        "path": "src/ecocommit/checkpoint_status.py",
+        "sha256": "0fe9a10591504bb55665f4a69309c65f7d50f88a4d8390983ea9b22723a7f566"
+      },
+      {
+        "path": "src/ecocommit/commitment.py",
+        "sha256": "1436327a61028581bb5fb290151b2f274f3f6eb7fbab396f3619902ddc5d4189"
+      },
+      {
+        "path": "src/ecocommit/contracts.py",
+        "sha256": "32fb069ec48c4b29ea4adf733c0e44c14b0a21faa254a037f7aa0ab47e46a112"
+      },
+      {
+        "path": "src/ecocommit/demo_server.py",
+        "sha256": "7aadb39f7226508d0ab56129896073881bb8897f048dc388ff71d3485e230f2d"
+      },
+      {
+        "path": "src/ecocommit/deployment.py",
+        "sha256": "5605b711b594c19102d5f120e81324226b000fd6bfbd08d139414f29ac125b15"
+      },
+      {
+        "path": "src/ecocommit/durable.py",
+        "sha256": "08b8628c5e739eb4a47d3ebf24376661c9f952ec35ca9baee3c6984ec6587c14"
+      },
+      {
+        "path": "src/ecocommit/evaluation.py",
+        "sha256": "01c2d53360fe40c58b456cdff1cf050648ab17298b2217facb4fdf2af4e85ead"
+      },
+      {
+        "path": "src/ecocommit/evidence.py",
+        "sha256": "5893171170c053d72f1dc1cc6eb258a7b9fce199073ba805cc866d49ddb2268a"
+      },
+      {
+        "path": "src/ecocommit/execution.py",
+        "sha256": "5096d693725e51063d81657fce74ba916c7735ec5b64b3366bd42f331c37e7ca"
+      },
+      {
+        "path": "src/ecocommit/exposure.py",
+        "sha256": "dadf9ecf5ed36ec05cfeaba52c9771149db2e87b1b381b3f1ebd9262f8af265a"
+      },
+      {
+        "path": "src/ecocommit/github_actions.py",
+        "sha256": "1720e4615aadcaad2313cb412717cad624bcb9fa2e4eb5d2989381481c97de77"
+      },
+      {
+        "path": "src/ecocommit/idempotency.py",
+        "sha256": "b8744f28e29a58db4f0d6b11638cc76da6cc66df4b73a4a3d4230f7b16ee8c41"
+      },
+      {
+        "path": "src/ecocommit/interpreter.py",
+        "sha256": "128ff5f83c6616517821d323924dd565af8de752b3cbf476c171d72aa1a04a6e"
+      },
+      {
+        "path": "src/ecocommit/observability.py",
+        "sha256": "acd918f708d9fb8d401b5092f8bbdf938c9042df1a81a9bec2847413fc7a88a0"
+      },
+      {
+        "path": "src/ecocommit/payments.py",
+        "sha256": "0d959b7244025b4c55ca90b82ea2e97e0a26676b19a20ebbec0a4961152c57d4"
+      },
+      {
+        "path": "src/ecocommit/policy.py",
+        "sha256": "b8be676dcb931935e3b5420fd337cc2d858c50c3d657146f9985db3d058f4eae"
+      },
+      {
+        "path": "src/ecocommit/razorpay.py",
+        "sha256": "d44716efe12607eb61e44030102a3c6fd8f90fdded6d83b75fe730f16ad98387"
+      },
+      {
+        "path": "src/ecocommit/razorpay_checkout.py",
+        "sha256": "579bc95567ba8289b6773a6b901766319116a6227cb8d1d6c7ddc80399754b7b"
+      },
+      {
+        "path": "src/ecocommit/reconciliation.py",
+        "sha256": "f37d4629e155041b515e4efde833cad1ca298ba0e8f6e5c39ac7da112ab638b0"
+      },
+      {
+        "path": "src/ecocommit/service.py",
+        "sha256": "ac766f6c4bd07128902f60bfe1928dde52cbf522a50eb34968e4ac9bddaa80ed"
+      },
+      {
+        "path": "src/ecocommit/validator.py",
+        "sha256": "ae82a8e0d96c2fe273b7c9e9a9eff8c66996323be237dc6a65bcda99d95c4a9f"
+      },
+      {
+        "path": "src/ecocommit/webhook.py",
+        "sha256": "0cf42fb6916c4f326e08e82889900f2a66af00ba71d91862154680f1b02be43a"
+      }
+    ],
+    "source_files_sha256": "faf69f4650e0988076a19c11d1ae18bdc7fc177bf73ebd335b257d0c7668ff94",
+    "runner_sha256": "e107a433beffe00b81c77eeaec058b823f74a53602ff336daa199ecd9c65cb32",
+    "offline_manifest_sha256": "1c2f62e912434a6ba130edaadaaf24551868c1bbf9a8abac4a0db3266b5b4215",
+    "binding_rule": "The implementation commit precedes this evidence-only preregistration commit, avoiding self-reference. Its exact runner/configuration hashes are frozen here. CI and provider/evaluation receipts must identify the public execution commit containing this preregistration. Runtime manifests add that execution revision and the fresh workflow ID/ref and therefore have their own real digests. Every non-source/non-workflow manifest field must equal this frozen manifest before any provider call."
+  },
+  "uniform_policy": {
+    "case_count": 80,
+    "max_completion_tokens": 2048,
+    "max_schema_corrections": 2,
+    "max_total_provider_attempts_per_case": 3,
+    "all_generation_and_correction_attempts_same_budget": true,
+    "first_schema_valid_output_terminal": true,
+    "correction_instruction_unchanged": true,
+    "transient_provider_errors": "Typed infrastructure deferrals; never semantic passes or failures; no workflow rerun or resume."
+  },
+  "timeout_preflight": {
+    "request_timeout_seconds": 60,
+    "max_total_attempts": 3,
+    "max_retry_delay_seconds_each": 15,
+    "maximum_retry_delays": 2,
+    "nominal_provider_envelope_seconds": 210,
+    "hard_case_process_deadline_seconds": 240,
+    "serial_evaluation_job_timeout_minutes": 360,
+    "eighty_case_deadline_sum_minutes": 320,
+    "job_setup_aggregation_upload_margin_minutes": 40,
+    "socket_timeout_is_not_wall_deadline": true,
+    "latency_from_retained_evidence": "Unavailable; no measured generation-latency claim.",
+    "completion_ceiling_support": "To be verified by an exact-source Groq preflight request with max_completion_tokens=2048 after public preregistration and green CI.",
+    "preflight": "One fresh manual non-benchmark health run, same endpoint/model/prompt/mode/cap, max three provider attempts and two schema corrections. Never scored as benchmark evidence. Retain measured elapsed time and provider metadata."
+  },
+  "anti_overfitting_rules": [
+    "No case-specific prompting, token limits or logic.",
+    "No gold-answer feedback, benchmark leakage or semantic-score-driven regeneration.",
+    "No retrying a schema-valid answer or replaying failed cases until pass.",
+    "No dataset, prompt, endpoint, model, reasoning, response-mode, schema, evaluator or threshold changes.",
+    "Candidate 1-4 evidence is historical and must not be resumed or rerun."
+  ],
+  "execution_contract": {
+    "trigger": "workflow_dispatch",
+    "maximum_fresh_evaluation_dispatches": 1,
+    "workflow_attempt": 1,
+    "case_order": "Existing frozen order: 50 clear cases, then 30 ambiguous cases.",
+    "scheduling_change": "Serial execution permits an automatic decision between every case without external status polling; it does not alter any semantic evaluation rule.",
+    "resume_forbidden": true,
+    "prerequisites": [
+      "Public source-bound preregistration",
+      "Green exact-source CI",
+      "Passing exact-source Candidate 5 provider health receipt"
+    ]
+  },
+  "decision_rules": {
+    "pass": "One complete 80-case aggregate must satisfy all four unchanged thresholds together. Only the existing strict aggregate verifier emits the typed A receipt.",
+    "stop": "Before dispatching the next case, stop if any conservative frozen-threshold upper bound is below its minimum. Preserve attempted rows, traces, manifest, preregistration, health receipt, incomplete aggregate and mathematical decision.",
+    "upper_bounds": [
+      "(retained_passes + missing)/80",
+      "(retained_validated + missing)/80",
+      "(retained_correct_validated + missing)/(retained_validated + missing), or zero if denominator is zero",
+      "(retained_correct_clarification_statuses + missing_ambiguous)/30"
+    ],
+    "incomplete": "Deferred cases remain unknown. Partial metrics are not interpreted as final scores or passing evidence. No score-recovery reruns."
+  },
+  "validation_before_registration": {
+    "focused_tests_passed": 38,
+    "full_repository_tests_passed": 486,
+    "provider_calls": 0,
+    "python_compilation_passed": true,
+    "dependency_check_passed": true,
+    "git_diff_check_passed": true
+  },
+  "preregistration_sha256": "8f2e8c56f929b90c8597a637de6fd38098b724837da2352ce1c8e693c4fc3958"
+}

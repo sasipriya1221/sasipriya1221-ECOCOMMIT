@@ -13,7 +13,7 @@ Status vocabulary is strict:
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 PREPARED OFFLINE / NOT RUN; NOT PASSED** | Freeze and publish Candidate 5 preregistration with real implementation hashes, obtain green exact-source CI and provider preflight, then dispatch exactly one fresh manual 80-case evaluation. A typed A receipt exists only if all four unchanged gates pass. |
+| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 PREREGISTERED / NOT RUN; NOT PASSED** | Publish the frozen Candidate 5 preregistration, obtain green exact-source CI and provider preflight, then dispatch exactly one fresh manual 80-case evaluation. A typed A receipt exists only if all four unchanged gates pass. |
 | B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | A passing typed A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
@@ -101,7 +101,7 @@ No further Groq retry is justified for Candidate 3. Re-running terminal failures
 
 Candidate 4 is explicitly retired in `evidence/checkpoint-a-candidate-4-retirement.json`. Its historical preregistration at source `d7c1acf9c1762a63f50cbf8b120083e956307b92` is preserved byte-for-byte. Source-filtered public Actions history contains only successful offline CI `33740496666` and independent reproduction `33740536540`; there was no Candidate 4 provider/preflight/evaluation run.
 
-### Candidate 5 — prepared offline, awaiting public preregistration and live gates
+### Candidate 5 — preregistered, awaiting public-source CI and provider gates
 
 Candidate 5 (`A-CANDIDATE-5`) introduces **UNIFORM_OUTPUT_BUDGET_REMEDIATION** after a zero-provider-call audit of retained Candidate 3 artifact `9875163068`. The downloaded archive and result JSON exactly match the published hashes above. `evidence/checkpoint-a-candidate-5-offline-audit.json` retains the nine relevant rows, provider traces, exact failure descriptions and timeout audit.
 
@@ -120,7 +120,9 @@ To enforce the user's immediate mathematical-stop requirement without status pol
 
 Timeout audit: three 60-second request allowances plus at most two 15-second retry sleeps give a nominal 210-second envelope. The old eight-minute case job had 270 seconds of nominal setup/teardown margin, but a socket timeout is not a hard wall-clock bound. Candidate 5 adds a uniform 240-second case-process deadline. The serial evaluation job has 360 minutes: 80 hard case deadlines require at most 320 minutes, leaving 40 minutes for setup, process overhead, aggregation and artifact upload. A deadline is an infrastructure deferral, never a semantic pass. The 60-second request timeout remains unchanged; retained traces contain no latency measurements. A full 2,048-token completion would require approximately 34.14 tokens/s before overhead, so provider availability/latency is still an external preflight condition.
 
-Validation: **38 focused regressions passed** and the complete repository gate passed **486/486 tests**. Coverage includes budget, bounded correction, terminality, namespace, manifest and automatic stop. Dependency consistency, Python compilation and whitespace checks passed. Hosted CI will perform the required JavaScript and clean-source checks. Final preregistration binding is pending. Provider calls during audit and preparation: **zero**. No B8/C/D live work was performed.
+Validation: **38 focused regressions passed** and the complete repository gate passed **486/486 tests**. Coverage includes budget, bounded correction, terminality, namespace, manifest and automatic stop. Dependency consistency, Python compilation and whitespace checks passed. Hosted CI will perform the required JavaScript and clean-source checks. Candidate 5 preregistration has been frozen before any provider call at `evidence/checkpoint-a-candidate-5-preregistration.json`. Provider calls during audit and preparation: **zero**. No B8/C/D live work was performed.
+
+Implementation source: `af12143d7ac41a02eb774a12b4ff74709cdc4e76`. Runner SHA-256: `e107a433beffe00b81c77eeaec058b823f74a53602ff336daa199ecd9c65cb32`. Offline frozen manifest SHA-256: `1c2f62e912434a6ba130edaadaaf24551868c1bbf9a8abac4a0db3266b5b4215`. Canonical preregistration SHA-256: `8f2e8c56f929b90c8597a637de6fd38098b724837da2352ce1c8e693c4fc3958`. The evidence-only registration commit necessarily follows the implementation commit; runtime receipts bind their exact public execution revision/run and retain these frozen configuration/runner hashes. No CI, provider readiness, evaluation result or A pass is claimed yet for this new source.
 
 **Checkpoint A remains BLOCKED / NOT PASSED.**
 
