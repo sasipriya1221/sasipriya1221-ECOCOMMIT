@@ -1,0 +1,55 @@
+{
+  "evidence_schema_version": "A.FAILURE.1",
+  "candidate_version": "A-CANDIDATE-3",
+  "source_revision": "fd26a52a21dc8431133c50be76d7d1ecaf0d099b",
+  "workflow_run_id": "33590028177",
+  "workflow_attempt": 11,
+  "manifest_sha256": "773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934",
+  "aggregate_artifact": {
+    "id": "9875163068",
+    "name": "checkpoint-a-candidate-3-results-attempt-11",
+    "github_archive_sha256": "e92787fc2dae0023b6c7fa0a1240f606e3a948fbca6b7f6ef22e27c9e8fddaa6",
+    "aggregate_json_sha256": "e1b2afd0fdc9bccd05f8dbbe492f59845be170f03246f7646c8ab1fbfc8d0f33"
+  },
+  "frozen_acceptance": {
+    "dataset_count": 80,
+    "case_pass_rate_min": 0.9,
+    "selective_semantic_reliability_min": 0.95,
+    "autonomous_coverage_min": 0.55,
+    "ambiguous_clarification_accuracy_min": 0.8
+  },
+  "retained_result": {
+    "terminal_rows": 32,
+    "passed_rows": 23,
+    "failed_rows": 9,
+    "missing_rows": 48,
+    "full_frozen_gate_run": false,
+    "checkpoint_a_gate_passed": false,
+    "typed_a_receipt_present": false,
+    "failed_case_ids": [
+      "C004",
+      "C011",
+      "C012",
+      "C013",
+      "C014",
+      "C019",
+      "C024",
+      "C033",
+      "A002"
+    ]
+  },
+  "mathematical_elimination": {
+    "minimum_required_passes": 72,
+    "maximum_possible_passes_if_all_missing_cases_pass": 71,
+    "maximum_possible_case_pass_rate": 0.8875,
+    "reason": "Nine terminal failures are already retained. Even if every one of the 48 missing cases passed, Candidate 3 could reach only 71/80, below the unchanged 72/80 minimum required by the frozen 90% case-pass criterion."
+  },
+  "conclusion": "FAILED",
+  "promotion_allowed": false,
+  "rerun_can_change_conclusion": false,
+  "notes": [
+    "No threshold, dataset, prompt, model/provider configuration, schema, or evaluator change is authorized by this evidence record.",
+    "Provider-deferred missing cases are not converted into failures; they are included only in the best-case upper-bound calculation.",
+    "The absence of a typed A receipt is expected because the frozen gate did not pass."
+  ]
+}
