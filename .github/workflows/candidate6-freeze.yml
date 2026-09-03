@@ -1,4 +1,4 @@
-name: Candidate 6 - Freeze and Holdout Handoff
+name: Candidate 6 - Freeze Gate
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ on:
         type: string
 
 concurrency:
-  group: candidate6-freeze-and-holdout-handoff
+  group: candidate6-freeze-gate
   cancel-in-progress: false
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
-      actions: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
         with:
@@ -164,6 +164,7 @@ jobs:
         run: |
           import base64, json, os
           from pathlib import Path
+          from urllib.error import HTTPError
           from urllib.request import Request, urlopen
 
           repo = os.environ['GITHUB_REPOSITORY']
@@ -183,9 +184,8 @@ jobs:
               raise SystemExit('Candidate-6 branch moved during freeze; commit refused')
           try:
               request_json('GET', '/contents/evidence/candidate6-freeze-receipt.json?ref=candidate6-internal-qualification')
-          except Exception as exc:
-              from urllib.error import HTTPError
-              if not isinstance(exc, HTTPError) or exc.code != 404:
+          except HTTPError as exc:
+              if exc.code != 404:
                   raise
           else:
               raise SystemExit('freeze receipt already exists; duplicate freeze refused')
@@ -199,38 +199,6 @@ jobs:
           commit_sha = result['commit']['sha']
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
               fh.write('receipt_commit_sha=' + commit_sha + '\n')
-
-      - name: Dispatch sealed holdout exactly once
-        shell: python
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RECEIPT_COMMIT_SHA: ${{ steps.commit_freeze.outputs.receipt_commit_sha }}
-        run: |
-          import json, os
-          from urllib.request import Request, urlopen
-
-          repo = os.environ['GITHUB_REPOSITORY']
-          token = os.environ['GH_TOKEN']
-          base = 'https://api.github.com/repos/' + repo
-          def get(path):
-              req = Request(base + path, headers={'Accept': 'application/vnd.github+json'})
-              req.add_unredirected_header('Authorization', 'Bearer ' + token)
-              with urlopen(req, timeout=30) as response:
-                  if response.geturl() != req.full_url:
-                      raise SystemExit('GitHub evidence redirect rejected')
-                  return json.load(response)
-          runs = get('/actions/workflows/candidate6-holdout-dispatch.yml/runs?per_page=1')
-          if runs.get('total_count', 0) != 0:
-              raise SystemExit('holdout dispatcher already has run history; duplicate dispatch refused')
-          payload = json.dumps({
-              'ref': 'main',
-              'inputs': {'candidate_ref': os.environ['RECEIPT_COMMIT_SHA']},
-          }, separators=(',', ':')).encode()
-          req = Request(base + '/actions/workflows/candidate6-holdout-dispatch.yml/dispatches', data=payload, headers={'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST')
-          req.add_unredirected_header('Authorization', 'Bearer ' + token)
-          with urlopen(req, timeout=30) as response:
-              if response.geturl() != req.full_url or response.status != 204:
-                  raise SystemExit('holdout dispatch failed')
 
       - name: Preserve freeze transition evidence
         if: always()
