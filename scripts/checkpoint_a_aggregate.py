@@ -91,6 +91,7 @@ def main() -> int:
         max_completion_tokens=provider_config.get("max_completion_tokens"),
         use_json_schema=provider_config.get("json_schema"),
         max_attempts=provider_config.get("max_attempts", 1),
+        max_schema_corrections=provider_config.get("max_schema_corrections", 1),
         max_retry_delay=provider_config.get("max_retry_delay_seconds", 0),
         max_response_bytes=provider_config.get("max_response_bytes", 1_048_576),
     )
