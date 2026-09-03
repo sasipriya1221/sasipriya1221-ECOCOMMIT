@@ -27,10 +27,11 @@ class OfficialCounts:
 
 
 def _valid(c: OfficialCounts) -> bool:
-    # Under the frozen evaluator, a semantically correct clear case is necessarily
-    # VALIDATED/autonomous and a semantically correct ambiguous case is necessarily
-    # CLARIFICATION_REQUIRED/non-autonomous. Therefore successful cases partition
-    # exactly into correct_autonomous + ambiguous_correct.
+    # Frozen Checkpoint A counts clarification accuracy from validator status alone.
+    # An ambiguous row can therefore count as a correct clarification while still
+    # failing the case-level semantic/structure checks. Every passing clear row is
+    # a correct autonomous row, while every passing ambiguous row is included in
+    # ambiguous_correct. This yields the exact observable inequalities below.
     return (
         c.total == c.clear_total + c.ambiguous_total
         and c.processed == c.clear_processed + c.ambiguous_processed
@@ -39,7 +40,7 @@ def _valid(c: OfficialCounts) -> bool:
         and 0 <= c.processed <= c.total
         and 0 <= c.correct_autonomous <= c.clear_processed
         and 0 <= c.ambiguous_correct <= c.ambiguous_processed
-        and c.case_passes == c.correct_autonomous + c.ambiguous_correct
+        and c.correct_autonomous <= c.case_passes <= c.correct_autonomous + c.ambiguous_correct
         and 0 <= c.correct_autonomous <= c.autonomous <= c.processed
     )
 
@@ -47,12 +48,13 @@ def _valid(c: OfficialCounts) -> bool:
 def optimistic_completion(c: OfficialCounts, t: OfficialThresholds = OfficialThresholds()) -> OfficialCounts | None:
     """Return the exact optimistic jointly feasible completion, or None.
 
-    Clear gold cases are optimistically completed as correct autonomous responses.
-    Ambiguous gold cases are optimistically completed as correct clarifications. If the
-    coverage threshold still cannot be met, the minimum number of remaining ambiguous
-    cases is converted to autonomous responses. Those conversions necessarily lose a
-    case pass and an ambiguity-correct result and cannot be correct autonomous results.
-    No other future outcome can improve any required metric relative to this completion.
+    Clear gold cases are optimistically completed as case-passing correct autonomous
+    responses. Ambiguous gold cases are optimistically completed as case-passing
+    correct clarifications. If coverage still cannot be met, the minimum number of
+    remaining ambiguous cases is converted to autonomous responses. Those conversions
+    necessarily lose both a potential case pass and an ambiguity-correct result and
+    cannot improve correct-autonomous reliability. No other future outcome improves
+    any required metric relative to this completion.
     """
     if not _valid(c):
         return None
