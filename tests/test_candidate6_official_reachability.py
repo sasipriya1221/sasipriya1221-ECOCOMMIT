@@ -16,7 +16,7 @@ def _observed_state_valid(c: OfficialCounts) -> bool:
         and 0 <= c.ambiguous_processed <= c.ambiguous_total
         and 0 <= c.correct_autonomous <= c.clear_processed
         and 0 <= c.ambiguous_correct <= c.ambiguous_processed
-        and c.case_passes == c.correct_autonomous + c.ambiguous_correct
+        and c.correct_autonomous <= c.case_passes <= c.correct_autonomous + c.ambiguous_correct
         and 0 <= c.correct_autonomous <= c.autonomous <= c.processed
     )
 
@@ -27,8 +27,9 @@ def _brute_reachable(c: OfficialCounts, t: OfficialThresholds) -> bool:
     clear_remaining = c.clear_total - c.clear_processed
     ambiguous_remaining = c.ambiguous_total - c.ambiguous_processed
     # Clear future rows: 0=fail/non-autonomous, 1=correct autonomous.
-    # Ambiguous future rows: 0=fail/non-autonomous, 1=correct clarification,
-    # 2=autonomous wrong. Dominated alternatives need not be represented.
+    # Ambiguous future rows: 0=fail/non-autonomous, 1=case-passing correct
+    # clarification, 2=autonomous wrong. Other outcomes are dominated when
+    # asking only whether any threshold-satisfying completion exists.
     for clear_outcomes in product(range(2), repeat=clear_remaining):
         for ambiguous_outcomes in product(range(3), repeat=ambiguous_remaining):
             clear_correct = sum(x == 1 for x in clear_outcomes)
@@ -78,6 +79,15 @@ def test_existing_wrong_autonomous_case_cannot_be_repaired_when_reliability_is_u
         case_passes=9, autonomous=7, correct_autonomous=6, ambiguous_correct=3,
     )
     assert reachable(c, OfficialThresholds()) is False
+
+
+def test_clarification_status_can_exceed_ambiguous_case_passes():
+    c = OfficialCounts(
+        total=4, clear_total=2, ambiguous_total=2,
+        processed=2, clear_processed=1, ambiguous_processed=1,
+        case_passes=1, autonomous=1, correct_autonomous=1, ambiguous_correct=1,
+    )
+    assert _observed_state_valid(c)
 
 
 def test_exact_bound_matches_bruteforce_for_small_states():
