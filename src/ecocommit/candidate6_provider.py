@@ -101,6 +101,27 @@ class GroqSemanticIRProvider:
             "usage": safe_usage,
         }
 
+    @staticmethod
+    def _safe_http_metadata(raw: bytes, headers: Any) -> dict[str, Any]:
+        meta: dict[str, Any] = {"error_body_sha256": sha256(raw).hexdigest()}
+        retry_after = headers.get("Retry-After") if headers else None
+        try:
+            if retry_after is not None:
+                value = max(0.0, float(retry_after))
+                meta["retry_after_seconds"] = min(value, 3600.0)
+        except (TypeError, ValueError):
+            pass
+        try:
+            body = strict_json_loads(raw.decode("utf-8"))
+            error_obj = body.get("error") if isinstance(body, dict) else None
+            if isinstance(error_obj, dict):
+                kind = error_obj.get("type") or error_obj.get("code")
+                if isinstance(kind, str):
+                    meta["provider_error_type"] = kind[:120]
+        except Exception:
+            pass
+        return meta
+
     def _request(self, payload: dict[str, Any], attempt: int) -> dict[str, Any]:
         req = request.Request(
             f"{self.base_url}/chat/completions",
@@ -125,11 +146,13 @@ class GroqSemanticIRProvider:
             return body
         except error.HTTPError as exc:
             try:
-                exc.read(self.MAX_RESPONSE_BYTES + 1)
+                raw = exc.read(self.MAX_RESPONSE_BYTES + 1)
             except Exception:
-                pass
+                raw = b""
             retryable = exc.code == 429 or 500 <= exc.code <= 599
-            raise ProviderRequestError(f"HTTP_{exc.code}", attempts=attempt, transient=retryable) from exc
+            provider_exc = ProviderRequestError(f"HTTP_{exc.code}", attempts=attempt, transient=retryable)
+            provider_exc.safe_http_metadata = self._safe_http_metadata(raw, exc.headers)
+            raise provider_exc from exc
         except (error.URLError, TimeoutError) as exc:
             raise ProviderRequestError("TRANSPORT_ERROR", attempts=attempt, transient=True) from exc
 
@@ -151,6 +174,10 @@ class GroqSemanticIRProvider:
             "max_completion_tokens": self.max_completion_tokens,
             "messages": base_messages,
             "response_format": {"type": "json_object"},
+            # Candidate-6 preregistration requires Qwen non-reasoning mode. Groq
+            # otherwise defaults Qwen 3.6 to reasoning, which can conflict with
+            # JSON mode and produce HTTP 400 depending on reasoning formatting.
+            "reasoning_effort": "none",
         }
         trace: list[dict[str, Any]] = []
         corrections = 0
@@ -159,9 +186,12 @@ class GroqSemanticIRProvider:
             try:
                 body = self._request(payload, attempt)
             except ProviderRequestError as exc:
-                trace.append({"attempt": attempt, "outcome": "provider_error", "code": exc.code, "transient": exc.transient})
+                safe_meta = getattr(exc, "safe_http_metadata", {})
+                trace.append({"attempt": attempt, "outcome": "provider_error", "code": exc.code, "transient": exc.transient, **safe_meta})
                 if exc.transient and attempt < self.max_attempts:
-                    time.sleep(min(self.max_retry_delay, 2 ** (attempt - 1)))
+                    provider_delay = float(safe_meta.get("retry_after_seconds", 0.0) or 0.0)
+                    exponential = min(8.0, 2 ** (attempt - 1))
+                    time.sleep(min(self.max_retry_delay, max(exponential, provider_delay)))
                     attempt += 1
                     continue
                 raise ProviderRequestError(exc.code, attempts=attempt, transient=exc.transient, provider_trace=trace) from exc
