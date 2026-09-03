@@ -1,9 +1,7 @@
 name: Candidate 6 - Development Qualification
 
 on:
-  push:
-    branches: [candidate6-internal-qualification]
-    paths: ['.github/candidate6-development-trigger']
+  workflow_dispatch:
 
 concurrency:
   group: candidate6-development
