@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 import pytest
+from pydantic import ValidationError
 
 from ecocommit.candidate6 import action_authorized
 from ecocommit.qualification import QualificationCounts, reachable
@@ -158,3 +159,14 @@ def test_reliability_reachability_uses_only_minimum_needed_autonomous_rows():
 def test_zero_safety_error_is_immediately_unreachable():
     c = QualificationCounts(total=60, processed=1, case_passes=1, autonomous=1, correct_autonomous=1, ambiguous_total=0, ambiguous_processed=0, ambiguous_correct=0, fail_open=1)
     assert not reachable(c)
+
+
+def test_reference_fields_reject_prose_instead_of_ids():
+    with pytest.raises(ValidationError):
+        Action(id="A1", kind="BUY", object="archive boxes", source=src("Buy archive boxes"))
+    with pytest.raises(ValidationError):
+        Predicate(id="P1", kind="STATE", subject="warehouse", operator="EQ", value="low", source=src("warehouse"))
+    with pytest.raises(ValidationError):
+        Guard(id="G1", action="buy action", expr=Atom(op="ATOM", predicate="P1"), source=src("if approved"))
+    with pytest.raises(ValidationError):
+        Atom(op="ATOM", predicate="approval")
