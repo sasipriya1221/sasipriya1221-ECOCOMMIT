@@ -25,22 +25,33 @@ def test_development_provider_incomplete_waits_without_semantic_failure():
 
 
 def test_fail_and_blocked_are_fail_closed():
-    assert decide("checkpoint_a", signed(status="FAILED")).action == "STOP"
-    assert decide("checkpoint_b", signed(status="BLOCKED")).action == "STOP"
+    assert decide("checkpoint_a", signed(stage="checkpoint_a", status="FAILED")).action == "STOP"
+    assert decide("checkpoint_b", signed(stage="checkpoint_b", status="BLOCKED")).action == "STOP"
 
 
 def test_missing_receipt_fails_closed():
     assert decide("development", None).reason == "MISSING_RECEIPT"
 
 
+def test_unsigned_receipt_fails_closed():
+    decision = decide("checkpoint_a", {"stage": "checkpoint_a", "status": "PASS"})
+    assert decision.action == "STOP"
+    assert decision.reason == "INVALID_RECEIPT_HASH"
+
+
 def test_invalid_hash_fails_closed():
-    receipt = signed(status="PASS")
+    receipt = signed(stage="checkpoint_a", status="PASS")
     receipt["receipt_sha256"] = "0" * 64
     assert decide("checkpoint_a", receipt).reason == "INVALID_RECEIPT_HASH"
 
 
+def test_receipt_stage_mismatch_fails_closed():
+    receipt = signed(stage="checkpoint_b", status="PASS")
+    assert decide("checkpoint_a", receipt).reason == "RECEIPT_STAGE_MISMATCH"
+
+
 def test_human_action_required_stops_automation():
-    receipt = signed(status="PASS", human_action_required=True)
+    receipt = signed(stage="checkpoint_b", status="PASS", human_action_required=True)
     assert decide("checkpoint_b", receipt).action == "STOP_HUMAN"
 
 
@@ -93,3 +104,14 @@ def test_holdout_nonzero_safety_error_stops():
         },
     )
     assert decide("holdout", receipt).action == "STOP"
+
+
+def test_downstream_pass_receipts_are_stage_typed_and_signed():
+    for stage, expected in (
+        ("checkpoint_a", "ADVANCE_B"),
+        ("checkpoint_b", "ADVANCE_C"),
+        ("checkpoint_c", "ADVANCE_D"),
+        ("checkpoint_d", "ADVANCE_E"),
+        ("checkpoint_e", "COMPLETE"),
+    ):
+        assert decide(stage, signed(stage=stage, status="PASS")).action == expected
