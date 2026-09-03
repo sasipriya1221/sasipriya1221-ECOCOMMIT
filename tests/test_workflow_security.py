@@ -55,7 +55,12 @@ def test_inline_credentialed_http_preflights_do_not_forward_auth_on_redirects():
         assert ".geturl()" in text, path.name
         assert ".full_url" in text, path.name
 
-    assert credentialed == ["checkpoint-a-live.yml", "provider-preflight.yml", "razorpay-test-preflight.yml"]
+    assert credentialed == [
+        "candidate6-freeze.yml",
+        "checkpoint-a-live.yml",
+        "provider-preflight.yml",
+        "razorpay-test-preflight.yml",
+    ]
 
 
 def test_secret_bearing_workflows_require_explicit_manual_dispatch():
@@ -80,6 +85,16 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
         "razorpay-test-lifecycle.yml",
         "razorpay-test-preflight.yml",
     ]
+
+
+def test_candidate6_freeze_workflow_is_manual_and_has_no_provider_or_payment_secret():
+    workflow = (WORKFLOWS / "candidate6-freeze.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert re.search(r"(?m)^  workflow_dispatch:\s*$", trigger_block)
+    assert "secrets." not in workflow
+    assert "ECOCOMMIT_LLM_API_KEY" not in workflow
+    assert "RAZORPAY" not in workflow
+    assert "candidate6-holdout-dispatch.yml/dispatches" in workflow
 
 
 def test_offline_regression_covers_every_change_and_static_checks():
