@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,24 @@ class Decision:
 def canonical_sha256(value: Any) -> str:
     raw = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def extract_checked_out_sha(log_text: str) -> str:
+    """Extract the unique checkout HEAD printed immediately after git log -1 --format=%H."""
+    lines = log_text.splitlines()
+    matches: list[str] = []
+    for index, line in enumerate(lines):
+        if "git log -1 --format=%H" not in line:
+            continue
+        for following in lines[index + 1:index + 4]:
+            match = re.search(r"(?:^|\s)([0-9a-f]{40})(?:\s|$)", following)
+            if match:
+                matches.append(match.group(1))
+                break
+    unique = sorted(set(matches))
+    if len(unique) != 1:
+        raise ValueError("development checkout SHA is not uniquely proven by job log")
+    return unique[0]
 
 
 def _valid_receipt_envelope(receipt: dict[str, Any]) -> bool:
