@@ -13,8 +13,8 @@ Status vocabulary is strict:
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE; Candidate 3 INCOMPLETE; NOT PASSED** | A complete frozen 80-case Candidate 3 aggregate satisfying all four unchanged thresholds plus a typed A receipt |
-| B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | Passing A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
+| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; NOT PASSED** | No retry of Candidates 1–3 can satisfy the frozen gate. A future path requires a new, explicitly preregistered and technically justified candidate/protocol; no threshold lowering, retrospective evidence rewrite, or retry-until-lucky promotion is allowed. |
+| B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | A passing typed A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
 | E — repository/submission readiness | **PUBLIC MAIN + OFFLINE CI + APACHE-2.0 + INDEPENDENT REPRODUCTION RETAINED; NOT PASSED** | A–D final evidence, final source-bound screenshots, and final five-minute video |
@@ -59,38 +59,45 @@ Run `33556907712` used an earlier protocol that automatically filled omitted `ma
 
 Candidate 2 ran as `33583323178`. Attempts 1 and 2 remained incomplete and exposed a provider/correction resumability defect; a later public attempt did not convert the run into eligible evidence. Candidate 2 has no passing receipt and will not be resumed into a pass.
 
-### Candidate 3 — latest retained truth
+### Candidate 3 — mathematically failed
 
-Candidate 3 (`A-CANDIDATE-3`) changes only execution classification/resumability and artifact namespacing. It keeps the frozen dataset, prompt, provider/model configuration, schema, evaluator, and thresholds unchanged.
+Candidate 3 (`A-CANDIDATE-3`) changed only execution classification/resumability and artifact namespacing. It kept the frozen dataset, prompt, provider/model configuration, schema, evaluator, and thresholds unchanged.
 
 Public Candidate 3 workflow:
 
 - run: `33590028177`;
 - candidate source: `fd26a52a21dc8431133c50be76d7d1ecaf0d099b`;
+- evidence-bearing terminal attempt: **11**;
 - manifest SHA-256: `773cb2efef42c0b94491cb599cb5e0d0a361722fec566ba90fac9e595ee51934`;
-- latest retained aggregate artifact: `9857872102` (`checkpoint-a-candidate-3-results-attempt-10`);
-- GitHub-published archive SHA-256: `917e74372b46f7727b565b335f4a6f23427b9f718d7948d137dcea8b304d900d`;
-- independently read aggregate JSON SHA-256: `a5b807d02d69283e5e14c209661f8f2e4e027e0abe55e276e3d46032dcf0f723`.
+- retained aggregate artifact: `9875163068` (`checkpoint-a-candidate-3-results-attempt-11`);
+- GitHub-published archive SHA-256: `e92787fc2dae0023b6c7fa0a1240f606e3a948fbca6b7f6ef22e27c9e8fddaa6`;
+- independently read aggregate JSON SHA-256: `e1b2afd0fdc9bccd05f8dbbe492f59845be170f03246f7646c8ab1fbfc8d0f33`; and
+- retained failure record: `evidence/checkpoint-a-candidate-3-failure.json`.
 
-The attempt-10 cumulative aggregate is still incomplete:
+The attempt-11 cumulative aggregate remains incomplete but is already mathematically decisive:
 
-- terminal rows: **18**;
-- passed rows: **12**;
-- failed rows: **6**;
-- missing cases: **62**;
+- terminal rows: **32**;
+- passed rows: **23**;
+- failed rows: **9**;
+- missing cases: **48**;
 - `full_frozen_gate_run=false`;
 - `checkpoint_a_gate.passed=false`;
 - typed A receipt: **absent**.
 
-The 12 passing rows are `C001`, `C002`, `C003`, `C005`, `C006`, `C007`, `C008`, `C009`, `C010`, `C038`, `A003`, and `A004`.
+The 23 passing rows are `C001`, `C002`, `C003`, `C005`, `C006`, `C007`, `C008`, `C009`, `C010`, `C028`, `C030`, `C031`, `C038`, `C047`, `C050`, `A001`, `A003`, `A004`, `A006`, `A008`, `A011`, `A013`, and `A029`.
 
-The six retained failures are `C004`, `C011`, `C012`, `C019`, `C024`, and `A002`. `C004`, `C011`, and `C012` exhausted bounded correction with an invalid trailing clause; `C019` and `C024` matched the expected validator state but failed one frozen required check; `A002` reached `CLARIFICATION_REQUIRED` as expected but failed the frozen dependency condition.
+The nine retained failures are `C004`, `C011`, `C012`, `C013`, `C014`, `C019`, `C024`, `C033`, and `A002`.
 
-For the **case-pass criterion alone**, Candidate 3 is not yet mathematically eliminated: if every missing case passed, the maximum would be **74/80 = 92.5%**. However, with six failures already retained, only two additional failures can occur while still reaching the 72/80 minimum. No partial metric is promoted as a final score.
+- `C004`, `C011`, `C012`, `C013`, and `C014` exhausted bounded correction with an incomplete trailing clause and are terminal schema failures under the frozen candidate.
+- `C019` and `C024` matched the expected validator state but failed one frozen required semantic check.
+- `C033` failed the frozen exception-preservation requirement and was rejected instead of validated.
+- `A002` reached `CLARIFICATION_REQUIRED` as expected but failed the frozen dependency condition.
 
-The retry contract requires a fresh, digest-bound healthy-provider observation no more than 30 minutes old before another provider-consuming continuation. The latest aggregate is older than that window and does not itself prove current provider health. Therefore no new Groq retry is dispatched merely because run `33590028177` is terminal.
+The frozen 90% case-pass criterion requires at least **72/80** passing cases. Candidate 3 already has **9 immutable terminal failures**. Even if every one of the remaining 48 cases passed, the best possible result would be **71/80 = 88.75%**. Candidate 3 is therefore permanently **FAILED** on the case-pass criterion alone; completing the missing provider-deferred cases cannot change that conclusion.
 
-**Checkpoint A remains BLOCKED / NOT PASSED.**
+No further Groq retry is justified for Candidate 3. Re-running terminal failures until a different stochastic answer appears would discard retained evidence and convert the benchmark into retry-until-lucky score recovery. Changing the frozen thresholds, dataset, prompt, provider/model configuration, schema, or evaluator would also invalidate the existing preregistered gate rather than make Candidate 3 pass.
+
+**Checkpoint A is definitively NOT PASSED under the current frozen protocol.**
 
 ---
 
@@ -98,7 +105,7 @@ The retry contract requires a fresh, digest-bound healthy-provider observation n
 
 B1–B7 remain locally validated: policy mapping, authoritative evidence, exposure, progressive commitment, TOCTOU protection, certificates, idempotency/reconciliation, and compensation fail closed under adversarial tests.
 
-The A→B boundary requires a typed A receipt bound to Candidate 3, the frozen dataset/thresholds, aggregate/manifest/source digests, and exact evidence reference. Production code refuses caller-created pass strings and test-fixture receipts.
+The A→B boundary requires a legitimate typed A pass receipt bound to its preregistered dataset/thresholds, aggregate/manifest/source digests, and exact evidence reference. Production code refuses caller-created pass strings and test-fixture receipts. Candidate 3 cannot supply that receipt because it is mathematically failed.
 
 ### Retained Razorpay Test evidence
 
@@ -121,7 +128,7 @@ Public `main` at `36bd3b28cafcb915c41e07e792550e33fd0a54a1` implements the requi
 
 Exact-source Offline Regression run `33663013490` passed that implementation with **471/471 tests**.
 
-The historical authorization cannot be salvaged. A **fresh post-fix Test lifecycle** is required. No fresh order, authorization, capture, refund, webhook, reconciliation, settlement, Live Mode call, or real-money action is claimed here.
+The historical authorization cannot be salvaged. A **fresh post-fix Test lifecycle** is required after a legitimate passing A receipt exists. No fresh order, authorization, capture, refund, webhook, reconciliation, settlement, Live Mode call, or real-money action is claimed here.
 
 **Checkpoint B remains BLOCKED / NOT PASSED.**
 
