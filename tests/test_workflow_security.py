@@ -71,6 +71,7 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
 
     assert credentialed == [
         "candidate6-development-dispatch.yml",
+        "candidate6-holdout-dispatch.yml",
         "checkpoint-a-live.yml",
         "checkpoint-a-qwen-smoke.yml",
         "checkpoint-a-smoke.yml",
