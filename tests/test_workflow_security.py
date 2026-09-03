@@ -57,6 +57,7 @@ def test_inline_credentialed_http_preflights_do_not_forward_auth_on_redirects():
 
     assert credentialed == [
         "candidate6-freeze.yml",
+        "candidate6-supervisor.yml",
         "checkpoint-a-live.yml",
         "provider-preflight.yml",
         "razorpay-test-preflight.yml",
@@ -95,6 +96,21 @@ def test_candidate6_freeze_workflow_is_manual_and_has_no_provider_or_payment_sec
     assert "ECOCOMMIT_LLM_API_KEY" not in workflow
     assert "RAZORPAY" not in workflow
     assert "candidate6-holdout-dispatch.yml/dispatches" in workflow
+
+
+def test_candidate6_supervisor_is_minimal_scheduled_fail_closed_and_duplicate_safe():
+    workflow = (WORKFLOWS / "candidate6-supervisor.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert re.search(r"(?m)^  workflow_dispatch:\s*$", trigger_block)
+    assert re.search(r"(?m)^  schedule:\s*$", trigger_block)
+    assert "candidate6-fail-closed-supervisor" in workflow
+    assert "cancel-in-progress: false" in workflow
+    assert "secrets." not in workflow
+    assert "ECOCOMMIT_LLM_API_KEY" not in workflow
+    assert "RAZORPAY" not in workflow
+    assert "freeze workflow already has history; automatic duplicate dispatch refused" in workflow
+    assert "HOLDOUT_ALREADY_HAS_HISTORY" in workflow
+    assert "candidate6_supervisor_decision" in workflow
 
 
 def test_offline_regression_covers_every_change_and_static_checks():
