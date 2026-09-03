@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from dataclasses import asdict
@@ -8,6 +9,7 @@ from pathlib import Path
 
 from ecocommit.candidate6 import Candidate6Result
 from ecocommit.candidate6_evaluator import aggregate, score_case
+from ecocommit.candidate6_freeze import verify_freeze_receipt
 from ecocommit.candidate6_provider import GroqSemanticIRProvider, SemanticIRSchemaError
 from ecocommit.interpreter import ProviderRequestError
 from ecocommit.semantic_compiler import ConservationError, compile_contract
@@ -23,8 +25,6 @@ def _result_from_ir(instruction, ir):
         contract, _, blocked = compile_contract(ir, instruction)
         return Candidate6Result("CLARIFICATION_REQUIRED" if blocked else "COMPILED", contract, ir, frozenset(blocked))
     except (SemanticValidationError, ConservationError, ValueError) as exc:
-        # Retain the schema-valid IR for evidence and safety diagnostics even when
-        # deterministic validation rejects it. No provider retry follows.
         return Candidate6Result("REJECTED", None, ir, frozenset(), str(exc))
 
 
@@ -39,10 +39,10 @@ def run(mode: str, output_dir: Path) -> int:
         if not receipt_path.exists():
             raise SystemExit("holdout is sealed until Candidate-6 freeze receipt exists")
         receipt = _load(receipt_path)
-        if receipt.get("freeze_state") != "IMPLEMENTATION_FROZEN_BEFORE_HOLDOUT":
-            raise SystemExit("invalid Candidate-6 freeze receipt")
-        if receipt.get("holdout_provider_calls_before_freeze") != 0 or receipt.get("official_benchmark_calls_before_freeze") != 0:
-            raise SystemExit("freeze receipt does not prove zero pre-freeze calls")
+        try:
+            verify_freeze_receipt(root, receipt)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
         if os.getenv("GITHUB_RUN_ATTEMPT", "1") != "1":
             raise SystemExit("Candidate-6 holdout workflow reruns are forbidden")
 
@@ -58,7 +58,7 @@ def run(mode: str, output_dir: Path) -> int:
     if len(cases) != 60 or len(gold_rows) != 60 or {c[0] for c in cases} != set(gold_by_id):
         raise SystemExit("Candidate-6 suite/gold coverage must be exactly 60 unique cases")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=False)
     rows = []
     scores = []
     provider_attempts = 0
@@ -82,7 +82,7 @@ def run(mode: str, output_dir: Path) -> int:
         scores.append(score)
         row = {
             "case_id": case_id,
-            "instruction_sha256": __import__("hashlib").sha256(instruction.encode()).hexdigest(),
+            "instruction_sha256": hashlib.sha256(instruction.encode()).hexdigest(),
             "observed_status": result.status,
             "error_code": result.error_code,
             "blocked_actions": sorted(result.blocked_actions),
@@ -96,10 +96,7 @@ def run(mode: str, output_dir: Path) -> int:
 
         current = aggregate(scores, gold_rows)
         if not current["reachable"]:
-            current["stopped_early"] = True
-            current["stopped_after_case"] = case_id
-            current["provider_attempts"] = provider_attempts
-            current["mode"] = mode
+            current.update({"stopped_early": True, "stopped_after_case": case_id, "provider_attempts": provider_attempts, "mode": mode})
             (output_dir / "aggregate.json").write_text(json.dumps(current, indent=2, sort_keys=True), encoding="utf-8")
             (output_dir / "rows.json").write_text(json.dumps(rows, indent=2, sort_keys=True), encoding="utf-8")
             return 2
