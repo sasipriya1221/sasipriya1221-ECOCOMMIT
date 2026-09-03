@@ -24,6 +24,24 @@ jobs:
         with:
           ref: ${{ inputs.candidate_ref }}
           persist-credentials: false
+      - name: Bind exact Candidate-6 source
+        shell: python
+        env:
+          CANDIDATE_REF: ${{ inputs.candidate_ref }}
+        run: |
+          import hashlib, json, os, subprocess
+          sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          payload = {
+              "candidate": "A-CANDIDATE-6",
+              "candidate_ref": os.environ["CANDIDATE_REF"],
+              "candidate_sha": sha,
+              "dispatcher_run_id": os.environ["GITHUB_RUN_ID"],
+              "dispatcher_run_attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
+          }
+          raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+          payload["binding_sha256"] = hashlib.sha256(raw).hexdigest()
+          with open("/tmp/candidate6-source-binding.json", "w", encoding="utf-8") as fh:
+              json.dump(payload, fh, indent=2, sort_keys=True)
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
@@ -42,6 +60,11 @@ jobs:
         env:
           ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
         run: python scripts/candidate6_qualify.py --mode development --output-dir artifacts/candidate6-development
+      - name: Attach exact source binding to evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/candidate6-development
+          cp /tmp/candidate6-source-binding.json artifacts/candidate6-development/source-binding.json
       - name: Preserve complete development evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
