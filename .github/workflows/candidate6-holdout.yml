@@ -1,0 +1,48 @@
+name: Candidate 6 - Internal Holdout Qualification
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: candidate6-internal-holdout
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Enforce one-shot attempt
+        run: |
+          test "${GITHUB_RUN_ATTEMPT}" = "1" || { echo 'Candidate-6 holdout reruns are forbidden'; exit 1; }
+      - name: Install exact project dependencies
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e .
+          python -m pip check
+      - name: Deterministic exact-source gate
+        run: |
+          python -m pytest -p no:cacheprovider --basetemp .test-tmp-c6-holdout
+          python -m compileall -q src scripts tests
+          git diff --check
+      - name: Run sealed 60-case internal holdout exactly once
+        env:
+          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
+        run: python scripts/candidate6_qualify.py --mode holdout --output-dir artifacts/candidate6-holdout
+      - name: Preserve complete holdout evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: candidate6-internal-holdout-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: artifacts/candidate6-holdout/
+          if-no-files-found: warn
+          retention-days: 30
