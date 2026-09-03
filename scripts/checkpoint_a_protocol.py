@@ -166,6 +166,7 @@ def build_manifest(
             "json_schema": provider.use_json_schema,
             "max_completion_tokens": provider.max_completion_tokens,
             "max_attempts": provider.max_attempts,
+            "max_schema_corrections": provider.max_schema_corrections,
             "max_retry_delay_seconds": provider.max_retry_delay,
             "max_response_bytes": provider.max_response_bytes,
         },
