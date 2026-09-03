@@ -70,6 +70,8 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
         assert not re.search(r"(?m)^  (?:push|pull_request(?:_target)?):", trigger_block), path.name
 
     assert credentialed == [
+        "candidate6-development.yml",
+        "candidate6-holdout.yml",
         "checkpoint-a-live.yml",
         "checkpoint-a-qwen-smoke.yml",
         "checkpoint-a-smoke.yml",
