@@ -1,0 +1,47 @@
+{
+  "schema_version": "A.PREREGISTRATION.1",
+  "candidate_version": "A-CANDIDATE-4",
+  "predecessor_candidate": "A-CANDIDATE-3",
+  "predecessor_terminal_source": "c54e132111d13a090a814807c336a017ae7228b2",
+  "reason": "Candidate 3 is mathematically failed after nine immutable terminal failures. Five failures were schema-invalid after the single bounded correction because the model again emitted an incomplete trailing clause. Candidate 4 addresses only that general schema-conformance recovery defect.",
+  "authorized_change": {
+    "kind": "bounded_schema_correction_budget",
+    "previous_max_schema_corrections": 1,
+    "candidate_4_max_schema_corrections": 2,
+    "previous_max_provider_attempts_per_case": 2,
+    "candidate_4_max_provider_attempts_per_case": 3,
+    "semantic_retry_after_valid_candidate": false,
+    "fresh_artifact_namespace": "checkpoint-a-candidate-4-*"
+  },
+  "frozen_unchanged": {
+    "dataset_count": 80,
+    "dataset_sha256": "968be3ed3a438a3a28a3402fa65c90a45cb564ed1adad2e6e51d852e24c5bb8b",
+    "case_pass_rate_min": 0.9,
+    "selective_semantic_reliability_min": 0.95,
+    "autonomous_coverage_min": 0.55,
+    "ambiguous_clarification_accuracy_min": 0.8,
+    "provider_base_url": "https://api.groq.com/openai/v1",
+    "model": "qwen/qwen3.6-27b",
+    "reasoning_effort": "none",
+    "json_schema_mode": false,
+    "max_completion_tokens": 1024,
+    "system_prompt": "UNCHANGED_AND_RUNTIME_HASHED",
+    "compact_schema": "UNCHANGED_AND_RUNTIME_HASHED",
+    "strict_json_schema": "UNCHANGED_AND_RUNTIME_HASHED",
+    "evaluator": "UNCHANGED_AND_RUNTIME_HASHED"
+  },
+  "evidence_rules": [
+    "Candidate 3 artifacts are historical and must never be resumed into Candidate 4.",
+    "A schema-valid candidate is terminal immediately; it is never regenerated because of semantic score dissatisfaction.",
+    "Transient provider failures remain infrastructure deferrals and never become semantic passes or failures.",
+    "Candidate 4 provider execution remains workflow_dispatch-only; no provider call is triggered by this preregistration commit.",
+    "The Candidate 4 runtime manifest must bind the exact source revision, runner, prompt/schema, evaluator, thresholds, provider configuration, and max schema correction budget before semantic evidence can be accepted."
+  ],
+  "provider_calls_performed_by_preregistration": 0,
+  "candidate_3_retry_performed": false,
+  "thresholds_lowered": false,
+  "benchmark_cases_changed": false,
+  "prompt_changed": false,
+  "schema_changed": false,
+  "evaluator_changed": false
+}

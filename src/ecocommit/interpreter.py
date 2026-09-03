@@ -197,6 +197,7 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         model: str,
         timeout: float = 30.0,
         max_attempts: int = 5,
+        max_schema_corrections: int | None = None,
         reasoning_effort: str | None = None,
         max_retry_delay: float = 900.0,
         max_completion_tokens: int | None = None,
@@ -209,6 +210,13 @@ class OpenAICompatibleIntentProvider(IntentProvider):
         self.model = model
         self.timeout = timeout
         self.max_attempts = max(1, max_attempts)
+        configured_corrections = os.getenv("ECOCOMMIT_LLM_MAX_SCHEMA_CORRECTIONS")
+        if max_schema_corrections is not None:
+            self.max_schema_corrections = max(0, int(max_schema_corrections))
+        elif configured_corrections:
+            self.max_schema_corrections = max(0, int(configured_corrections))
+        else:
+            self.max_schema_corrections = 1
         self.reasoning_effort = reasoning_effort or os.getenv("ECOCOMMIT_LLM_REASONING_EFFORT")
         self.max_retry_delay = max(0.0, max_retry_delay)
         self.max_response_bytes = max(1, int(max_response_bytes))
@@ -408,7 +416,7 @@ class OpenAICompatibleIntentProvider(IntentProvider):
             payload["max_completion_tokens"] = self.max_completion_tokens
 
         provider_trace: list[dict[str, Any]] = []
-        correction_used = False
+        corrections_used = 0
         for attempt in range(1, self.max_attempts + 1):
             req = request.Request(
                 f"{self.base_url}/chat/completions",
@@ -461,8 +469,8 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                 ) as exc:
                     issues = self._validation_issues(exc)
                     provider_trace.append({**candidate_meta, "outcome": "schema_invalid", "issues": issues})
-                    if not correction_used and attempt < self.max_attempts:
-                        correction_used = True
+                    if corrections_used < self.max_schema_corrections and attempt < self.max_attempts:
+                        corrections_used += 1
                         payload["messages"] = base_messages + [
                             {"role": "user", "content": self._correction_message(issues)}
                         ]
@@ -470,7 +478,7 @@ class OpenAICompatibleIntentProvider(IntentProvider):
                     raise CandidateContractError(
                         issues,
                         provider_trace,
-                        correction_attempted=correction_used,
+                        correction_attempted=corrections_used > 0,
                     ) from exc
                 provider_trace.append({**candidate_meta, "outcome": "accepted"})
                 return InterpretationResult(contract=contract, provider_trace=tuple(provider_trace))

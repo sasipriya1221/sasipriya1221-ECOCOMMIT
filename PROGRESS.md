@@ -13,7 +13,7 @@ Status vocabulary is strict:
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; NOT PASSED** | No retry of Candidates 1–3 can satisfy the frozen gate. A future path requires a new, explicitly preregistered and technically justified candidate/protocol; no threshold lowering, retrospective evidence rewrite, or retry-until-lucky promotion is allowed. |
+| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / NOT RUN; NOT PASSED** | Validate the Candidate 4 bounded schema-correction remediation offline, then run one fresh manual-only 80-case Candidate 4 evaluation with the unchanged frozen dataset/prompt/model/schema/evaluator/thresholds. A typed A receipt exists only if all four unchanged gates pass. |
 | B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | A passing typed A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
@@ -34,7 +34,7 @@ All four thresholds must pass together in one complete real-model 80-case run:
 - autonomous coverage >= **55%**; and
 - ambiguous clarification accuracy >= **80%**.
 
-The frozen 80 cases, prompt, model/provider configuration, schemas, evaluator, and thresholds have not been weakened or rewritten.
+The frozen 80 cases, system prompt, model/provider identity, compact/strict schemas, evaluator, and thresholds have not been weakened or rewritten.
 
 ### Candidate 1 — mathematically failed
 
@@ -53,7 +53,7 @@ Later reruns cannot replace that mathematical failure.
 
 ### Excluded score-recovery experiment
 
-Run `33556907712` used an earlier protocol that automatically filled omitted `materiality` and `confidence` values. That behavior was rejected because exact text grounding does not prove maximum materiality or extraction confidence. The run and its failure history remain preserved but are **not** Candidate 2/3 evidence and are not promotable.
+Run `33556907712` used an earlier protocol that automatically filled omitted `materiality` and `confidence` values. That behavior was rejected because exact text grounding does not prove maximum materiality or extraction confidence. The run and its failure history remain preserved but are **not** Candidate 2/3/4 evidence and are not promotable.
 
 ### Candidate 2 — incomplete and not promotable
 
@@ -95,9 +95,27 @@ The nine retained failures are `C004`, `C011`, `C012`, `C013`, `C014`, `C019`, `
 
 The frozen 90% case-pass criterion requires at least **72/80** passing cases. Candidate 3 already has **9 immutable terminal failures**. Even if every one of the remaining 48 cases passed, the best possible result would be **71/80 = 88.75%**. Candidate 3 is therefore permanently **FAILED** on the case-pass criterion alone; completing the missing provider-deferred cases cannot change that conclusion.
 
-No further Groq retry is justified for Candidate 3. Re-running terminal failures until a different stochastic answer appears would discard retained evidence and convert the benchmark into retry-until-lucky score recovery. Changing the frozen thresholds, dataset, prompt, provider/model configuration, schema, or evaluator would also invalidate the existing preregistered gate rather than make Candidate 3 pass.
+No further Groq retry is justified for Candidate 3. Re-running terminal failures until a different stochastic answer appears would discard retained evidence and convert the benchmark into retry-until-lucky score recovery.
 
-**Checkpoint A is definitively NOT PASSED under the current frozen protocol.**
+### Candidate 4 — preregistered, no provider run yet
+
+Candidate 4 (`A-CANDIDATE-4`) is a fresh candidate justified by the **general schema-conformance failure class** observed in five Candidate 3 terminal rows. Its preregistration is retained at `evidence/checkpoint-a-candidate-4-preregistration.json` before any Candidate 4 provider call.
+
+Candidate 4 changes only bounded schema-conformance recovery and fresh artifact namespacing:
+
+- schema-invalid candidates may receive at most **two** model correction requests instead of one;
+- the total per-case provider-attempt ceiling is **three**, so the second correction opportunity is bounded;
+- the correction message itself is unchanged;
+- the first schema-valid candidate is immediately terminal and is **never** regenerated because of semantic score dissatisfaction;
+- transient provider failures remain typed infrastructure deferrals;
+- Candidate 3 artifacts are never resumed into Candidate 4; and
+- Candidate 4 uses `checkpoint-a-candidate-4-*` artifacts in a fresh workflow run.
+
+Unchanged and still frozen: all 80 cases and their digest, system prompt, compact schema, strict JSON schema, Groq endpoint, `qwen/qwen3.6-27b`, reasoning effort `none`, JSON-object mode, 1,024 completion-token budget, semantic evaluator, and all four thresholds. The runtime manifest additionally binds `max_schema_corrections` and the exact source/runner hashes.
+
+The Candidate 4 workflow remains **manual `workflow_dispatch` only**. The preregistration/source push does not consume Groq calls. No Candidate 4 semantic result or pass is claimed until the complete fresh 80-case run exists and passes every frozen threshold.
+
+**Checkpoint A remains BLOCKED / NOT PASSED.**
 
 ---
 
@@ -105,7 +123,7 @@ No further Groq retry is justified for Candidate 3. Re-running terminal failures
 
 B1–B7 remain locally validated: policy mapping, authoritative evidence, exposure, progressive commitment, TOCTOU protection, certificates, idempotency/reconciliation, and compensation fail closed under adversarial tests.
 
-The A→B boundary requires a legitimate typed A pass receipt bound to its preregistered dataset/thresholds, aggregate/manifest/source digests, and exact evidence reference. Production code refuses caller-created pass strings and test-fixture receipts. Candidate 3 cannot supply that receipt because it is mathematically failed.
+The A→B boundary requires a legitimate typed A pass receipt bound to its preregistered dataset/thresholds, aggregate/manifest/source digests, and exact evidence reference. Production code refuses caller-created pass strings and test-fixture receipts. No current candidate has supplied that receipt.
 
 ### Retained Razorpay Test evidence
 
