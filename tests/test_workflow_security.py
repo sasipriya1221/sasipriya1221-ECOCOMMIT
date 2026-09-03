@@ -57,6 +57,7 @@ def test_inline_credentialed_http_preflights_do_not_forward_auth_on_redirects():
 
     assert credentialed == [
         "candidate6-freeze.yml",
+        "candidate6-holdout-decision.yml",
         "candidate6-supervisor.yml",
         "checkpoint-a-live.yml",
         "provider-preflight.yml",
@@ -98,6 +99,19 @@ def test_candidate6_freeze_workflow_is_manual_secretless_and_single_purpose():
     assert "candidate6-holdout-dispatch.yml/dispatches" not in workflow
     assert "Freeze Gate" in workflow
     assert "candidate6-freeze-receipt.json" in workflow
+
+
+def test_candidate6_holdout_decision_is_secretless_mechanical_and_non_provider():
+    workflow = (WORKFLOWS / "candidate6-holdout-decision.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert re.search(r"(?m)^  workflow_dispatch:\s*$", trigger_block)
+    assert "secrets." not in workflow
+    assert "ECOCOMMIT_LLM_API_KEY" not in workflow
+    assert "RAZORPAY" not in workflow
+    assert "case_pass_rate" in workflow
+    assert "0.95" in workflow and "0.97" in workflow and "0.60" in workflow and "0.90" in workflow
+    assert "holdout_rerun_permitted': False" in workflow
+    assert "post_holdout_semantic_modification_permitted': False" in workflow
 
 
 def test_candidate6_supervisor_is_minimal_scheduled_fail_closed_and_duplicate_safe():
