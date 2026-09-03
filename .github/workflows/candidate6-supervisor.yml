@@ -49,27 +49,26 @@ jobs:
                   if exc.code == 404:
                       return None
                   raise
+          def content_object(path):
+              payload = maybe_get(path)
+              if payload is None:
+                  return None
+              raw = base64.b64decode(payload['content'])
+              return json.loads(raw.decode('utf-8'))
+          def self_digest_valid(payload, field):
+              expected = payload.get(field)
+              if not isinstance(expected, str) or len(expected) != 64:
+                  return False
+              unsigned = {k: v for k, v in payload.items() if k != field}
+              actual = hashlib.sha256(json.dumps(unsigned, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+              return expected == actual
 
           branch = get('/branches/candidate6-internal-qualification')
           candidate_head = branch['commit']['sha']
-          freeze_file = maybe_get('/contents/evidence/candidate6-freeze-receipt.json?ref=candidate6-internal-qualification')
-          phase = 'DEVELOPMENT'
           outputs = {'candidate_head': candidate_head}
+          freeze = content_object('/contents/evidence/candidate6-freeze-receipt.json?ref=candidate6-internal-qualification')
 
-          if freeze_file is not None:
-              raw = base64.b64decode(freeze_file['content'])
-              receipt = json.loads(raw.decode('utf-8'))
-              expected = receipt.get('freeze_receipt_sha256')
-              unsigned = {k: v for k, v in receipt.items() if k != 'freeze_receipt_sha256'}
-              actual = hashlib.sha256(json.dumps(unsigned, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-              if not isinstance(expected, str) or expected != actual:
-                  phase = 'STOP_INVALID_FREEZE_RECEIPT'
-              elif receipt.get('candidate') != 'A-CANDIDATE-6' or receipt.get('freeze_state') != 'IMPLEMENTATION_FROZEN_BEFORE_HOLDOUT':
-                  phase = 'STOP_INVALID_FREEZE_RECEIPT'
-              else:
-                  phase = 'FROZEN'
-                  outputs['frozen_source_sha'] = str(receipt.get('candidate_source_revision', ''))
-          else:
+          if freeze is None:
               runs = get('/actions/workflows/candidate6-development-dispatch.yml/runs?event=workflow_dispatch&per_page=20')
               if not runs.get('workflow_runs'):
                   phase = 'WAIT_NO_DEVELOPMENT_RUN'
@@ -80,6 +79,36 @@ jobs:
                   outputs['development_status'] = str(run['status'])
                   outputs['development_conclusion'] = str(run.get('conclusion') or '')
                   phase = 'DEVELOPMENT_COMPLETE' if run['status'] == 'completed' else 'WAIT_DEVELOPMENT_RUNNING'
+          elif not self_digest_valid(freeze, 'freeze_receipt_sha256') or freeze.get('candidate') != 'A-CANDIDATE-6' or freeze.get('freeze_state') != 'IMPLEMENTATION_FROZEN_BEFORE_HOLDOUT':
+              phase = 'STOP_INVALID_FREEZE_RECEIPT'
+          else:
+              outputs['frozen_source_sha'] = str(freeze.get('candidate_source_revision', ''))
+              internal = content_object('/contents/evidence/candidate6-internal-qualification-receipt.json?ref=candidate6-internal-qualification')
+              if internal is not None:
+                  if not self_digest_valid(internal, 'receipt_sha256') or internal.get('stage') != 'holdout' or internal.get('candidate') != 'A-CANDIDATE-6':
+                      phase = 'STOP_INVALID_INTERNAL_RECEIPT'
+                  elif internal.get('status') == 'PASS' and internal.get('passed') is True and internal.get('official_checkpoint_a_eligibility') == 'ELIGIBLE':
+                      phase = 'INTERNAL_PASS'
+                      outputs['internal_receipt_sha256'] = internal['receipt_sha256']
+                  else:
+                      phase = 'STOP_INTERNAL_FAILED'
+                      outputs['internal_receipt_sha256'] = str(internal.get('receipt_sha256', ''))
+                      outputs['internal_reason'] = str(internal.get('reason', ''))
+              else:
+                  holdout_runs = get('/actions/workflows/candidate6-holdout-dispatch.yml/runs?event=workflow_dispatch&per_page=20')
+                  if not holdout_runs.get('workflow_runs'):
+                      phase = 'FROZEN_READY_FOR_HOLDOUT'
+                  else:
+                      run = holdout_runs['workflow_runs'][0]
+                      outputs['holdout_run_id'] = str(run['id'])
+                      outputs['holdout_status'] = str(run['status'])
+                      outputs['holdout_conclusion'] = str(run.get('conclusion') or '')
+                      if run.get('run_attempt') != 1:
+                          phase = 'STOP_HOLDOUT_RERUN_DETECTED'
+                      elif run['status'] != 'completed':
+                          phase = 'WAIT_HOLDOUT_RUNNING'
+                      else:
+                          phase = 'HOLDOUT_COMPLETE'
 
           outputs['phase'] = phase
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
@@ -150,22 +179,16 @@ jobs:
               raise SystemExit('development aggregate evidence missing')
           aggregate = json.loads(aggregate_path.read_text(encoding='utf-8'))
 
-          provenance = None
           if binding_path.exists():
               binding = json.loads(binding_path.read_text(encoding='utf-8'))
               unsigned_binding = {k: v for k, v in binding.items() if k != 'binding_sha256'}
               if binding.get('binding_sha256') != canonical_sha256(unsigned_binding):
                   raise SystemExit('development source binding digest invalid')
-              if binding.get('candidate') != 'A-CANDIDATE-6':
-                  raise SystemExit('development candidate binding invalid')
-              if binding.get('candidate_sha') != os.environ['CANDIDATE_HEAD']:
-                  raise SystemExit('Candidate-6 branch differs from development source; no automatic freeze')
+              if binding.get('candidate') != 'A-CANDIDATE-6' or binding.get('candidate_sha') != os.environ['CANDIDATE_HEAD']:
+                  raise SystemExit('development candidate/source binding invalid')
               if str(binding.get('dispatcher_run_id')) != os.environ['DEVELOPMENT_RUN_ID'] or str(binding.get('dispatcher_run_attempt')) != os.environ['DEVELOPMENT_RUN_ATTEMPT']:
                   raise SystemExit('development workflow provenance mismatch')
-              provenance = {
-                  'method': 'source-binding-artifact',
-                  'sha256': hashlib.sha256(binding_path.read_bytes()).hexdigest(),
-              }
+              provenance = {'method': 'source-binding-artifact', 'sha256': hashlib.sha256(binding_path.read_bytes()).hexdigest()}
           else:
               jobs = get_json('/actions/runs/' + os.environ['DEVELOPMENT_RUN_ID'] + '/attempts/' + os.environ['DEVELOPMENT_RUN_ATTEMPT'] + '/jobs?per_page=100')
               qualify = [j for j in jobs.get('jobs', []) if j.get('name') == 'qualify']
@@ -174,16 +197,10 @@ jobs:
               raw = job_log_bytes(qualify[0]['id'])
               if len(raw) > 16 * 1024 * 1024:
                   raise SystemExit('development job log exceeds evidence bound')
-              text = raw.decode('utf-8-sig')
-              checkout_sha = extract_checked_out_sha(text)
+              checkout_sha = extract_checked_out_sha(raw.decode('utf-8-sig'))
               if checkout_sha != os.environ['CANDIDATE_HEAD']:
                   raise SystemExit('Candidate-6 branch differs from checkout proven by development log')
-              provenance = {
-                  'method': 'immutable-job-log',
-                  'job_id': qualify[0]['id'],
-                  'sha256': hashlib.sha256(raw).hexdigest(),
-                  'candidate_sha': checkout_sha,
-              }
+              provenance = {'method': 'immutable-job-log', 'job_id': qualify[0]['id'], 'sha256': hashlib.sha256(raw).hexdigest(), 'candidate_sha': checkout_sha}
               Path('artifacts/supervisor/development-log-provenance.json').write_text(json.dumps(provenance, indent=2, sort_keys=True) + '\n', encoding='utf-8')
 
           receipt = {
@@ -219,48 +236,34 @@ jobs:
         run: |
           import json, os
           from urllib.request import Request, urlopen
-          repo = os.environ['GITHUB_REPOSITORY']
-          token = os.environ['GH_TOKEN']
-          base = 'https://api.github.com/repos/' + repo
+          repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; base = 'https://api.github.com/repos/' + repo
           def get(path):
-              req = Request(base + path, headers={'Accept': 'application/vnd.github+json'})
-              req.add_unredirected_header('Authorization', 'Bearer ' + token)
+              req = Request(base + path, headers={'Accept': 'application/vnd.github+json'}); req.add_unredirected_header('Authorization', 'Bearer ' + token)
               with urlopen(req, timeout=30) as response:
-                  if response.geturl() != req.full_url:
-                      raise SystemExit('GitHub evidence redirect rejected')
+                  if response.geturl() != req.full_url: raise SystemExit('GitHub evidence redirect rejected')
                   return json.load(response)
           prior = get('/actions/workflows/candidate6-freeze.yml/runs?per_page=1')
-          if prior.get('total_count', 0) != 0:
-              raise SystemExit('freeze workflow already has history; automatic duplicate dispatch refused')
-          payload = json.dumps({
-              'ref': 'main',
-              'inputs': {
-                  'development_run_id': os.environ['DEVELOPMENT_RUN_ID'],
-                  'development_run_attempt': os.environ['DEVELOPMENT_RUN_ATTEMPT'],
-                  'candidate_sha': os.environ['CANDIDATE_SHA'],
-              },
-          }, separators=(',', ':')).encode()
-          req = Request(base + '/actions/workflows/candidate6-freeze.yml/dispatches', data=payload, headers={'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST')
-          req.add_unredirected_header('Authorization', 'Bearer ' + token)
+          if prior.get('total_count', 0) != 0: raise SystemExit('freeze workflow already has history; automatic duplicate dispatch refused')
+          payload = json.dumps({'ref': 'main', 'inputs': {'development_run_id': os.environ['DEVELOPMENT_RUN_ID'], 'development_run_attempt': os.environ['DEVELOPMENT_RUN_ATTEMPT'], 'candidate_sha': os.environ['CANDIDATE_SHA']}}, separators=(',', ':')).encode()
+          req = Request(base + '/actions/workflows/candidate6-freeze.yml/dispatches', data=payload, headers={'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST'); req.add_unredirected_header('Authorization', 'Bearer ' + token)
           with urlopen(req, timeout=30) as response:
-              if response.geturl() != req.full_url or response.status != 204:
-                  raise SystemExit('freeze dispatch failed')
+              if response.geturl() != req.full_url or response.status != 204: raise SystemExit('freeze dispatch failed')
           with open('artifacts/supervisor/transition.json', 'w', encoding='utf-8') as fh:
               json.dump({'transition': 'DEVELOPMENT_PASS_TO_FREEZE', 'candidate_sha': os.environ['CANDIDATE_SHA'], 'development_run_id': int(os.environ['DEVELOPMENT_RUN_ID']), 'development_run_attempt': int(os.environ['DEVELOPMENT_RUN_ATTEMPT'])}, fh, indent=2, sort_keys=True)
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
-        if: steps.inspect.outputs.phase == 'FROZEN'
+        if: steps.inspect.outputs.phase == 'FROZEN_READY_FOR_HOLDOUT'
         with:
           ref: candidate6-internal-qualification
           path: candidate
           persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        if: steps.inspect.outputs.phase == 'FROZEN'
+        if: steps.inspect.outputs.phase == 'FROZEN_READY_FOR_HOLDOUT'
         with:
           python-version: '3.11'
           cache-dependency-path: candidate/requirements-dev.lock
       - name: Verify frozen Candidate-6 receipt exactly
-        if: steps.inspect.outputs.phase == 'FROZEN'
+        if: steps.inspect.outputs.phase == 'FROZEN_READY_FOR_HOLDOUT'
         working-directory: candidate
         run: |
           python -m pip install --require-hashes -r requirements-dev.lock
@@ -271,13 +274,11 @@ jobs:
           from pathlib import Path
           from ecocommit.candidate6_freeze import verify_freeze_receipt
           receipt = json.loads(Path('evidence/candidate6-freeze-receipt.json').read_text(encoding='utf-8'))
-          if not re.fullmatch(r'[0-9a-f]{40}', str(receipt.get('candidate_source_revision', ''))):
-              raise SystemExit('freeze receipt exact source revision missing')
+          if not re.fullmatch(r'[0-9a-f]{40}', str(receipt.get('candidate_source_revision', ''))): raise SystemExit('freeze receipt exact source revision missing')
           verify_freeze_receipt(Path.cwd(), receipt)
           PY
-
-      - name: Dispatch sealed holdout only if never dispatched before
-        if: steps.inspect.outputs.phase == 'FROZEN'
+      - name: Dispatch sealed holdout exactly once
+        if: steps.inspect.outputs.phase == 'FROZEN_READY_FOR_HOLDOUT'
         shell: python
         env:
           GH_TOKEN: ${{ github.token }}
@@ -285,29 +286,45 @@ jobs:
         run: |
           import json, os
           from urllib.request import Request, urlopen
-          repo = os.environ['GITHUB_REPOSITORY']
-          token = os.environ['GH_TOKEN']
-          base = 'https://api.github.com/repos/' + repo
+          repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; base = 'https://api.github.com/repos/' + repo
           def get(path):
-              req = Request(base + path, headers={'Accept': 'application/vnd.github+json'})
-              req.add_unredirected_header('Authorization', 'Bearer ' + token)
+              req = Request(base + path, headers={'Accept': 'application/vnd.github+json'}); req.add_unredirected_header('Authorization', 'Bearer ' + token)
               with urlopen(req, timeout=30) as response:
-                  if response.geturl() != req.full_url:
-                      raise SystemExit('GitHub evidence redirect rejected')
+                  if response.geturl() != req.full_url: raise SystemExit('GitHub evidence redirect rejected')
                   return json.load(response)
           runs = get('/actions/workflows/candidate6-holdout-dispatch.yml/runs?per_page=1')
-          if runs.get('total_count', 0) != 0:
-              with open('artifacts/supervisor/holdout-state.json', 'w', encoding='utf-8') as fh:
-                  json.dump({'state': 'HOLDOUT_ALREADY_HAS_HISTORY', 'run_id': runs['workflow_runs'][0]['id'], 'status': runs['workflow_runs'][0]['status'], 'conclusion': runs['workflow_runs'][0].get('conclusion')}, fh, indent=2, sort_keys=True)
-              raise SystemExit(0)
+          if runs.get('total_count', 0) != 0: raise SystemExit('holdout dispatcher already has history; duplicate dispatch refused')
           payload = json.dumps({'ref': 'main', 'inputs': {'candidate_ref': os.environ['CANDIDATE_REF']}}, separators=(',', ':')).encode()
-          req = Request(base + '/actions/workflows/candidate6-holdout-dispatch.yml/dispatches', data=payload, headers={'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST')
-          req.add_unredirected_header('Authorization', 'Bearer ' + token)
+          req = Request(base + '/actions/workflows/candidate6-holdout-dispatch.yml/dispatches', data=payload, headers={'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST'); req.add_unredirected_header('Authorization', 'Bearer ' + token)
           with urlopen(req, timeout=30) as response:
-              if response.geturl() != req.full_url or response.status != 204:
-                  raise SystemExit('holdout dispatch failed')
+              if response.geturl() != req.full_url or response.status != 204: raise SystemExit('holdout dispatch failed')
           with open('artifacts/supervisor/transition.json', 'w', encoding='utf-8') as fh:
               json.dump({'transition': 'VERIFIED_FREEZE_TO_ONE_SHOT_HOLDOUT', 'candidate_ref': os.environ['CANDIDATE_REF']}, fh, indent=2, sort_keys=True)
+
+      - name: Dispatch mechanical holdout decision once after holdout completion
+        if: steps.inspect.outputs.phase == 'HOLDOUT_COMPLETE'
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HOLDOUT_RUN_ID: ${{ steps.inspect.outputs.holdout_run_id }}
+          FROZEN_REF: ${{ steps.inspect.outputs.candidate_head }}
+        run: |
+          import json, os
+          from urllib.request import Request, urlopen
+          repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; base = 'https://api.github.com/repos/' + repo
+          def get(path):
+              req = Request(base + path, headers={'Accept': 'application/vnd.github+json'}); req.add_unredirected_header('Authorization', 'Bearer ' + token)
+              with urlopen(req, timeout=30) as response:
+                  if response.geturl() != req.full_url: raise SystemExit('GitHub evidence redirect rejected')
+                  return json.load(response)
+          prior = get('/actions/workflows/candidate6-holdout-decision.yml/runs?per_page=1')
+          if prior.get('total_count', 0) != 0: raise SystemExit('holdout decision workflow already has history; duplicate decision refused')
+          payload = json.dumps({'ref': 'main', 'inputs': {'holdout_run_id': os.environ['HOLDOUT_RUN_ID'], 'frozen_ref': os.environ['FROZEN_REF']}}, separators=(',', ':')).encode()
+          req = Request(base + '/actions/workflows/candidate6-holdout-decision.yml/dispatches', data=payload, headers={'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST'); req.add_unredirected_header('Authorization', 'Bearer ' + token)
+          with urlopen(req, timeout=30) as response:
+              if response.geturl() != req.full_url or response.status != 204: raise SystemExit('holdout decision dispatch failed')
+          with open('artifacts/supervisor/transition.json', 'w', encoding='utf-8') as fh:
+              json.dump({'transition': 'ONE_SHOT_HOLDOUT_TO_MECHANICAL_DECISION', 'holdout_run_id': int(os.environ['HOLDOUT_RUN_ID']), 'frozen_ref': os.environ['FROZEN_REF']}, fh, indent=2, sort_keys=True)
 
       - name: Preserve supervisor audit evidence
         if: always()
