@@ -27,27 +27,32 @@ class OfficialCounts:
 
 
 def _valid(c: OfficialCounts) -> bool:
+    # Under the frozen evaluator, a semantically correct clear case is necessarily
+    # VALIDATED/autonomous and a semantically correct ambiguous case is necessarily
+    # CLARIFICATION_REQUIRED/non-autonomous. Therefore successful cases partition
+    # exactly into correct_autonomous + ambiguous_correct.
     return (
         c.total == c.clear_total + c.ambiguous_total
         and c.processed == c.clear_processed + c.ambiguous_processed
         and 0 <= c.clear_processed <= c.clear_total
         and 0 <= c.ambiguous_processed <= c.ambiguous_total
         and 0 <= c.processed <= c.total
-        and 0 <= c.case_passes <= c.processed
-        and 0 <= c.correct_autonomous <= c.autonomous <= c.processed
+        and 0 <= c.correct_autonomous <= c.clear_processed
         and 0 <= c.ambiguous_correct <= c.ambiguous_processed
+        and c.case_passes == c.correct_autonomous + c.ambiguous_correct
+        and 0 <= c.correct_autonomous <= c.autonomous <= c.processed
     )
 
 
 def optimistic_completion(c: OfficialCounts, t: OfficialThresholds = OfficialThresholds()) -> OfficialCounts | None:
-    """Return the best jointly feasible completion, or None when thresholds are unreachable.
+    """Return the exact optimistic jointly feasible completion, or None.
 
     Clear gold cases are optimistically completed as correct autonomous responses.
     Ambiguous gold cases are optimistically completed as correct clarifications. If the
     coverage threshold still cannot be met, the minimum number of remaining ambiguous
     cases is converted to autonomous responses. Those conversions necessarily lose a
     case pass and an ambiguity-correct result and cannot be correct autonomous results.
-    This yields the exact optimistic joint bound for the four frozen Checkpoint-A metrics.
+    No other future outcome can improve any required metric relative to this completion.
     """
     if not _valid(c):
         return None
@@ -83,7 +88,6 @@ def final_pass(c: OfficialCounts, t: OfficialThresholds = OfficialThresholds()) 
     if not _valid(c) or c.processed != c.total:
         return False
     reliability = c.correct_autonomous / c.autonomous if c.autonomous else 0.0
-    clarification = c.ambiguous_correct / c.ambiguous_total if c.ambiguous_total else 1.0
     return (
         c.case_passes >= ceil(t.case_pass * c.total)
         and reliability >= t.selective_reliability
