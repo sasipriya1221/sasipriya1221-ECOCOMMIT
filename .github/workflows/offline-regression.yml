@@ -28,11 +28,15 @@ jobs:
           python -m pip install --require-hashes -r requirements-dev.lock
           python -m pip install --no-deps --no-build-isolation -e .
           python -m pip check
-      - name: Run regression suite
-        run: python -m pytest -p no:cacheprovider --basetemp .test-tmp-ci
+      - name: Run deterministic regression suite
+        run: python -m pytest tests -p no:cacheprovider --basetemp .test-tmp-ci
+      - name: Run mocked qualification harness tests
+        run: python -m pytest diagnostic_tests/candidate7_qualification_harness_mock_tests.py -p no:cacheprovider --basetemp .test-tmp-c7-harness-ci
+      - name: Run zero-provider qualification harness self-check
+        run: python scripts/candidate7_pass2_qualification.py self-check
       - name: Static runtime checks
         run: |
-          python -m compileall -q src scripts tests
+          python -m compileall -q src scripts tests diagnostic_tests
           node --check ui/app.js
           git diff --check
       - name: Validate public-repository structure
