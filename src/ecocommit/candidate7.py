@@ -6,6 +6,7 @@ from typing import Any, Protocol
 from .candidate7_compile import compile_graph_v2
 from .candidate7_conservation import verify_candidate7_conservation
 from .candidate7_flat import LabeledFact, RelationBatch
+from .candidate7_provider import Candidate7SchemaError
 from .candidate7_structure import C7Graph, build_graph
 from .interpreter import ProviderRequestError
 
@@ -59,6 +60,17 @@ def run_candidate7(instruction: str, provider: Candidate7Provider) -> Candidate7
             blocked_actions=frozenset(),
             error_code=exc.code,
             provider_trace=provider_trace,
+        )
+    except Candidate7SchemaError as exc:
+        return Candidate7Result(
+            status="REJECTED",
+            contract=None,
+            graph=None,
+            facts=facts,
+            relations=relations,
+            blocked_actions=frozenset(),
+            error_code=str(exc),
+            provider_trace=tuple(exc.provider_trace),
         )
     except Exception as exc:
         return Candidate7Result(
