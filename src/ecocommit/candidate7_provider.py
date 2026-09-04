@@ -80,6 +80,15 @@ class Candidate7SchemaError(RuntimeError):
 class GroqCandidate7Provider:
     DEFAULT_ALLOWED_HOSTS = frozenset({"api.groq.com"})
     MAX_RESPONSE_BYTES = 1_048_576
+    RATE_LIMIT_HEADER_NAMES = (
+        "x-ratelimit-limit-requests",
+        "x-ratelimit-remaining-requests",
+        "x-ratelimit-reset-requests",
+        "x-ratelimit-limit-tokens",
+        "x-ratelimit-remaining-tokens",
+        "x-ratelimit-reset-tokens",
+        "retry-after",
+    )
 
     def __init__(
         self,
@@ -91,6 +100,7 @@ class GroqCandidate7Provider:
         max_attempts_per_pass: int = 2,
         max_completion_tokens: int = 1536,
         max_retry_delay: float = 900.0,
+        min_request_interval_seconds: float = 3.0,
     ) -> None:
         parsed = urlsplit(base_url)
         if parsed.scheme != "https" or parsed.hostname not in self.DEFAULT_ALLOWED_HOSTS or parsed.username or parsed.password or parsed.query or parsed.fragment:
@@ -102,6 +112,8 @@ class GroqCandidate7Provider:
         self.max_attempts_per_pass = max(1, int(max_attempts_per_pass))
         self.max_completion_tokens = max(1, int(max_completion_tokens))
         self.max_retry_delay = max(0.0, float(max_retry_delay))
+        self.min_request_interval_seconds = max(0.0, float(min_request_interval_seconds))
+        self._last_request_started: float | None = None
 
     @staticmethod
     def _issues(exc: Exception) -> list[dict[str, str]]:
@@ -112,7 +124,28 @@ class GroqCandidate7Provider:
             ]
         return [{"location": "root", "code": type(exc).__name__}]
 
+    @classmethod
+    def _rate_limit_headers(cls, headers: Any) -> dict[str, str]:
+        if headers is None:
+            return {}
+        captured: dict[str, str] = {}
+        for name in cls.RATE_LIMIT_HEADER_NAMES:
+            value = headers.get(name)
+            if value is not None:
+                captured[name] = str(value).strip()
+        return captured
+
+    def _pace_request(self) -> None:
+        now = time.monotonic()
+        if self._last_request_started is not None:
+            remaining = self.min_request_interval_seconds - (now - self._last_request_started)
+            if remaining > 0:
+                time.sleep(remaining)
+                now = time.monotonic()
+        self._last_request_started = now
+
     def _request(self, messages: list[dict[str, str]], attempt: int) -> tuple[dict[str, Any], dict[str, Any]]:
+        self._pace_request()
         payload = {
             "model": self.model,
             "temperature": 0,
@@ -137,13 +170,15 @@ class GroqCandidate7Provider:
                     raise ProviderRequestError("RESPONSE_TOO_LARGE", attempts=attempt, transient=False)
         except error.HTTPError as exc:
             retryable = exc.code == 429 or 500 <= exc.code <= 599
+            rate_headers = self._rate_limit_headers(exc.headers)
             retry_after = 0.0
             try:
-                retry_after = min(max(0.0, float(exc.headers.get("Retry-After", 0.0))), 3600.0)
+                retry_after = min(max(0.0, float(rate_headers.get("retry-after", 0.0))), 3600.0)
             except (TypeError, ValueError):
                 pass
             provider_exc = ProviderRequestError(f"HTTP_{exc.code}", attempts=attempt, transient=retryable)
             provider_exc.retry_after_seconds = retry_after
+            provider_exc.rate_limit_headers = rate_headers
             raise provider_exc from exc
         except (error.URLError, TimeoutError) as exc:
             raise ProviderRequestError("TRANSPORT_ERROR", attempts=attempt, transient=True) from exc
@@ -168,7 +203,11 @@ class GroqCandidate7Provider:
             try:
                 parsed, metadata = self._request(messages, attempt)
             except ProviderRequestError as exc:
-                trace.append({"stage": stage, "attempt": attempt, "outcome": "provider_error", "code": exc.code, "transient": exc.transient})
+                entry = {"stage": stage, "attempt": attempt, "outcome": "provider_error", "code": exc.code, "transient": exc.transient}
+                rate_headers = dict(getattr(exc, "rate_limit_headers", {}) or {})
+                if rate_headers:
+                    entry["rate_limit_headers"] = rate_headers
+                trace.append(entry)
                 if exc.transient and attempt < self.max_attempts_per_pass:
                     delay = max(2 ** (attempt - 1), float(getattr(exc, "retry_after_seconds", 0.0) or 0.0))
                     time.sleep(min(self.max_retry_delay, delay))
