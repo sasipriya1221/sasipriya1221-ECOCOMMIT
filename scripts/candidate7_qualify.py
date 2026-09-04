@@ -19,9 +19,42 @@ def _load(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _trace_metrics(rows) -> tuple[int, int]:
+    relations_dropped_ungrounded = 0
+    actions_corrected_out_of_vocab = 0
+    for row in rows:
+        trace = row.get("provider_trace") or []
+        relations_dropped_ungrounded += sum(
+            entry.get("outcome") == "relation_dropped_ungrounded" for entry in trace
+        )
+        # Branch 1c routes OOV ACTION values through the existing bounded schema
+        # correction loop. Count an OOV invalid attempt only when a later facts
+        # attempt for that same case was accepted, i.e. the bounded correction worked.
+        saw_oov = any(
+            entry.get("stage") == "facts"
+            and entry.get("outcome") == "schema_invalid"
+            and any(issue.get("code") == "C7_ACTION_TYPE_OUT_OF_VOCAB" for issue in entry.get("issues", []))
+            for entry in trace
+        )
+        later_accepted = any(
+            entry.get("stage") == "facts" and entry.get("outcome") == "accepted"
+            for entry in trace
+        )
+        if saw_oov and later_accepted:
+            actions_corrected_out_of_vocab += 1
+    return relations_dropped_ungrounded, actions_corrected_out_of_vocab
+
+
 def _write_summary(output_dir: Path, rows, scores, gold_rows, provider_attempts: int, **extra) -> dict:
     payload = aggregate(scores, gold_rows)
-    payload.update({"provider_attempts": provider_attempts, "mode": "development", **extra})
+    relations_dropped_ungrounded, actions_corrected_out_of_vocab = _trace_metrics(rows)
+    payload.update({
+        "provider_attempts": provider_attempts,
+        "mode": "development",
+        "relations_dropped_ungrounded": relations_dropped_ungrounded,
+        "actions_corrected_out_of_vocab": actions_corrected_out_of_vocab,
+        **extra,
+    })
     payload["provider_deferred_cases"] = sum(row["observed_status"] == "PROVIDER_DEFERRED" for row in rows)
     payload["terminal_semantic_cases"] = len(scores)
     (output_dir / "aggregate.json").write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
@@ -58,7 +91,7 @@ def run(output_dir: Path) -> int:
     for case_id, instruction in cases:
         result = run_candidate7(instruction, provider)
         trace = list(result.provider_trace)
-        provider_attempts += len(trace)
+        provider_attempts += len([entry for entry in trace if "attempt" in entry])
         score = score_case(case_id, result, gold_by_id[case_id])
         row = {
             "case_id": case_id,
