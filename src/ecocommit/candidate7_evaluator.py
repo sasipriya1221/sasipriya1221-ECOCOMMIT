@@ -6,9 +6,9 @@ from decimal import Decimal
 from typing import Any
 
 from .candidate7 import Candidate7Result
-from .candidate7_compile import _quantity
+from .candidate7_compile import _constraint_kind_v2, _quantity
 from .candidate7_flat import FactKind, RelationKind
-from .candidate7_structure import C7And, C7Atom, C7Not, C7Or, C7Truth, _action_kind, _constraint_kind, _money, _refs, eval_expr
+from .candidate7_structure import C7And, C7Atom, C7Not, C7Or, C7Truth, _action_kind, _money, _refs, eval_expr
 from .qualification import QualificationCounts, QualificationThresholds, final_pass, reachable
 
 
@@ -112,8 +112,10 @@ def _match_constraints(result: Candidate7Result, expected: list[list[str]]) -> b
     for fact in graph.facts:
         if fact.kind is FactKind.CONSTRAINT:
             try:
+                kind = _constraint_kind_v2(fact.text_span.quote)
+                if kind == "TEMPORAL_DURATION":
+                    continue
                 amount, currency = _money(fact.text_span.quote)
-                kind = _constraint_kind(fact.text_span.quote)
             except ValueError:
                 return False
             actual.append((kind, _decimal_text(amount), currency))
