@@ -16,6 +16,22 @@ _NUMBER_WORDS = {
     "twenty": 20,
 }
 
+_DURATION_NUMBER = r"(?:\d+(?:\.\d+)?|" + "|".join(_NUMBER_WORDS) + r"|a|an|another)"
+_DURATION_UNIT = r"(?:day|days|week|weeks|month|months|year|years)"
+_TEMPORAL_DURATION_RE = re.compile(rf"\bfor\s+{_DURATION_NUMBER}\s+{_DURATION_UNIT}\b", re.I)
+
+
+def _constraint_kind_v2(text: str) -> str:
+    """Extend legacy monetary constraint typing with source-grounded durations."""
+    try:
+        return _constraint_kind(text)
+    except ValueError as exc:
+        if str(exc) != "C7_CONSTRAINT_KIND_UNSUPPORTED":
+            raise
+    if _TEMPORAL_DURATION_RE.search(text):
+        return "TEMPORAL_DURATION"
+    raise ValueError("C7_CONSTRAINT_KIND_UNSUPPORTED")
+
 
 def _quantity(action_text: str, object_text: str | None) -> tuple[Decimal, str] | None:
     lowered = action_text.lower()
@@ -111,7 +127,9 @@ def validate_graph_semantics(graph: C7Graph) -> None:
         targets = [r.right for r in graph.relations if r.kind is RelationKind.CONSTRAINT_APPLIES_TO and r.left == fact.id]
         if len(targets) != 1:
             raise ValueError("C7_CONSTRAINT_TARGET_CARDINALITY")
-        kind = _constraint_kind(fact.text_span.quote)
+        kind = _constraint_kind_v2(fact.text_span.quote)
+        if kind == "TEMPORAL_DURATION":
+            continue
         amount, _ = _money(fact.text_span.quote)
         constraints_by_action.setdefault(targets[0], []).append((kind, amount))
 
@@ -169,9 +187,14 @@ def compile_graph_v2(graph: C7Graph) -> EconomicIntentContract:
     for fact in graph.facts:
         if fact.kind is FactKind.CONSTRAINT:
             target = next(r.right for r in graph.relations if r.kind is RelationKind.CONSTRAINT_APPLIES_TO and r.left == fact.id)
-            amount, currency = _money(fact.text_span.quote)
-            value = f"{_constraint_kind(fact.text_span.quote)}:{currency}:{amount.normalize()}"
-            clauses.append(_clause(graph, clause_ids[fact.id], ClauseType.AMOUNT, value, fact.id, depends=(clause_ids[target],)))
+            kind = _constraint_kind_v2(fact.text_span.quote)
+            if kind == "TEMPORAL_DURATION":
+                value = f"TEMPORAL_DURATION:{fact.text_span.quote.strip().lower()}"
+                clauses.append(_clause(graph, clause_ids[fact.id], ClauseType.TEMPORAL, value, fact.id, depends=(clause_ids[target],)))
+            else:
+                amount, currency = _money(fact.text_span.quote)
+                value = f"{kind}:{currency}:{amount.normalize()}"
+                clauses.append(_clause(graph, clause_ids[fact.id], ClauseType.AMOUNT, value, fact.id, depends=(clause_ids[target],)))
         elif fact.kind is FactKind.PREDICATE:
             clauses.append(_clause(graph, clause_ids[fact.id], ClauseType.CONDITION, fact.text_span.quote.strip().lower(), fact.id))
 
