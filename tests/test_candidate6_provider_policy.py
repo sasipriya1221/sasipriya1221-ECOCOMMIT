@@ -1,3 +1,6 @@
+import re
+
+from ecocommit.candidate6 import SYSTEM_PROMPT
 from ecocommit.candidate6_provider import COMPACT_SEMANTIC_IR_SCHEMA, GroqSemanticIRProvider
 
 
@@ -43,3 +46,43 @@ def test_default_retry_window_can_honor_long_provider_reset():
     provider = GroqSemanticIRProvider("test-key")
     assert provider.max_attempts == 3
     assert provider.max_retry_delay >= 600
+
+
+def test_system_prompt_enforces_general_field_type_discipline():
+    assert "Never encode money, price, fee, budget" in SYSTEM_PROMPT
+    assert "Never encode a time span, renewal period" in SYSTEM_PROMPT
+    assert "A concrete descriptive entity named by the instruction is not ambiguous" in SYSTEM_PROMPT
+    assert 'Every Boolean expression MUST be an object with an explicit op' in SYSTEM_PROMPT
+    assert "Predicate.operator MUST be one of" in SYSTEM_PROMPT
+
+
+def test_system_prompt_contains_no_development_holdout_or_official_case_ids():
+    assert re.search(r"\bD\d{3}\b", SYSTEM_PROMPT) is None
+    assert re.search(r"\bH\d{3}\b", SYSTEM_PROMPT) is None
+    assert re.search(r"\bC\d{3}\b", SYSTEM_PROMPT) is None
+
+
+def test_schema_correction_reiterates_boolean_and_quantity_types(monkeypatch):
+    provider = GroqSemanticIRProvider("test-key", max_attempts=2, max_schema_corrections=1)
+    seen = []
+
+    def fake_request(payload, attempt):
+        seen.append(payload)
+        if attempt == 1:
+            return {
+                "id": "bad",
+                "choices": [{"finish_reason": "stop", "message": {"content": '{"schema_version":"semantic-ir-v1","entities":[{"id":"E1","kind":"OBJECT","text":"cables","source":{"kind":"SPAN","quote":"cables","occurrence":1}}],"actions":[{"id":"A1","kind":"BUY","object":"E1","counterparty":null,"quantity":{"raw_value":"4","raw_unit":null,"source":{"kind":"SPAN","quote":"4 cables","occurrence":1}},"source":{"kind":"SPAN","quote":"Buy 4 cables","occurrence":1}}],"constraints":[],"predicates":[],"guards":[],"dependencies":[],"exceptions":[],"ambiguities":[]}'}}],
+                "usage": {},
+            }
+        return {
+            "id": "good",
+            "choices": [{"finish_reason": "stop", "message": {"content": '{"schema_version":"semantic-ir-v1","entities":[{"id":"E1","kind":"OBJECT","text":"cables","source":{"kind":"SPAN","quote":"cables","occurrence":1}}],"actions":[{"id":"A1","kind":"BUY","object":"E1","counterparty":null,"quantity":{"raw_value":"4","raw_unit":"cables","source":{"kind":"SPAN","quote":"4 cables","occurrence":1}},"source":{"kind":"SPAN","quote":"Buy 4 cables","occurrence":1}}],"constraints":[],"predicates":[],"guards":[],"dependencies":[],"exceptions":[],"ambiguities":[]}'}}],
+            "usage": {},
+        }
+
+    monkeypatch.setattr(provider, "_request", fake_request)
+    provider.parse_with_metadata("Buy 4 cables")
+    correction = seen[1]["messages"][-1]["content"]
+    assert "Boolean expr/when must be an object with op=ATOM|NOT|AND|OR" in correction
+    assert "raw_value/raw_unit must be strings" in correction
+    assert "never put money or time spans in quantity" in correction
