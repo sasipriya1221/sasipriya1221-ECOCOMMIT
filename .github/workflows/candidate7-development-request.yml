@@ -1,0 +1,68 @@
+name: Candidate 7 - Development Request Bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - evidence/candidate7-development-request.json
+
+concurrency:
+  group: candidate7-development-request-bridge
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Validate request and current Candidate-7 head
+        id: request
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          import json, os, re, subprocess
+          from pathlib import Path
+
+          request = json.loads(Path("evidence/candidate7-development-request.json").read_text(encoding="utf-8"))
+          if request.get("candidate") != "A-CANDIDATE-7":
+              raise SystemExit("invalid Candidate-7 request marker")
+          sha = request.get("source_sha", "")
+          if not re.fullmatch(r"[0-9a-f]{40}", sha):
+              raise SystemExit("request source_sha must be exact lowercase 40-hex")
+          if request.get("official_checkpoint_a_cases_used") is not False or request.get("holdout_opened") is not False:
+              raise SystemExit("development request must attest official/holdout remain unopened")
+
+          branch = subprocess.check_output([
+              "gh", "api", f"repos/{os.environ['GH_REPO']}/branches/candidate7-structural-semantic-fix",
+              "--jq", ".commit.sha",
+          ], text=True).strip()
+          if branch != sha:
+              raise SystemExit(f"Candidate-7 branch head {branch} != requested source {sha}")
+
+          target_title = f"Candidate 7 Dev {sha}"
+          existing = subprocess.check_output([
+              "gh", "api", f"repos/{os.environ['GH_REPO']}/actions/workflows/candidate7-development-dispatch.yml/runs?event=workflow_dispatch&per_page=100",
+              "--jq", ".workflow_runs[].display_title",
+          ], text=True).splitlines()
+          if target_title in existing:
+              raise SystemExit("duplicate Candidate-7 development dispatch for this exact source refused")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"source_sha={sha}\n")
+
+      - name: Dispatch exact-source Candidate-7 development qualification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ steps.request.outputs.source_sha }}
+        run: |
+          gh workflow run candidate7-development-dispatch.yml --repo "$GH_REPO" --ref main -f source_sha="$SOURCE_SHA"
