@@ -2,7 +2,7 @@ name: Offline Regression
 
 on:
   push:
-    branches: [main]
+    branches: [main, candidate7-structural-semantic-fix]
   pull_request:
 
 concurrency:
