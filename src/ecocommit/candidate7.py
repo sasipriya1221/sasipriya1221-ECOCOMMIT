@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from .candidate7_compile import compile_graph_v2
+from .candidate7_conservation import verify_candidate7_conservation
 from .candidate7_flat import LabeledFact, RelationBatch
 from .candidate7_structure import C7Graph, build_graph
 from .interpreter import ProviderRequestError
@@ -36,6 +37,7 @@ def run_candidate7(instruction: str, provider: Candidate7Provider) -> Candidate7
         trace = parsed.provider_trace
         graph = build_graph(instruction, facts, relations)
         contract = compile_graph_v2(graph)
+        verify_candidate7_conservation(graph, contract)
         status = "CLARIFICATION_REQUIRED" if graph.blocked_actions else "COMPILED"
         return Candidate7Result(
             status=status,
