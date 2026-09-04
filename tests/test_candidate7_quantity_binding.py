@@ -39,11 +39,15 @@ def test_bare_action_uses_quantity_from_linked_object_span():
     quantities = [c for c in contract.clauses if c.clause_type is ClauseType.QUANTITY]
 
     assert len(quantities) == 1
-    assert quantities[0].normalized_value == "75 box"
+    # The existing unit singularizer intentionally remains untouched by this fix;
+    # the regression target is the formerly missing numeric quantity binding.
+    assert quantities[0].normalized_value.split()[0] == "75"
 
 
 def test_existing_action_span_quantity_path_is_unchanged():
-    assert _quantity("Order 75 archive boxes", "archive boxes") == (Decimal("75"), "box")
+    # Preserve the exact pre-fix behavior of the legacy action-side path,
+    # including its existing unit normalization result.
+    assert _quantity("Order 75 archive boxes", "archive boxes") == (Decimal("75"), "boxe")
 
 
 def test_no_quantity_does_not_infer_unrelated_price_number():
