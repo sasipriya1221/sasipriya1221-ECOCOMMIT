@@ -24,9 +24,13 @@ def fact(quote: str, kind: FactKind, polarity: Polarity = Polarity.POSITIVE) -> 
     return Fact(text_span=TextSpan(quote=quote), kind=kind, polarity=polarity)
 
 
+def relation(kind: RelationKind, left: str, right: str, justification: str = "grounded") -> Relation:
+    return Relation(kind=kind, left=left, right=right, justification_span=justification)
+
+
 def test_pass1_schema_has_no_identifier_or_reference_field():
     fields = set(Fact.model_fields)
-    assert fields == {"text_span", "kind", "polarity"}
+    assert fields == {"text_span", "kind", "polarity", "action_type"}
     assert "NO IDs" in PASS1_SYSTEM_PROMPT
     assert "NO cross-references" in PASS1_SYSTEM_PROMPT
     assert "Boolean" in PASS1_SYSTEM_PROMPT
@@ -45,7 +49,7 @@ def test_ids_are_assigned_only_deterministically_in_extraction_order():
 
 def test_pass2_schema_can_reference_only_existing_fact_ids():
     facts = assign_fact_ids(FactBatch(facts=[fact("Buy cables", FactKind.ACTION), fact("cables", FactKind.ENTITY)]))
-    bad = RelationBatch(relations=[Relation(kind=RelationKind.ACTION_OBJECT, left="F0001", right="F9999")])
+    bad = RelationBatch(relations=[relation(RelationKind.ACTION_OBJECT, "F0001", "F9999")])
     with pytest.raises(ValueError, match="C7_UNKNOWN_FACT_REFERENCE"):
         validate_relations(facts, bad)
     assert "ONLY the existing F#### IDs" in PASS2_SYSTEM_PROMPT
@@ -54,7 +58,7 @@ def test_pass2_schema_can_reference_only_existing_fact_ids():
 
 def test_relation_kind_mismatch_fails_closed():
     facts = assign_fact_ids(FactBatch(facts=[fact("Buy cables", FactKind.ACTION), fact("cables", FactKind.ENTITY)]))
-    bad = RelationBatch(relations=[Relation(kind=RelationKind.ALL_OF, left="F0001", right="F0002")])
+    bad = RelationBatch(relations=[relation(RelationKind.ALL_OF, "F0001", "F0002")])
     with pytest.raises(ValueError, match="C7_RELATION_KIND_MISMATCH"):
         validate_relations(facts, bad)
 
@@ -62,8 +66,8 @@ def test_relation_kind_mismatch_fails_closed():
 def test_contradictory_boolean_pair_fails_closed():
     facts = assign_fact_ids(FactBatch(facts=[fact("approval received", FactKind.PREDICATE), fact("account frozen", FactKind.PREDICATE)]))
     bad = RelationBatch(relations=[
-        Relation(kind=RelationKind.ALL_OF, left="F0001", right="F0002"),
-        Relation(kind=RelationKind.ANY_OF, left="F0001", right="F0002"),
+        relation(RelationKind.ALL_OF, "F0001", "F0002"),
+        relation(RelationKind.ANY_OF, "F0001", "F0002"),
     ])
     with pytest.raises(ValueError, match="C7_CONTRADICTORY_LOGIC_RELATION"):
         validate_relations(facts, bad)
@@ -77,8 +81,8 @@ def test_single_negated_guard_is_built_deterministically_not_by_model():
         fact("account not frozen", FactKind.PREDICATE, Polarity.NEGATED),
     ]))
     relations = RelationBatch(relations=[
-        Relation(kind=RelationKind.ACTION_OBJECT, left="F0001", right="F0002"),
-        Relation(kind=RelationKind.GUARDS_ACTION, left="F0003", right="F0001"),
+        relation(RelationKind.ACTION_OBJECT, "F0001", "F0002", instruction),
+        relation(RelationKind.GUARDS_ACTION, "F0003", "F0001", "if account not frozen"),
     ])
     graph = build_graph(instruction, facts, relations)
     assert len(graph.guards) == 1
@@ -96,8 +100,8 @@ def test_unless_style_block_relation_becomes_not_guard_deterministically():
         fact("recall notice active", FactKind.PREDICATE),
     ]))
     relations = RelationBatch(relations=[
-        Relation(kind=RelationKind.ACTION_OBJECT, left="F0001", right="F0002"),
-        Relation(kind=RelationKind.BLOCKS_ACTION, left="F0003", right="F0001"),
+        relation(RelationKind.ACTION_OBJECT, "F0001", "F0002", instruction),
+        relation(RelationKind.BLOCKS_ACTION, "F0003", "F0001", "unless recall notice active"),
     ])
     graph = build_graph(instruction, facts, relations)
     assert isinstance(graph.guards[0].expr, C7Not)
@@ -113,13 +117,13 @@ def test_mixed_boolean_structure_is_constructed_from_flat_pair_relations():
         fact("branch B requests replenishment", FactKind.PREDICATE),
     ]))
     relations = RelationBatch(relations=[
-        Relation(kind=RelationKind.ACTION_OBJECT, left="F0001", right="F0002"),
-        Relation(kind=RelationKind.GUARDS_ACTION, left="F0003", right="F0001"),
-        Relation(kind=RelationKind.GUARDS_ACTION, left="F0004", right="F0001"),
-        Relation(kind=RelationKind.GUARDS_ACTION, left="F0005", right="F0001"),
-        Relation(kind=RelationKind.ALL_OF, left="F0003", right="F0004"),
-        Relation(kind=RelationKind.ALL_OF, left="F0003", right="F0005"),
-        Relation(kind=RelationKind.ANY_OF, left="F0004", right="F0005"),
+        relation(RelationKind.ACTION_OBJECT, "F0001", "F0002", instruction),
+        relation(RelationKind.GUARDS_ACTION, "F0003", "F0001", "only when inventory low"),
+        relation(RelationKind.GUARDS_ACTION, "F0004", "F0001", "either branch A requests replenishment or branch B requests replenishment"),
+        relation(RelationKind.GUARDS_ACTION, "F0005", "F0001", "either branch A requests replenishment or branch B requests replenishment"),
+        relation(RelationKind.ALL_OF, "F0003", "F0004", "inventory low and either branch A requests replenishment"),
+        relation(RelationKind.ALL_OF, "F0003", "F0005", "inventory low and either branch A requests replenishment or branch B requests replenishment"),
+        relation(RelationKind.ANY_OF, "F0004", "F0005", "either branch A requests replenishment or branch B requests replenishment"),
     ])
     graph = build_graph(instruction, facts, relations)
     expr = graph.guards[0].expr
@@ -137,9 +141,9 @@ def test_multiple_guard_predicates_without_logic_relation_fail_closed():
         fact("account current", FactKind.PREDICATE),
     ]))
     relations = RelationBatch(relations=[
-        Relation(kind=RelationKind.ACTION_OBJECT, left="F0001", right="F0002"),
-        Relation(kind=RelationKind.GUARDS_ACTION, left="F0003", right="F0001"),
-        Relation(kind=RelationKind.GUARDS_ACTION, left="F0004", right="F0001"),
+        relation(RelationKind.ACTION_OBJECT, "F0001", "F0002", instruction),
+        relation(RelationKind.GUARDS_ACTION, "F0003", "F0001", "if approval received"),
+        relation(RelationKind.GUARDS_ACTION, "F0004", "F0001", "and account current"),
     ])
     with pytest.raises(ValueError, match="C7_BOOLEAN_RELATION_MISSING"):
         build_graph(instruction, facts, relations)
@@ -153,8 +157,8 @@ def test_guard_relation_cannot_be_silently_dropped_from_contract():
         fact("warehouse count below 100", FactKind.PREDICATE),
     ]))
     relations = RelationBatch(relations=[
-        Relation(kind=RelationKind.ACTION_OBJECT, left="F0001", right="F0002"),
-        Relation(kind=RelationKind.GUARDS_ACTION, left="F0003", right="F0001"),
+        relation(RelationKind.ACTION_OBJECT, "F0001", "F0002", instruction),
+        relation(RelationKind.GUARDS_ACTION, "F0003", "F0001", "only if warehouse count below 100"),
     ])
     graph = build_graph(instruction, facts, relations)
     contract = compile_graph(graph)
@@ -172,7 +176,7 @@ def test_ambiguity_without_target_blocks_all_actions_fail_closed():
         fact("cables", FactKind.ENTITY),
         fact("reasonable number", FactKind.AMBIGUITY),
     ]))
-    relations = RelationBatch(relations=[Relation(kind=RelationKind.ACTION_OBJECT, left="F0001", right="F0002")])
+    relations = RelationBatch(relations=[relation(RelationKind.ACTION_OBJECT, "F0001", "F0002", instruction)])
     graph = build_graph(instruction, facts, relations)
     assert graph.blocked_actions == frozenset({"F0001"})
 
