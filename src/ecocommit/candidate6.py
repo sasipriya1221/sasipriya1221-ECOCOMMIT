@@ -15,24 +15,29 @@ Extract only semantic meaning explicitly supported by the instruction. Preserve 
 
 REFERENCE DISCIPLINE
 - Every reference field MUST contain the ID of a declared semantic object, never copied prose.
-- action.object and action.counterparty must reference entity IDs such as E1.
-- constraint.action and guard.action must reference action IDs such as A1.
-- predicate.subject must reference an entity ID such as E2.
-- Boolean ATOM.predicate must reference a predicate ID such as P1.
-- dependency.action and dependency.prerequisite_action must reference action IDs.
-- Never write values such as "archive boxes", "supplier", or "approval" into a reference field; declare an entity/predicate and reference its ID.
+- action.object and action.counterparty must reference declared entity IDs such as E1.
+- constraint.action and guard.action must reference declared action IDs such as A1.
+- predicate.subject must reference a declared entity ID such as E2.
+- Boolean ATOM.predicate must reference a declared predicate ID such as P1.
+- dependency.action and dependency.prerequisite_action must reference declared action IDs.
+- ambiguity targets must reference an existing declared ID of the target kind; ACTION_FIELD uses A#, COUNTERPARTY uses E#, PREDICATE uses P#, GUARD uses G#, CONSTRAINT uses C#, DEPENDENCY uses D#. PRESENTATION has no ID.
+- Never write a surface label such as an object name, supplier name, action phrase, or approval phrase into a reference field. Declare the semantic object and reference its ID.
 
 GUARD DISCIPLINE
 Conditions governing actions use ONLY_IF guards with ATOM/AND/OR/NOT. Preserve AND versus OR, negation, condition scope and exception scope exactly. Cross-action sequencing belongs only in dependencies. Do not encode the same relationship twice.
 Create a guard only when the instruction actually makes execution conditional, for example with "only if", "if", "provided", "on condition that", "subject to", "when", "unless", or an equivalent authorization condition.
-Do NOT turn a descriptive, completed-state, purpose, or noun-modifying phrase into a guard merely because it contains words such as "completed", "approved", "valid", or "current". For example, a phrase describing what an invoice/payment is for is not automatically a condition. A condition must govern whether the action may occur.
+Do NOT turn a descriptive, completed-state, purpose, or noun-modifying phrase into a guard merely because it contains words such as "completed", "approved", "valid", or "current". A condition must govern whether the action may occur.
 
-AMBIGUITY DISCIPLINE
-Represent an ambiguity only when unresolved wording is needed to determine the meaning or economic authority of an explicit action, constraint, guard, exception, dependency, counterparty, or other represented semantic object. Do not invent a missing-budget ambiguity merely because no budget was stated. Do not invent a duration ambiguity when an explicit duration such as "one week" is stated. Do not create ambiguities for optional information that the instruction does not require. If ambiguous wording is strictly presentation/cosmetic language disconnected from economic authorization, target PRESENTATION. The deterministic system, not you, decides materiality.
+AMBIGUITY DISCIPLINE — ABSENCE IS NOT AMBIGUITY
+An unstated fact is NOT, by itself, an ambiguity. Represent missing information only when the instruction itself makes that unresolved information necessary to interpret an explicitly stated action, constraint, condition, dependency, exception, or authority boundary.
+Do not create an ambiguity merely because an action lacks a stated budget, price, counterparty/provider/vendor, date, time, duration, location, payment method, or other optional operational detail. If the instruction gives a complete semantic action without requiring such a field, omit that field and do not clarify it.
+Do not infer that every BUY/ORDER/HIRE/BOOK/RESERVE action requires a budget, counterparty, date, time, or duration. Those fields become material only when the user's wording makes them part of the requested meaning or authority boundary.
+By contrast, if the user explicitly makes authorization depend on unresolved wording — for example an unspecified limit explicitly required by a stated cap, an unclear named counterparty reference, or an ambiguous condition that governs whether the action may execute — preserve that unresolved material meaning as an ambiguity.
+If ambiguous wording is strictly presentation/cosmetic language disconnected from economic authorization, target PRESENTATION. The deterministic system, not you, decides materiality.
 If wording affecting an economic semantic object is unresolved, target ACTION_FIELD, PREDICATE, GUARD, CONSTRAINT, COUNTERPARTY or DEPENDENCY; never guess.
 
 GROUNDING AND UNSUPPORTED MEANING
-Missing information that is genuinely required for an identified ambiguity uses ABSENCE grounding; semantic facts actually stated use exact SPAN quotes copied verbatim. If the schema cannot safely express material meaning that affects authorization, emit an UNSUPPORTED_SEMANTIC_STRUCTURE ambiguity targeted to the affected economic semantic object instead of simplifying it.
+ABSENCE grounding is permitted only for information genuinely required by the user's stated semantics, never to list optional unstated details. Semantic facts actually stated use exact SPAN quotes copied verbatim. If the schema cannot safely express material meaning that affects authorization, emit an UNSUPPORTED_SEMANTIC_STRUCTURE ambiguity targeted to the affected economic semantic object instead of simplifying it.
 
 Do not calculate operational consequences. Never output execution_allowed, transaction_allowed, clarification status, approval state, evidence satisfaction, economic authority, validator state or payment permission.
 Output exactly one JSON object conforming to semantic-ir-v1. No commentary or markdown. JSON only.'''
@@ -71,15 +76,12 @@ def action_guard_truth(ir: SemanticIR, action_id: str, predicate_values: Mapping
 
 
 def action_authorized(ir: SemanticIR, action_id: str, predicate_values: Mapping[str, Truth]) -> bool:
-    # This is the deterministic semantic authority boundary only; downstream B controls
-    # must still pass before any economic commitment. UNKNOWN is never authority.
     if action_id in blocked_actions(ir):
         return False
     if action_guard_truth(ir, action_id, predicate_values) is not Truth.TRUE:
         return False
     for exception in ir.exceptions:
         if exception.target.kind == "ACTION" and exception.target.id == action_id and exception.effect.effect == "BLOCK_ACTION":
-            # A restrictive exception whose truth is UNKNOWN is fail-closed.
             if eval_expr(exception.when, predicate_values) is not Truth.FALSE:
                 return False
     return True
