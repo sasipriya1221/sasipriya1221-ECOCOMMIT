@@ -16,7 +16,6 @@ def test_all_third_party_workflow_actions_are_commit_pinned():
             match = re.search(r"\buses:\s*([^\s#]+)", line)
             if match and not re.fullmatch(r"[^@\s]+@[0-9a-f]{40}", match.group(1)):
                 unpinned.append(f"{path.name}:{line_number}:{match.group(1)}")
-
     assert unpinned == []
 
 
@@ -54,7 +53,6 @@ def test_inline_credentialed_http_preflights_do_not_forward_auth_on_redirects():
         assert ".add_unredirected_header(" in text, path.name
         assert ".geturl()" in text, path.name
         assert ".full_url" in text, path.name
-
     assert credentialed == [
         "candidate6-freeze.yml",
         "candidate6-holdout-decision.yml",
@@ -76,10 +74,10 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
         trigger_block = text.split("\njobs:", 1)[0]
         assert re.search(r"(?m)^  workflow_dispatch:\s*$", trigger_block), path.name
         assert not re.search(r"(?m)^  (?:push|pull_request(?:_target)?):", trigger_block), path.name
-
     assert credentialed == [
         "candidate6-development-dispatch.yml",
         "candidate6-holdout-dispatch.yml",
+        "candidate7-development-dispatch.yml",
         "checkpoint-a-live.yml",
         "checkpoint-a-qwen-smoke.yml",
         "checkpoint-a-smoke.yml",
@@ -88,6 +86,34 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
         "razorpay-test-lifecycle.yml",
         "razorpay-test-preflight.yml",
     ]
+
+
+def test_candidate7_development_dispatch_is_manual_exact_source_and_secret_scoped():
+    workflow = (WORKFLOWS / "candidate7-development-dispatch.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert re.search(r"(?m)^  workflow_dispatch:\s*$", trigger_block)
+    assert not re.search(r"(?m)^  (?:push|pull_request(?:_target)?):", trigger_block)
+    assert "source_sha" in trigger_block
+    assert "ref: ${{ inputs.source_sha }}" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}" in workflow
+    assert "python -m pytest" in workflow
+    assert "candidate7_qualify.py" in workflow
+    assert "official_checkpoint_a_cases_used" in workflow
+    assert "holdout_opened" in workflow
+
+
+def test_candidate7_request_bridge_is_secretless_exact_source_and_duplicate_safe():
+    workflow = (WORKFLOWS / "candidate7-development-request.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert re.search(r"(?m)^  push:\s*$", trigger_block)
+    assert "evidence/candidate7-development-request.json" in trigger_block
+    assert "secrets." not in workflow
+    assert "actions: write" in workflow
+    assert "candidate7-structural-semantic-fix" in workflow
+    assert "duplicate Candidate-7 development dispatch for this exact source refused" in workflow
+    assert "gh workflow run candidate7-development-dispatch.yml" in workflow
+    assert "persist-credentials: false" in workflow
 
 
 def test_candidate6_freeze_workflow_is_manual_secretless_and_single_purpose():
@@ -154,7 +180,6 @@ def test_candidate6_supervisor_handoff_is_event_driven_secretless_and_narrow():
 def test_offline_regression_covers_every_change_and_static_checks():
     workflow = (WORKFLOWS / "offline-regression.yml").read_text(encoding="utf-8")
     trigger_block = workflow.split("\nconcurrency:", 1)[0]
-
     assert "paths:" not in trigger_block
     assert "paths-ignore:" not in trigger_block
     assert re.search(r"(?m)^  push:\s*$", trigger_block)
@@ -167,13 +192,8 @@ def test_offline_regression_covers_every_change_and_static_checks():
 def test_hash_lock_includes_build_backend_for_a_fresh_venv():
     lock = (ROOT / "requirements-dev.lock").read_text(encoding="utf-8")
     lines = lock.splitlines()
-
     for distribution in ("setuptools", "wheel"):
-        matches = [
-            index
-            for index, line in enumerate(lines)
-            if line.startswith(f"{distribution}==")
-        ]
+        matches = [index for index, line in enumerate(lines) if line.startswith(f"{distribution}==")]
         assert len(matches) == 1, distribution
         index = matches[0]
         assert lines[index].endswith(" \\")
@@ -188,7 +208,6 @@ def test_checkout_callback_is_ignored_and_runbook_moves_it_to_private_artifacts(
         check=False,
     )
     runbook = (ROOT / "docs" / "REPRODUCIBILITY.md").read_text(encoding="utf-8")
-
     assert ignored.returncode == 0
     assert f"Move-Item -LiteralPath {callback}" in runbook
     assert runbook.count(f"artifacts\\private\\{callback}") == 3
