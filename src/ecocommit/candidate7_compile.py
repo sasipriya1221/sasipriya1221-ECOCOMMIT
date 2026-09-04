@@ -23,13 +23,29 @@ def _quantity(action_text: str, object_text: str | None) -> tuple[Decimal, str] 
         raise ValueError("C7_QUANTITY_INVALID")
     if object_text is None:
         return None
+
     object_lower = object_text.lower()
+    number_pattern = r"(?:\d+(?:\.\d+)?|" + "|".join(_NUMBER_WORDS) + r")"
+
+    # Preserve the legacy path first: when the ACTION span itself contains the
+    # quantity before the linked object text, that explicit action-side value wins.
     object_pos = lowered.find(object_lower)
     prefix = lowered[:object_pos] if object_pos >= 0 else lowered
-    candidates = list(re.finditer(r"\b(?:\d+(?:\.\d+)?|" + "|".join(_NUMBER_WORDS) + r")\b", prefix))
-    if not candidates:
+    candidates = list(re.finditer(r"\b" + number_pattern + r"\b", prefix))
+    token: str | None = candidates[-1].group(0) if candidates else None
+
+    # Candidate 7 grounds ACTION spans narrowly (often just the verb), while the
+    # linked ENTITY may carry the quantity (e.g. "75 archive boxes"). Fall back
+    # only to a leading quantity in that linked object span. This deliberately
+    # avoids treating unrelated trailing numbers or prices as quantities.
+    if token is None:
+        leading = re.match(r"^\s*(" + number_pattern + r")\b", object_lower)
+        if leading is not None:
+            token = leading.group(1)
+
+    if token is None:
         return None
-    token = candidates[-1].group(0)
+
     value = Decimal(_NUMBER_WORDS[token]) if token in _NUMBER_WORDS else Decimal(token)
     if value <= 0:
         raise ValueError("C7_QUANTITY_INVALID")
