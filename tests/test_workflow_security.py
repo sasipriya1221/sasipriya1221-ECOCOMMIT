@@ -56,8 +56,11 @@ def test_inline_credentialed_http_preflights_do_not_forward_auth_on_redirects():
     assert credentialed == [
         "candidate6-freeze.yml",
         "candidate6-holdout-decision.yml",
+        "candidate6-official-prereg.yml",
+        "candidate6-provider-readiness.yml",
         "candidate6-supervisor-kick.yml",
         "candidate6-supervisor.yml",
+        "checkpoint-a-candidate6.yml",
         "checkpoint-a-live.yml",
         "provider-preflight.yml",
         "razorpay-test-preflight.yml",
@@ -77,7 +80,9 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
     assert credentialed == [
         "candidate6-development-dispatch.yml",
         "candidate6-holdout-dispatch.yml",
+        "candidate6-provider-readiness.yml",
         "candidate7-development-dispatch.yml",
+        "checkpoint-a-candidate6.yml",
         "checkpoint-a-live.yml",
         "checkpoint-a-qwen-smoke.yml",
         "checkpoint-a-smoke.yml",
