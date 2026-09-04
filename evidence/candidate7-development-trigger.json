@@ -1,0 +1,9 @@
+{
+  "candidate": "Candidate 7",
+  "purpose": "development qualification trigger",
+  "source_sha": "6e2e08a0dbbe6b35d6e57cc5f5eda50a36f6babb",
+  "development_suite": "data/candidate6/development.json",
+  "development_gold": "data/candidate6/development_gold.json",
+  "official_checkpoint_a_cases_used": false,
+  "holdout_opened": false
+}
