@@ -1,0 +1,30 @@
+name: Candidate 7 - Groq Rate Limit Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/candidate7-rate-limit-diagnostic.yml
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: One-token Groq header probe
+        env:
+          GROQ_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GROQ_API_KEY"
+          tmp_headers="$(mktemp)"
+          http_code=$(curl -sS -D "$tmp_headers" -o /dev/null -w '%{http_code}' \
+            "https://api.groq.com/openai/v1/chat/completions" \
+            -H "Authorization: Bearer $GROQ_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"model":"qwen/qwen3.6-27b","messages":[{"role":"user","content":"ping"}],"max_tokens":1}')
+          echo "http_status=$http_code"
+          awk 'BEGIN{IGNORECASE=1} /^x-ratelimit-limit-requests:|^x-ratelimit-remaining-requests:|^x-ratelimit-reset-requests:|^x-ratelimit-limit-tokens:|^x-ratelimit-remaining-tokens:|^x-ratelimit-reset-tokens:|^retry-after:/ {gsub("\r",""); print}' "$tmp_headers"
