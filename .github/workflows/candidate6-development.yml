@@ -75,147 +75,18 @@ jobs:
           python -m pip check
       - name: Verify frozen deterministic gate on dispatched commit
         run: |
-          python -m pytest -p no:cacheprovider --basetemp .test-tmp-c7-frozen-qual
-          python -m compileall -q src scripts tests
+          python -m pytest tests -p no:cacheprovider --basetemp .test-tmp-c7-frozen-qual
+          python -m pytest diagnostic_tests/candidate7_qualification_harness_mock_tests.py -p no:cacheprovider --basetemp .test-tmp-c7-harness
+          python -m compileall -q src scripts tests diagnostic_tests
           node --check ui/app.js
           git diff --check
           python scripts/candidate7_pass2_qualification.py self-check
       - name: Prepare evidence directory
         run: mkdir -p artifacts/candidate7-pass2-qualification
-
-      - name: D003 attempt 1
+      - name: Run safe Candidate-7 qualification
         env:
           ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: python scripts/candidate7_pass2_qualification.py run-attempt --case D003 --attempt 1 --output artifacts/candidate7-pass2-qualification/d003-1.json
-      - name: Preserve D003 attempt 1
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d003-1-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d003-1.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: D003 attempt 2
-        env:
-          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: sleep 3 && python scripts/candidate7_pass2_qualification.py run-attempt --case D003 --attempt 2 --output artifacts/candidate7-pass2-qualification/d003-2.json
-      - name: Preserve D003 attempt 2
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d003-2-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d003-2.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: D003 attempt 3
-        env:
-          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: sleep 3 && python scripts/candidate7_pass2_qualification.py run-attempt --case D003 --attempt 3 --output artifacts/candidate7-pass2-qualification/d003-3.json
-      - name: Preserve D003 attempt 3
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d003-3-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d003-3.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: D003 attempt 4
-        env:
-          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: sleep 3 && python scripts/candidate7_pass2_qualification.py run-attempt --case D003 --attempt 4 --output artifacts/candidate7-pass2-qualification/d003-4.json
-      - name: Preserve D003 attempt 4
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d003-4-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d003-4.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: D003 attempt 5
-        env:
-          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: sleep 3 && python scripts/candidate7_pass2_qualification.py run-attempt --case D003 --attempt 5 --output artifacts/candidate7-pass2-qualification/d003-5.json
-      - name: Preserve D003 attempt 5
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d003-5-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d003-5.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: D009 attempt 1
-        env:
-          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: sleep 3 && python scripts/candidate7_pass2_qualification.py run-attempt --case D009 --attempt 1 --output artifacts/candidate7-pass2-qualification/d009-1.json
-      - name: Preserve D009 attempt 1
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d009-1-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d009-1.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: D009 attempt 2
-        env:
-          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: sleep 3 && python scripts/candidate7_pass2_qualification.py run-attempt --case D009 --attempt 2 --output artifacts/candidate7-pass2-qualification/d009-2.json
-      - name: Preserve D009 attempt 2
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d009-2-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d009-2.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: D009 attempt 3
-        env:
-          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: sleep 3 && python scripts/candidate7_pass2_qualification.py run-attempt --case D009 --attempt 3 --output artifacts/candidate7-pass2-qualification/d009-3.json
-      - name: Preserve D009 attempt 3
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d009-3-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d009-3.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: D009 attempt 4
-        env:
-          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: sleep 3 && python scripts/candidate7_pass2_qualification.py run-attempt --case D009 --attempt 4 --output artifacts/candidate7-pass2-qualification/d009-4.json
-      - name: Preserve D009 attempt 4
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d009-4-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d009-4.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: D009 attempt 5
-        env:
-          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: sleep 3 && python scripts/candidate7_pass2_qualification.py run-attempt --case D009 --attempt 5 --output artifacts/candidate7-pass2-qualification/d009-5.json
-      - name: Preserve D009 attempt 5
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: candidate7-qual-d009-5-${{ github.run_id }}
-          path: artifacts/candidate7-pass2-qualification/d009-5.json
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Summarize qualification
-        if: always()
-        run: python scripts/candidate7_pass2_qualification.py summarize --directory artifacts/candidate7-pass2-qualification --output artifacts/candidate7-pass2-qualification/summary.json
+        run: python scripts/candidate7_pass2_qualification.py qualify --directory artifacts/candidate7-pass2-qualification
       - name: Preserve complete Candidate-7 qualification evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
