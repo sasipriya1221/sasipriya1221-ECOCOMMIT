@@ -26,6 +26,8 @@ Rules:
 - NO IDs. Do not create identifiers, labels, references, keys, handles, indexes, or names for facts.
 - NO cross-references. NO nesting beyond text_span. NO Boolean operators or Boolean trees.
 - Do not paraphrase text_span.quote. It must be copied verbatim from the instruction.
+- For every ACTION fact, text_span.quote MUST contain the instruction's own explicit action/domain verb verbatim. Never replace, normalize, synonymize, infer, or substitute a different action verb. Use the smallest source span that preserves that explicit action and its directly stated object/quantity when present.
+- If the instruction does not contain an explicit action verb, do not invent an ACTION fact merely to fit a known action category.
 - Extract entities separately from actions when they participate as an action object or counterparty.
 - Extract each economically meaningful action separately.
 - Extract monetary caps/exact/minimum constraints as CONSTRAINT facts.
@@ -45,16 +47,19 @@ ACTION_OBJECT, ACTION_COUNTERPARTY, PREDICATE_SUBJECT, CONSTRAINT_APPLIES_TO,
 GUARDS_ACTION, BLOCKS_ACTION, AFTER_COMPLETION, AFTER_SUCCESS,
 EXCEPTION_TARGET, EXCEPTION_WHEN, AMBIGUITY_TARGET, ALL_OF, ANY_OF.
 Rules:
+- An empty relation list is a first-class correct output whenever no relation is explicitly supported. Do not invent a relation merely because two compatible facts exist.
+- Example of a fully valid answer when no relation is supported: {"relations":[]}.
+- A populated relation list and an empty relation list are equally valid; evidence in the supplied instruction/facts, not a preference to connect facts, decides which is correct.
 - You may reference ONLY the existing F#### IDs supplied in the input.
 - Do not create any new identifier of any kind.
 - Do not output facts, spans, prose, nested structures, Boolean ASTs, groups, or derived semantic objects.
 - ALL_OF and ANY_OF classify pairwise logical relationships between existing PREDICATE facts only.
-- GUARDS_ACTION means the predicate must hold for the action to execute.
-- BLOCKS_ACTION means the predicate prevents the action when it holds (for `unless`, veto, suspension, recall, frozen-account style semantics).
+- GUARDS_ACTION means the predicate must explicitly be an authorization condition for the action to execute. Do not infer GUARDS_ACTION from mere proximity, topic similarity, sequence, or co-occurrence.
+- BLOCKS_ACTION means the predicate explicitly prevents the action when it holds (for `unless`, veto, suspension, recall, frozen-account style semantics).
 - AFTER_COMPLETION / AFTER_SUCCESS are directed: left is the later/dependent ACTION, right is the prerequisite ACTION.
 - EXCEPTION_WHEN is directed: left is PREDICATE, right is EXCEPTION.
 - Other directed relation names follow their English reading.
-- Emit only relations explicitly supported by the supplied facts/instruction. JSON only."""
+- Emit only relations explicitly supported by the supplied facts/instruction. When support is absent, omit the relation; `relations: []` is expected and correct. JSON only."""
 
 
 @dataclass(frozen=True)
