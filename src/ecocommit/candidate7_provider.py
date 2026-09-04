@@ -19,7 +19,11 @@ from .candidate7_flat import (
     assign_fact_ids,
     drop_ungrounded_relations,
     grounded_span,
-    validate_relations,
+)
+from .candidate7_relation_checklist import (
+    Pass2DecisionBatch,
+    action_entity_pair_payload,
+    validate_and_materialize_pass2,
 )
 from .candidate7_structure import _ACTION_PATTERNS, _action_kind
 from .interpreter import ProviderRequestError
@@ -52,29 +56,39 @@ Rules:
 JSON only."""
 
 
-PASS2_SYSTEM_PROMPT = """You are ECOCOMMIT Candidate 7 pass 2: a relation classifier.
-You receive an ID-labeled flat fact list produced deterministically by code.
-Output one flat JSON object with key `relations`.
-Each relation has exactly: kind, left, right, justification_span.
-`justification_span` must be the exact verbatim substring of the original instruction that establishes the claimed relation.
-Allowed kinds:
-ACTION_OBJECT, ACTION_COUNTERPARTY, PREDICATE_SUBJECT, CONSTRAINT_APPLIES_TO,
-GUARDS_ACTION, BLOCKS_ACTION, AFTER_COMPLETION, AFTER_SUCCESS,
-EXCEPTION_TARGET, EXCEPTION_WHEN, AMBIGUITY_TARGET, ALL_OF, ANY_OF.
+PASS2_SYSTEM_PROMPT = """You are ECOCOMMIT Candidate 7 pass 2: an exhaustive relation classifier.
+You receive an ID-labeled flat fact list plus a deterministic `action_entity_pairs` checklist.
+Output one flat JSON object with exactly two keys: `action_entity_decisions` and `relations`.
+
+For EVERY supplied ACTION x ENTITY pair, emit exactly one action_entity_decision with exactly:
+  action: supplied ACTION F####
+  entity: supplied ENTITY F####
+  decision: ACTION_OBJECT | ACTION_COUNTERPARTY | NONE
+  justification_span: exact verbatim substring establishing the relation, or null when decision=NONE
+No supplied pair may be omitted, duplicated, or replaced with a different pair.
+
+The `relations` list is only for non-ACTION×ENTITY relations. Each relation has exactly:
+  kind, left, right, justification_span
+Allowed relation kinds there:
+PREDICATE_SUBJECT, CONSTRAINT_APPLIES_TO, GUARDS_ACTION, BLOCKS_ACTION,
+AFTER_COMPLETION, AFTER_SUCCESS, EXCEPTION_TARGET, EXCEPTION_WHEN,
+AMBIGUITY_TARGET, ALL_OF, ANY_OF.
+
 Rules:
-- An empty relation list is a first-class correct output whenever no relation is explicitly supported. Do not invent a relation merely because two compatible facts exist.
-- Example of a fully valid answer when no relation is supported: {"relations":[]}.
-- A populated relation list and an empty relation list are equally valid; evidence in the supplied instruction/facts, not a preference to connect facts, decides which is correct.
+- ACTION_OBJECT and ACTION_COUNTERPARTY MUST be expressed only through `action_entity_decisions`, never in `relations`.
+- `NONE` is a first-class required decision when a supplied ACTION×ENTITY pair has no explicit semantic relationship.
+- Every non-NONE justification_span must be an exact verbatim substring of the instruction that establishes the claimed relationship.
+- Prefer source-local evidence: an entity contained in or immediately following an action phrase is normally the direct action-object candidate. Do not let a trailing purpose, condition, or sequence phrase beginning with words such as `for`, `if`, or `after` automatically replace a source-local direct object.
 - You may reference ONLY the existing F#### IDs supplied in the input.
 - Do not create any new identifier of any kind.
-- Do not output facts, prose, nested structures, Boolean ASTs, groups, or derived semantic objects.
+- Do not output facts, prose, nested Boolean ASTs, groups, or derived semantic objects.
 - ALL_OF and ANY_OF classify pairwise logical relationships between existing PREDICATE facts only.
 - GUARDS_ACTION means the predicate must explicitly be an authorization condition for the action to execute. Do not infer GUARDS_ACTION from mere proximity, topic similarity, sequence, or co-occurrence.
-- BLOCKS_ACTION means the predicate explicitly prevents the action when it holds (for `unless`, veto, suspension, recall, frozen-account style semantics).
+- BLOCKS_ACTION means the predicate explicitly prevents the action when it holds.
 - AFTER_COMPLETION / AFTER_SUCCESS are directed: left is the later/dependent ACTION, right is the prerequisite ACTION.
 - EXCEPTION_WHEN is directed: left is PREDICATE, right is EXCEPTION.
 - Other directed relation names follow their English reading.
-- Emit only relations explicitly supported by the supplied facts/instruction. When support is absent, omit the relation; `relations: []` is expected and correct. JSON only."""
+- Emit only source-supported non-ACTION×ENTITY relations in `relations`; an empty `relations` list is valid. JSON only."""
 
 
 @dataclass(frozen=True)
@@ -282,8 +296,6 @@ class GroqCandidate7Provider:
             for fact in labeled:
                 grounded_span(instruction, fact.text_span)
                 if fact.kind is FactKind.ACTION:
-                    # The closed enum is not enough: ensure the selected canonical action
-                    # agrees with the explicit verb present in the grounded ACTION span.
                     if fact.action_type != _action_kind(fact.text_span.quote):
                         raise ValueError("C7_ACTION_TYPE_SPAN_MISMATCH")
             return labeled
@@ -292,17 +304,18 @@ class GroqCandidate7Provider:
         labeled_payload = [fact.model_dump(mode="json") for fact in facts]
         pass2_messages = [
             {"role": "system", "content": PASS2_SYSTEM_PROMPT},
-            {"role": "user", "content": json.dumps({"instruction": instruction, "facts": labeled_payload}, separators=(",", ":"))},
+            {"role": "user", "content": json.dumps({
+                "instruction": instruction,
+                "facts": labeled_payload,
+                "action_entity_pairs": action_entity_pair_payload(facts),
+            }, separators=(",", ":"))},
         ]
 
         def validate_relation_batch(parsed: Any) -> RelationBatch:
-            batch = RelationBatch.model_validate(parsed)
-            validate_relations(facts, batch)
-            return batch
+            decision_batch = Pass2DecisionBatch.model_validate(parsed)
+            return validate_and_materialize_pass2(instruction, facts, decision_batch)
 
         relations, trace2 = self._run_stage("relations", pass2_messages, validate_relation_batch)
         grounded_relations, grounding_events = drop_ungrounded_relations(instruction, relations)
-        # Dropping an ungrounded relation is deterministic evidence, not schema failure
-        # and not an ambiguity. It therefore does not consume or create correction retries.
         trace2.extend({"stage": "relations", **event} for event in grounding_events)
         return Candidate7ParseResult(facts, grounded_relations, tuple(trace1 + trace2))
