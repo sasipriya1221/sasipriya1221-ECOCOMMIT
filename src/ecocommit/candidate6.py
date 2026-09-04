@@ -23,6 +23,14 @@ REFERENCE DISCIPLINE
 - ambiguity targets must reference an existing declared ID of the target kind; ACTION_FIELD uses A#, COUNTERPARTY uses E#, PREDICATE uses P#, GUARD uses G#, CONSTRAINT uses C#, DEPENDENCY uses D#. PRESENTATION has no ID.
 - Never write a surface label such as an object name, supplier name, action phrase, or approval phrase into a reference field. Declare the semantic object and reference its ID.
 
+FIELD-TYPE DISCIPLINE
+- action.quantity is only for an explicitly stated count or measurable amount of the action object. raw_value and raw_unit MUST both be JSON strings. If there is no explicit object quantity, set quantity to null.
+- Never encode money, price, fee, budget, account balance, percentage, or currency amount as action.quantity. Monetary authority belongs only in constraints or monetary exception effects.
+- Never encode a time span, renewal period, deadline, date, clock time, or scheduling phrase as action.quantity. If the current Semantic-IR has no dedicated field for a non-authority descriptive time phrase, do not coerce it into quantity or invent an ambiguity merely to store it.
+- A concrete descriptive entity named by the instruction is not ambiguous merely because it lacks a globally unique real-world identifier. Create UNCLEAR_COUNTERPARTY only when the wording itself leaves which counterparty/entity is intended unresolved or makes selection depend on subjective/open alternatives.
+- Every Boolean expression MUST be an object with an explicit op. ATOM={"op":"ATOM","predicate":"P#"}; NOT={"op":"NOT","arg":BoolExpr}; AND/OR={"op":"AND|OR","args":[BoolExpr,BoolExpr,...]}. Never use prose, arrays without op, or shorthand operators.
+- Predicate.operator MUST be one of EQ, NEQ, LT, LTE, GT, GTE, EXISTS, OCCURRED, APPROVED, VALID, CURRENT, RECEIVED. Express ordinary state facts through those operators instead of inventing a new operator label.
+
 GUARD DISCIPLINE
 Conditions governing actions use ONLY_IF guards with ATOM/AND/OR/NOT. Preserve AND versus OR, negation, condition scope and exception scope exactly. Cross-action sequencing belongs only in dependencies. Do not encode the same relationship twice.
 Create a guard only when the instruction actually makes execution conditional, for example with "only if", "if", "provided", "on condition that", "subject to", "when", "unless", or an equivalent authorization condition.
