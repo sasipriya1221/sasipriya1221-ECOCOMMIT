@@ -1,0 +1,182 @@
+name: Candidate 7 - Diagnostic Sweep
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/candidate7-diagnostic-sweep.yml
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: de37b994ae32c9cbb2d3dadb10fb2e0d240ad83b
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install exact project dependencies
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e .
+          python -m pip check
+      - name: Confirm deterministic baseline
+        run: python -m pytest -p no:cacheprovider --basetemp .test-tmp-c7-diag
+      - name: Run diagnostic-only sweep and Pass-2 resampling
+        env:
+          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
+        shell: python
+        run: |
+          import json, os, re, time
+          from pathlib import Path
+          from ecocommit.candidate7_compile import _constraint_kind_v2
+          from ecocommit.candidate7_flat import FactBatch, FactKind, LabeledFact, RelationBatch, TextSpan, Polarity, assign_fact_ids, drop_ungrounded_relations, grounded_span, validate_relations
+          from ecocommit.candidate7_provider import GroqCandidate7Provider, PASS1_SYSTEM_PROMPT, PASS2_SYSTEM_PROMPT
+          from ecocommit.candidate7_structure import _action_kind, _money
+
+          out = Path('artifacts/candidate7-diagnostic-sweep')
+          out.mkdir(parents=True, exist_ok=False)
+          suite = json.loads(Path('data/candidate6/development.json').read_text())['cases']
+          gold_rows = json.loads(Path('data/candidate6/development_gold.json').read_text())['cases']
+          gold = {r['case_id']: r for r in gold_rows}
+          provider = GroqCandidate7Provider(os.environ['ECOCOMMIT_LLM_API_KEY'], min_request_interval_seconds=5.0)
+
+          def run_pass1(instruction):
+              base = [
+                  {'role':'system','content':PASS1_SYSTEM_PROMPT},
+                  {'role':'user','content':json.dumps({'instruction':instruction},separators=(',',':'))},
+              ]
+              def validate(parsed):
+                  provider._validate_action_types_raw(parsed)
+                  batch = FactBatch.model_validate(parsed)
+                  labeled = assign_fact_ids(batch)
+                  for fact in labeled:
+                      grounded_span(instruction, fact.text_span)
+                      if fact.kind is FactKind.ACTION and fact.action_type != _action_kind(fact.text_span.quote):
+                          raise ValueError('C7_ACTION_TYPE_SPAN_MISMATCH')
+                  return labeled
+              return provider._run_stage('facts', base, validate)
+
+          def money_shape(text):
+              try:
+                  _money(text)
+                  return True
+              except Exception:
+                  return bool(re.search(r'(₹|\b(?:rs\.?|inr|rupees?)\b)', text, re.I))
+
+          def bare_number_monetary_context(instruction, span):
+              if not re.fullmatch(r'\s*[+-]?\d[\d,]*(?:\.\d+)?\s*', span):
+                  return False
+              pos = instruction.find(span)
+              if pos < 0: return False
+              window = instruction[max(0,pos-30):pos+len(span)+30]
+              return bool(re.search(r'(₹|\b(?:rs\.?|inr|rupees?|pay|payment|spend|cost|price|fee|budget|amount|transfer)\b)', window, re.I))
+
+          part_a = {'cases': [], 'unsupported_constraints': [], 'currency_entities': [], 'provider_failures': []}
+          for case_id, instruction in suite:
+              try:
+                  facts, trace = run_pass1(instruction)
+              except Exception as exc:
+                  part_a['provider_failures'].append({'case_id':case_id,'error':str(exc)})
+                  continue
+              fact_json = [f.model_dump(mode='json') for f in facts]
+              part_a['cases'].append({'case_id':case_id,'instruction':instruction,'facts':fact_json,'trace':trace})
+              for fact in facts:
+                  if fact.kind is FactKind.CONSTRAINT:
+                      text = fact.text_span.quote
+                      classification = None
+                      try:
+                          classification = _constraint_kind_v2(text)
+                      except Exception:
+                          classification = 'UNSUPPORTED_NONMONETARY_NONTEMPORAL'
+                      if classification == 'UNSUPPORTED_NONMONETARY_NONTEMPORAL':
+                          part_a['unsupported_constraints'].append({'case_id':case_id,'text_span':text})
+                  if fact.kind is FactKind.ENTITY:
+                      text = fact.text_span.quote
+                      if money_shape(text) or bare_number_monetary_context(instruction, text):
+                          g = gold[case_id]['gold_semantic_ir']
+                          nums = re.findall(r'\d+', text.replace(',',''))
+                          expected_constraints = g.get('constraints', [])
+                          expected_as_constraint = any(nums and nums[-1] == str(amount) for _, amount in expected_constraints)
+                          object_terms = {t.lower() for a in g.get('actions',[]) for t in a.get('object_terms',[])}
+                          entity_tokens = set(re.findall(r'[a-z0-9]+', text.lower()))
+                          expected_as_entity = bool(object_terms and object_terms <= entity_tokens)
+                          part_a['currency_entities'].append({
+                              'case_id':case_id,'text_span':text,
+                              'gold_expected_as_constraint':expected_as_constraint,
+                              'gold_expected_as_entity_object':expected_as_entity,
+                              'gold_semantic_ir':g,
+                          })
+
+          frozen = {
+              'D003': {
+                  'instruction':'Pay printer exactly ₹32,500 for completed run.',
+                  'facts':[
+                      {'id':'F0001','text_span':{'quote':'Pay','occurrence':1},'kind':'ACTION','polarity':'POSITIVE','action_type':'PAY'},
+                      {'id':'F0002','text_span':{'quote':'printer','occurrence':1},'kind':'ENTITY','polarity':'POSITIVE','action_type':None},
+                      {'id':'F0003','text_span':{'quote':'exactly ₹32,500','occurrence':1},'kind':'CONSTRAINT','polarity':'POSITIVE','action_type':None},
+                      {'id':'F0004','text_span':{'quote':'completed run','occurrence':1},'kind':'ENTITY','polarity':'POSITIVE','action_type':None},
+                  ],
+              },
+              'D009': {
+                  'instruction':'Order 500 envelopes only if warehouse count below 100.',
+                  'facts':[
+                      {'id':'F0001','text_span':{'quote':'Order 500 envelopes','occurrence':1},'kind':'ACTION','polarity':'POSITIVE','action_type':'ORDER'},
+                      {'id':'F0002','text_span':{'quote':'500 envelopes','occurrence':1},'kind':'ENTITY','polarity':'POSITIVE','action_type':None},
+                      {'id':'F0003','text_span':{'quote':'warehouse count below 100','occurrence':1},'kind':'PREDICATE','polarity':'POSITIVE','action_type':None},
+                  ],
+              },
+          }
+          original_signatures = {
+              'D003': {('ACTION_COUNTERPARTY','F0001','F0002'),('CONSTRAINT_APPLIES_TO','F0003','F0001'),('ACTION_OBJECT','F0001','F0004')},
+              'D009': {('GUARDS_ACTION','F0003','F0001')},
+          }
+          part_b = {}
+          for case_id, payload in frozen.items():
+              facts = tuple(LabeledFact.model_validate(x) for x in payload['facts'])
+              instruction = payload['instruction']
+              labeled_payload = [f.model_dump(mode='json') for f in facts]
+              base = [
+                  {'role':'system','content':PASS2_SYSTEM_PROMPT},
+                  {'role':'user','content':json.dumps({'instruction':instruction,'facts':labeled_payload},separators=(',',':'))},
+              ]
+              attempts=[]
+              for sample in range(1,6):
+                  def validate(parsed):
+                      batch = RelationBatch.model_validate(parsed)
+                      validate_relations(facts,batch)
+                      return batch
+                  try:
+                      raw_batch, trace = provider._run_stage('relations', base, validate)
+                      kept, drops = drop_ungrounded_relations(instruction, raw_batch)
+                      sig = {(r.kind.value,r.left,r.right) for r in kept.relations}
+                      attempts.append({
+                          'sample':sample,
+                          'raw_relation_batch':raw_batch.model_dump(mode='json'),
+                          'kept_relation_batch':kept.model_dump(mode='json'),
+                          'drops':list(drops),
+                          'trace':trace,
+                          'matches_original_failure_signature': sig == original_signatures[case_id],
+                      })
+                  except Exception as exc:
+                      attempts.append({'sample':sample,'error':str(exc),'matches_original_failure_signature':False})
+                  time.sleep(1)
+              part_b[case_id]={'frozen_facts':payload['facts'],'attempts':attempts}
+
+          result={'candidate_sha':'de37b994ae32c9cbb2d3dadb10fb2e0d240ad83b','part_a':part_a,'part_b':part_b}
+          (out/'diagnostic.json').write_text(json.dumps(result,indent=2,sort_keys=True),encoding='utf-8')
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate7-diagnostic-sweep-${{ github.run_id }}
+          path: artifacts/candidate7-diagnostic-sweep/
+          if-no-files-found: warn
+          retention-days: 30
