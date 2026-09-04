@@ -78,6 +78,9 @@ class AmbiguityKind(str, Enum):
 EntityRef = Annotated[str, Field(pattern=r"^E\d+$")]
 ActionRef = Annotated[str, Field(pattern=r"^A\d+$")]
 PredicateRef = Annotated[str, Field(pattern=r"^P\d+$")]
+ConstraintRef = Annotated[str, Field(pattern=r"^C\d+$")]
+GuardRef = Annotated[str, Field(pattern=r"^G\d+$")]
+DependencyRef = Annotated[str, Field(pattern=r"^D\d+$")]
 
 
 class SpanSource(BaseModel):
@@ -123,7 +126,7 @@ class Money(BaseModel):
 
 
 class Constraint(BaseModel):
-    id: str = Field(pattern=r"^C\d+$")
+    id: ConstraintRef
     action: ActionRef
     kind: ConstraintKind
     money: Money
@@ -166,7 +169,7 @@ Not.model_rebuild()
 
 
 class Guard(BaseModel):
-    id: str = Field(pattern=r"^G\d+$")
+    id: GuardRef
     action: ActionRef
     mode: Literal["ONLY_IF"] = "ONLY_IF"
     expr: BoolExpr
@@ -174,16 +177,29 @@ class Guard(BaseModel):
 
 
 class Dependency(BaseModel):
-    id: str = Field(pattern=r"^D\d+$")
+    id: DependencyRef
     action: ActionRef
     prerequisite_action: ActionRef
     relation: Literal["AFTER_COMPLETION", "AFTER_SUCCESS"]
     source: SpanSource
 
 
-class ExceptionTarget(BaseModel):
-    kind: Literal["ACTION", "GUARD", "CONSTRAINT"]
-    id: str
+class ActionExceptionTarget(BaseModel):
+    kind: Literal["ACTION"]
+    id: ActionRef
+
+
+class GuardExceptionTarget(BaseModel):
+    kind: Literal["GUARD"]
+    id: GuardRef
+
+
+class ConstraintExceptionTarget(BaseModel):
+    kind: Literal["CONSTRAINT"]
+    id: ConstraintRef
+
+
+ExceptionTarget = Annotated[Union[ActionExceptionTarget, GuardExceptionTarget, ConstraintExceptionTarget], Field(discriminator="kind")]
 
 
 class BlockEffect(BaseModel):
@@ -206,15 +222,56 @@ class ExceptionRule(BaseModel):
     source: SpanSource
 
 
-class AmbiguityTarget(BaseModel):
-    # The model identifies semantic location only. It never labels materiality.
-    # PRESENTATION is the sole closed category deterministically treated as non-economic.
-    kind: Literal[
-        "ACTION_FIELD", "PREDICATE", "GUARD", "CONSTRAINT",
-        "COUNTERPARTY", "DEPENDENCY", "PRESENTATION",
-    ]
-    id: str | None = None
+class ActionFieldAmbiguityTarget(BaseModel):
+    kind: Literal["ACTION_FIELD"]
+    id: ActionRef
+    field: str = Field(min_length=1)
+
+
+class PredicateAmbiguityTarget(BaseModel):
+    kind: Literal["PREDICATE"]
+    id: PredicateRef
     field: str | None = None
+
+
+class GuardAmbiguityTarget(BaseModel):
+    kind: Literal["GUARD"]
+    id: GuardRef
+    field: str | None = None
+
+
+class ConstraintAmbiguityTarget(BaseModel):
+    kind: Literal["CONSTRAINT"]
+    id: ConstraintRef
+    field: str | None = None
+
+
+class CounterpartyAmbiguityTarget(BaseModel):
+    kind: Literal["COUNTERPARTY"]
+    id: EntityRef
+    field: str | None = None
+
+
+class DependencyAmbiguityTarget(BaseModel):
+    kind: Literal["DEPENDENCY"]
+    id: DependencyRef
+    field: str | None = None
+
+
+class PresentationAmbiguityTarget(BaseModel):
+    kind: Literal["PRESENTATION"]
+    id: None = None
+    field: str | None = None
+
+
+AmbiguityTarget = Annotated[
+    Union[
+        ActionFieldAmbiguityTarget, PredicateAmbiguityTarget, GuardAmbiguityTarget,
+        ConstraintAmbiguityTarget, CounterpartyAmbiguityTarget,
+        DependencyAmbiguityTarget, PresentationAmbiguityTarget,
+    ],
+    Field(discriminator="kind"),
+]
 
 
 class Ambiguity(BaseModel):
@@ -305,8 +362,6 @@ def normalize_quantity(raw_value: str, raw_unit: str) -> tuple[Decimal, str]:
     unit_text = raw_unit.strip().lower()
     unit = _UNIT_ALIASES.get(unit_text)
     if unit is None:
-        # Product-specific count nouns are safe as opaque count units; blank/semantic
-        # transformations are not. Canonicalization is lower-case singular-ish text.
         unit = unit_text[:-1] if unit_text.endswith("s") and len(unit_text) > 2 else unit_text
     if not unit:
         raise ValueError("IR_UNIT_INVALID")
@@ -316,7 +371,6 @@ def normalize_quantity(raw_value: str, raw_unit: str) -> tuple[Decimal, str]:
 def normalize_money(raw_amount: str, raw_currency: str) -> tuple[Decimal, str]:
     currency = raw_currency.strip().upper()
     currency = {"₹": "INR", "RS": "INR", "RS.": "INR", "INR": "INR"}.get(currency, currency)
-    # '$' is intentionally not guessed; configured FX authority is outside semantic parsing.
     if currency != "INR":
         raise ValueError("IR_CURRENCY_INVALID")
     text = raw_amount.strip().lower().replace(",", "")
