@@ -31,6 +31,10 @@ class Fact(BaseModel):
     text_span: TextSpan
     kind: FactKind
     polarity: Polarity
+    # Candidate 7 uses JSON-object mode for qwen/qwen3.6-27b, so the provider
+    # performs the conditional ACTION-only requirement and closed-vocabulary
+    # validation before this post-parse model is accepted.
+    action_type: str | None = None
 
 
 class FactBatch(BaseModel):
@@ -44,6 +48,7 @@ class LabeledFact(BaseModel):
     text_span: TextSpan
     kind: FactKind
     polarity: Polarity
+    action_type: str | None = None
 
 
 class RelationKind(str, Enum):
@@ -67,6 +72,7 @@ class Relation(BaseModel):
     kind: RelationKind
     left: str = Field(pattern=r"^F\d{4}$")
     right: str = Field(pattern=r"^F\d{4}$")
+    justification_span: str = Field(min_length=1)
 
     @model_validator(mode="after")
     def no_self_relation(self) -> "Relation":
@@ -87,6 +93,7 @@ def assign_fact_ids(batch: FactBatch) -> tuple[LabeledFact, ...]:
             text_span=fact.text_span,
             kind=fact.kind,
             polarity=fact.polarity,
+            action_type=fact.action_type,
         )
         for index, fact in enumerate(batch.facts, start=1)
     )
@@ -150,3 +157,29 @@ def grounded_span(instruction: str, span: TextSpan) -> tuple[int, int]:
             raise ValueError("C7_UNGROUNDED_SPAN")
         cursor = start + len(span.quote)
     return start, start + len(span.quote)
+
+
+def drop_ungrounded_relations(
+    instruction: str,
+    batch: RelationBatch,
+) -> tuple[RelationBatch, tuple[dict[str, str], ...]]:
+    """Drop well-formed relations whose claimed source justification is unverifiable.
+
+    This is intentionally not a schema retry: the relation was structurally valid,
+    but its semantic link cannot be grounded to a verbatim source substring.
+    """
+    kept: list[Relation] = []
+    events: list[dict[str, str]] = []
+    for relation in batch.relations:
+        if relation.justification_span not in instruction:
+            events.append({
+                "outcome": "relation_dropped_ungrounded",
+                "kind": relation.kind.value,
+                "left": relation.left,
+                "right": relation.right,
+                "reason": "UNGROUNDED_SPAN",
+                "justification_span": relation.justification_span,
+            })
+            continue
+        kept.append(relation)
+    return RelationBatch(relations=kept), tuple(events)
