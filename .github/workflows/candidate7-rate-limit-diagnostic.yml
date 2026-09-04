@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/candidate7-rate-limit-diagnostic.yml
 
+# One-shot reprobe authorized 2026-09-04 before final Candidate 7 qualification.
 jobs:
   diagnose:
     runs-on: ubuntu-latest
