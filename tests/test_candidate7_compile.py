@@ -11,13 +11,17 @@ def f(quote: str, kind: FactKind, polarity: Polarity = Polarity.POSITIVE) -> Fac
     return Fact(text_span=TextSpan(quote=quote), kind=kind, polarity=polarity)
 
 
+def rel(kind: RelationKind, left: str, right: str, instruction: str) -> Relation:
+    return Relation(kind=kind, left=left, right=right, justification_span=instruction)
+
+
 def test_objectless_commit_is_supported_deterministically():
     instruction = "Spend no more than ₹60,000."
     facts = assign_fact_ids(FactBatch(facts=[
         f("Spend", FactKind.ACTION),
         f("no more than ₹60,000", FactKind.CONSTRAINT),
     ]))
-    relations = RelationBatch(relations=[Relation(kind=RelationKind.CONSTRAINT_APPLIES_TO, left="F0002", right="F0001")])
+    relations = RelationBatch(relations=[rel(RelationKind.CONSTRAINT_APPLIES_TO, "F0002", "F0001", instruction)])
     graph = build_graph(instruction, facts, relations)
     contract = compile_graph_v2(graph)
     assert any(c.clause_type.value == "AUTHORIZATION" for c in contract.clauses)
@@ -33,9 +37,9 @@ def test_contradictory_min_max_constraints_reject():
         f("at least ₹30,000", FactKind.CONSTRAINT),
     ]))
     relations = RelationBatch(relations=[
-        Relation(kind=RelationKind.ACTION_OBJECT, left="F0001", right="F0002"),
-        Relation(kind=RelationKind.CONSTRAINT_APPLIES_TO, left="F0003", right="F0001"),
-        Relation(kind=RelationKind.CONSTRAINT_APPLIES_TO, left="F0004", right="F0001"),
+        rel(RelationKind.ACTION_OBJECT, "F0001", "F0002", instruction),
+        rel(RelationKind.CONSTRAINT_APPLIES_TO, "F0003", "F0001", instruction),
+        rel(RelationKind.CONSTRAINT_APPLIES_TO, "F0004", "F0001", instruction),
     ])
     graph = build_graph(instruction, facts, relations)
     with pytest.raises(ValueError, match="IR_CONTRADICTORY_CONSTRAINTS"):
@@ -50,8 +54,8 @@ def test_exact_above_max_rejects():
         f("never more than ₹45,000", FactKind.CONSTRAINT),
     ]))
     relations = RelationBatch(relations=[
-        Relation(kind=RelationKind.CONSTRAINT_APPLIES_TO, left="F0002", right="F0001"),
-        Relation(kind=RelationKind.CONSTRAINT_APPLIES_TO, left="F0003", right="F0001"),
+        rel(RelationKind.CONSTRAINT_APPLIES_TO, "F0002", "F0001", instruction),
+        rel(RelationKind.CONSTRAINT_APPLIES_TO, "F0003", "F0001", instruction),
     ])
     graph = build_graph(instruction, facts, relations)
     with pytest.raises(ValueError, match="IR_CONTRADICTORY_CONSTRAINTS"):
@@ -64,7 +68,7 @@ def test_minus_quantity_rejects_instead_of_becoming_positive():
         f("Order minus five replacement units", FactKind.ACTION),
         f("replacement units", FactKind.ENTITY),
     ]))
-    relations = RelationBatch(relations=[Relation(kind=RelationKind.ACTION_OBJECT, left="F0001", right="F0002")])
+    relations = RelationBatch(relations=[rel(RelationKind.ACTION_OBJECT, "F0001", "F0002", instruction)])
     graph = build_graph(instruction, facts, relations)
     with pytest.raises(ValueError, match="C7_QUANTITY_INVALID"):
         validate_graph_semantics(graph)
@@ -77,8 +81,8 @@ def test_dependency_cycle_rejects():
         f("book", FactKind.ACTION),
     ]))
     relations = RelationBatch(relations=[
-        Relation(kind=RelationKind.AFTER_SUCCESS, left="F0001", right="F0002"),
-        Relation(kind=RelationKind.AFTER_SUCCESS, left="F0002", right="F0001"),
+        rel(RelationKind.AFTER_SUCCESS, "F0001", "F0002", instruction),
+        rel(RelationKind.AFTER_SUCCESS, "F0002", "F0001", instruction),
     ])
     graph = build_graph(instruction, facts, relations)
     with pytest.raises(ValueError, match="IR_DEPENDENCY_CYCLE"):
