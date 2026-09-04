@@ -11,8 +11,21 @@ from urllib.parse import urlsplit
 from pydantic import ValidationError
 
 from ._canonical import strict_json_loads
-from .candidate7_flat import FactBatch, LabeledFact, RelationBatch, assign_fact_ids, grounded_span, validate_relations
+from .candidate7_flat import (
+    FactBatch,
+    FactKind,
+    LabeledFact,
+    RelationBatch,
+    assign_fact_ids,
+    drop_ungrounded_relations,
+    grounded_span,
+    validate_relations,
+)
+from .candidate7_structure import _ACTION_PATTERNS, _action_kind
 from .interpreter import ProviderRequestError
+
+
+ACTION_TYPE_VALUES = frozenset(kind for kind, _ in _ACTION_PATTERNS)
 
 
 PASS1_SYSTEM_PROMPT = """You are ECOCOMMIT Candidate 7 pass 1: a semantic fact extractor.
@@ -22,6 +35,7 @@ Each fact has exactly:
   text_span: {quote: exact verbatim substring from the instruction, occurrence: positive integer}
   kind: ENTITY | ACTION | CONSTRAINT | PREDICATE | EXCEPTION | AMBIGUITY
   polarity: POSITIVE | NEGATED
+  action_type: required only when kind=ACTION; one of BUY | ORDER | PAY | TRANSFER | HIRE | BOOK | RENEW | RESERVE | SELECT | RELEASE | CANCEL | COMMIT
 Rules:
 - NO IDs. Do not create identifiers, labels, references, keys, handles, indexes, or names for facts.
 - NO cross-references. NO nesting beyond text_span. NO Boolean operators or Boolean trees.
@@ -41,7 +55,8 @@ JSON only."""
 PASS2_SYSTEM_PROMPT = """You are ECOCOMMIT Candidate 7 pass 2: a relation classifier.
 You receive an ID-labeled flat fact list produced deterministically by code.
 Output one flat JSON object with key `relations`.
-Each relation has exactly: kind, left, right.
+Each relation has exactly: kind, left, right, justification_span.
+`justification_span` must be the exact verbatim substring of the original instruction that establishes the claimed relation.
 Allowed kinds:
 ACTION_OBJECT, ACTION_COUNTERPARTY, PREDICATE_SUBJECT, CONSTRAINT_APPLIES_TO,
 GUARDS_ACTION, BLOCKS_ACTION, AFTER_COMPLETION, AFTER_SUCCESS,
@@ -52,7 +67,7 @@ Rules:
 - A populated relation list and an empty relation list are equally valid; evidence in the supplied instruction/facts, not a preference to connect facts, decides which is correct.
 - You may reference ONLY the existing F#### IDs supplied in the input.
 - Do not create any new identifier of any kind.
-- Do not output facts, spans, prose, nested structures, Boolean ASTs, groups, or derived semantic objects.
+- Do not output facts, prose, nested structures, Boolean ASTs, groups, or derived semantic objects.
 - ALL_OF and ANY_OF classify pairwise logical relationships between existing PREDICATE facts only.
 - GUARDS_ACTION means the predicate must explicitly be an authorization condition for the action to execute. Do not infer GUARDS_ACTION from mere proximity, topic similarity, sequence, or co-occurrence.
 - BLOCKS_ACTION means the predicate explicitly prevents the action when it holds (for `unless`, veto, suspension, recall, frozen-account style semantics).
@@ -122,7 +137,8 @@ class GroqCandidate7Provider:
                 {"location": ".".join(str(part) for part in item.get("loc", ())) or "root", "code": str(item.get("type", "invalid"))}
                 for item in exc.errors(include_input=False, include_url=False)[:32]
             ]
-        return [{"location": "root", "code": type(exc).__name__}]
+        code = str(exc) if isinstance(exc, ValueError) and str(exc).startswith("C7_") else type(exc).__name__
+        return [{"location": "root", "code": code}]
 
     @classmethod
     def _rate_limit_headers(cls, headers: Any) -> dict[str, str]:
@@ -134,6 +150,27 @@ class GroqCandidate7Provider:
             if value is not None:
                 captured[name] = str(value).strip()
         return captured
+
+    @staticmethod
+    def _validate_action_types_raw(parsed: Any) -> None:
+        """Branch 1c: deterministic ACTION vocabulary validation in the existing retry path."""
+        if not isinstance(parsed, dict):
+            return
+        facts = parsed.get("facts")
+        if not isinstance(facts, list):
+            return
+        for item in facts:
+            if not isinstance(item, dict):
+                continue
+            kind = item.get("kind")
+            action_type = item.get("action_type")
+            if kind == FactKind.ACTION.value:
+                if action_type is None:
+                    raise ValueError("C7_ACTION_TYPE_MISSING")
+                if action_type not in ACTION_TYPE_VALUES:
+                    raise ValueError("C7_ACTION_TYPE_OUT_OF_VOCAB")
+            elif action_type is not None:
+                raise ValueError("C7_ACTION_TYPE_ON_NON_ACTION")
 
     def _pace_request(self) -> None:
         now = time.monotonic()
@@ -239,10 +276,16 @@ class GroqCandidate7Provider:
         ]
 
         def validate_facts(parsed: Any) -> tuple[LabeledFact, ...]:
+            self._validate_action_types_raw(parsed)
             batch = FactBatch.model_validate(parsed)
             labeled = assign_fact_ids(batch)
             for fact in labeled:
                 grounded_span(instruction, fact.text_span)
+                if fact.kind is FactKind.ACTION:
+                    # The closed enum is not enough: ensure the selected canonical action
+                    # agrees with the explicit verb present in the grounded ACTION span.
+                    if fact.action_type != _action_kind(fact.text_span.quote):
+                        raise ValueError("C7_ACTION_TYPE_SPAN_MISMATCH")
             return labeled
 
         facts, trace1 = self._run_stage("facts", pass1_messages, validate_facts)
@@ -258,4 +301,8 @@ class GroqCandidate7Provider:
             return batch
 
         relations, trace2 = self._run_stage("relations", pass2_messages, validate_relation_batch)
-        return Candidate7ParseResult(facts, relations, tuple(trace1 + trace2))
+        grounded_relations, grounding_events = drop_ungrounded_relations(instruction, relations)
+        # Dropping an ungrounded relation is deterministic evidence, not schema failure
+        # and not an ambiguity. It therefore does not consume or create correction retries.
+        trace2.extend({"stage": "relations", **event} for event in grounding_events)
+        return Candidate7ParseResult(facts, grounded_relations, tuple(trace1 + trace2))
