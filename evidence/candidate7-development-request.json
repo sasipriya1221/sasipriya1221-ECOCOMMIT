@@ -1,6 +1,6 @@
 {
   "candidate": "A-CANDIDATE-7",
-  "source_sha": "44f4150014e0558fd0f0440d0e09d9fb744aac59",
+  "source_sha": "1f2328ec96faa72646450da470775c981831e474",
   "development_suite": "data/candidate6/development.json",
   "development_gold": "data/candidate6/development_gold.json",
   "official_checkpoint_a_cases_used": false,
