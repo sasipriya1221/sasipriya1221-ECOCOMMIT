@@ -88,7 +88,9 @@ Rules:
 - AFTER_COMPLETION / AFTER_SUCCESS are directed: left is the later/dependent ACTION, right is the prerequisite ACTION.
 - EXCEPTION_WHEN is directed: left is PREDICATE, right is EXCEPTION.
 - Other directed relation names follow their English reading.
-- Emit only source-supported non-ACTION×ENTITY relations in `relations`; an empty `relations` list is valid. JSON only."""
+- Emit only source-supported non-ACTION×ENTITY relations in `relations`; an empty `relations` list is valid.
+- Example valid empty non-ACTION×ENTITY relation list: {"relations":[]}.
+JSON only."""
 
 
 @dataclass(frozen=True)
