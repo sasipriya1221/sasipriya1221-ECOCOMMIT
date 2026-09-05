@@ -130,7 +130,7 @@ class GroqCandidate7Provider:
         model: str = "qwen/qwen3.6-27b",
         timeout: float = 60.0,
         max_attempts_per_pass: int = 2,
-        max_completion_tokens: int = 1536,
+        max_completion_tokens: int = 900,
         max_retry_delay: float = 900.0,
         min_request_interval_seconds: float = 3.0,
     ) -> None:
