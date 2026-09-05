@@ -102,6 +102,22 @@ def build_preregistration(candidate_root: Path, binding: dict[str, Any], summary
             "src/ecocommit/candidate7.py",
         )
     }
+    runner_files = {
+        name: ROOT / name
+        for name in (
+            "scripts/checkpoint_a_candidate7.py",
+            "scripts/checkpoint_a_candidate7_prereg.py",
+            "scripts/checkpoint_a_candidate7_readiness.py",
+            "scripts/candidate6_official_reachability.py",
+            ".github/workflows/candidate7-official-prereg.yml",
+            ".github/workflows/candidate7-provider-readiness.yml",
+            ".github/workflows/checkpoint-a-candidate7.yml",
+        )
+    }
+    missing = [name for name, path in runner_files.items() if not path.is_file()]
+    if missing:
+        raise ValueError(f"Candidate-7 official runner files missing: {missing}")
+    runner_digests = {name: file_sha256(path) for name, path in sorted(runner_files.items())}
     provider = {
         "base_url": "https://api.groq.com/openai/v1", "model": "qwen/qwen3.6-27b",
         "reasoning_effort": "none", "temperature": 0, "max_completion_tokens": 1536,
@@ -110,11 +126,13 @@ def build_preregistration(candidate_root: Path, binding: dict[str, Any], summary
     value = {
         "schema_version": "A.CANDIDATE7.PREREGISTRATION.1", "candidate": CANDIDATE_ID,
         "frozen_semantic_source_revision": FROZEN_SOURCE, "artifact_namespace": ARTIFACT_NAMESPACE,
+        "supervisor_source_revision": git_head(ROOT),
         "qualification": {"status": "PASS", "evidence_sha256": qualification_digest, "artifact": qualification_artifact, "archive_sha256": qualification_archive_sha256},
         "frozen_dataset": {"count": 80, "sha256": dataset},
         "frozen_evaluator_files": evaluator_files, "frozen_evaluator_sha256": canonical_sha256(evaluator_files),
         "criteria": CRITERIA, "criteria_sha256": canonical_sha256(CRITERIA),
         "candidate_components": components, "candidate_components_sha256": canonical_sha256(components),
+        "official_runner_files": runner_digests, "official_runner_sha256": canonical_sha256(runner_digests),
         "provider_policy": provider, "provider_policy_sha256": canonical_sha256(provider),
         "early_stop_policy": {"implementation": "class-aware exact optimistic joint reachability", "check_before_next_provider_call": True},
         "one_shot_policy": {"official_run_attempt": 1, "rerun_permitted": False, "resume_to_pass_permitted": False, "semantic_score_retry_permitted": False},

@@ -4,6 +4,7 @@ on:
     inputs:
       preregistration_run_id: {required: true, type: string}
       provider_readiness_run_id: {required: true, type: string}
+      supervisor_revision: {required: true, type: string}
 jobs:
   evaluate:
     runs-on: ubuntu-latest
@@ -11,7 +12,7 @@ jobs:
     permissions: {contents: read, actions: read}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with: {ref: main, path: supervisor, persist-credentials: false}
+        with: {ref: "${{ inputs.supervisor_revision }}", path: supervisor, persist-credentials: false}
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {ref: 12d121f80a6cacd94376c6d2b7bce7dff5212eb5, path: candidate, persist-credentials: false}
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -24,9 +25,9 @@ jobs:
       - name: Enforce one shot
         run: test "$GITHUB_RUN_ATTEMPT" = 1
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with: {name: checkpoint-a-candidate7-preregistration-${{ inputs.preregistration_run_id }}, run-id: "${{ inputs.preregistration_run_id }}", github-token: "${{ github.token }}", path: bundle}
+        with: {name: "checkpoint-a-candidate7-preregistration-${{ inputs.preregistration_run_id }}", run-id: "${{ inputs.preregistration_run_id }}", github-token: "${{ github.token }}", path: bundle}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with: {name: checkpoint-a-candidate7-provider-readiness-${{ inputs.provider_readiness_run_id }}, run-id: "${{ inputs.provider_readiness_run_id }}", github-token: "${{ github.token }}", path: readiness}
+        with: {name: "checkpoint-a-candidate7-provider-readiness-${{ inputs.provider_readiness_run_id }}", run-id: "${{ inputs.provider_readiness_run_id }}", github-token: "${{ github.token }}", path: readiness}
       - name: Verify exact frozen execution boundary
         run: test "$(git -C candidate rev-parse HEAD)" = 12d121f80a6cacd94376c6d2b7bce7dff5212eb5
       - name: Run one frozen official evaluation
@@ -38,4 +39,4 @@ jobs:
           --evidence-reference github-actions://${{ github.repository }}/runs/${{ github.run_id }}/artifacts/checkpoint-a-candidate7-official
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
-        with: {name: checkpoint-a-candidate7-official-${{ github.run_id }}-attempt-${{ github.run_attempt }}, path: result/, if-no-files-found: warn, retention-days: 30}
+        with: {name: "checkpoint-a-candidate7-official-${{ github.run_id }}-attempt-${{ github.run_attempt }}", path: result/, if-no-files-found: warn, retention-days: 30}
