@@ -1,10 +1,13 @@
 {
   "candidate": "A-CANDIDATE-7",
-  "source_sha": "12d121f80a6cacd94376c6d2b7bce7dff5212eb5",
+  "source_sha": "763528a220c8bf922fff0d8c899700a880c3d3c7",
   "development_suite": "data/candidate6/development.json",
   "development_gold": "data/candidate6/development_gold.json",
   "official_checkpoint_a_cases_used": false,
   "holdout_opened": false,
   "qualification_harness": "scripts/candidate7_pass2_qualification.py",
-  "qualification_mode": "candidate7-d003-d009"
+  "qualification_mode": "candidate7-d003-d009",
+  "preregistration_amendment": "evidence/candidate7-preregistration-amendment-900.json",
+  "authorized_output_token_ceiling": 900,
+  "single_qualification_run_only": true
 }
