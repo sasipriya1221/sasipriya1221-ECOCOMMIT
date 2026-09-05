@@ -2,7 +2,7 @@ name: Candidate 8 - Focused Development CI
 
 on:
   push:
-    branches: [candidate8-semantic-role-redesign]
+    branches: [candidate8-development-clean]
     paths:
       - 'src/ecocommit/candidate8*.py'
       - 'tests/test_candidate8_semantics.py'
