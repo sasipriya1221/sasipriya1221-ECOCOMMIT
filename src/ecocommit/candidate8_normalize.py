@@ -140,6 +140,7 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
     events: list[dict[str, str]] = []
     staged: list[tuple[int, Fact]] = []
     condition_regions = _condition_regions(instruction)
+    action_count = sum(fact.kind is FactKind.ACTION for fact in facts)
 
     # Atomize model predicates/exceptions inside explicit condition bodies.  A
     # flat atomic fact inventory is required for deterministic Boolean assembly.
@@ -147,7 +148,9 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
     for fact in facts:
         start, end = grounded_span(instruction, fact.text_span)
         for region_start, region_end, marker, _ in condition_regions:
-            if start >= region_start and end <= region_end and fact.kind in {FactKind.PREDICATE, FactKind.EXCEPTION}:
+            inside_body = start >= region_start and end <= region_end
+            includes_marker = start < region_start and end >= region_end
+            if (inside_body or includes_marker) and fact.kind in {FactKind.PREDICATE, FactKind.EXCEPTION}:
                 covered_condition_fact_ids.add(fact.id)
                 events.append({"outcome": "condition_fact_rebuilt", "fact_id": fact.id, "marker": marker})
                 break
@@ -160,11 +163,39 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
         kind = fact.kind
         polarity = fact.polarity
 
+        # A model may absorb an explicit condition tail into the preceding
+        # entity (for example, ``the customer after finance approves``). Keep
+        # only the source-local entity portion; the condition body is rebuilt
+        # independently below. This is grammar-based and does not consult gold.
+        crossing_region = next(
+            (
+                (region_start, marker)
+                for region_start, _region_end, marker, _body in condition_regions
+                if kind is FactKind.ENTITY and start < region_start < end
+            ),
+            None,
+        )
+        if crossing_region is not None:
+            region_start, marker = crossing_region
+            marker_start = instruction.lower().rfind(marker, start, region_start)
+            if marker_start >= start:
+                entity_quote = instruction[start:marker_start].rstrip()
+                if entity_quote:
+                    quote = entity_quote
+                    events.append({"outcome": "condition_tail_removed_from_entity", "fact_id": fact.id})
+
         if kind is FactKind.CONSTRAINT and not _BARE_MONEY.search(quote) and re.search(r"\b(?:budget|affordable|reasonable)\b", quote, re.I):
             kind = FactKind.AMBIGUITY
             events.append({"outcome": "vague_constraint_retyped", "fact_id": fact.id})
         if kind is FactKind.PREDICATE and re.search(r"\b(?:not|does\s+not|do\s+not|is\s+not|are\s+not)\b", quote, re.I):
             polarity = Polarity.NEGATED
+        # ``for completed route`` and similar trailing execution context is a
+        # nominal provenance/context phrase, not an authorization predicate.
+        # Retyping it as ENTITY allows the explicit disposition layer to keep
+        # it out of the authority graph without weakening predicate handling.
+        if kind is FactKind.PREDICATE and re.search(r"\bfor\s+(?:the\s+)?$", instruction[:start], re.I):
+            kind = FactKind.ENTITY
+            events.append({"outcome": "trailing_for_context_retyped", "fact_id": fact.id})
         nominal_after = re.fullmatch(r"after\s+(.+)", quote.strip(), re.I) if kind is FactKind.PREDICATE else None
         if nominal_after is not None and not _PREDICATE_CUE.search(nominal_after.group(1)):
             context_quote = nominal_after.group(1)
@@ -173,6 +204,41 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
             events.append({"outcome": "nominal_after_context_retyped", "fact_id": fact.id})
             continue
         staged.append((start, _make_fact(quote, kind, polarity, fact.action_type, occurrence=fact.text_span.occurrence)))
+
+    # A bare number between an action and its following object is a quantity,
+    # not a monetary/temporal constraint. Fold it into the exact object span so
+    # the existing deterministic quantity compiler can preserve it.
+    quantity_constraints = [
+        (start, fact)
+        for start, fact in staged
+        if re.fullmatch(r"\s*\d+(?:\.\d+)?\s*", fact.text_span.quote)
+        and fact.kind is FactKind.CONSTRAINT
+    ]
+    for quantity_start, quantity_fact in quantity_constraints:
+        quantity_end = quantity_start + len(quantity_fact.text_span.quote)
+        following_entities = [
+            (entity_start, entity)
+            for entity_start, entity in staged
+            if entity.kind is FactKind.ENTITY
+            and entity_start >= quantity_end
+            and not instruction[quantity_end:entity_start].strip()
+        ]
+        if not following_entities:
+            continue
+        entity_start, entity = min(following_entities, key=lambda item: item[0])
+        entity_end = entity_start + len(entity.text_span.quote)
+        combined = instruction[quantity_start:entity_end]
+        staged = [
+            (item_start, item)
+            for item_start, item in staged
+            if item is not quantity_fact and item is not entity
+        ]
+        staged.append((quantity_start, _make_fact(
+            combined,
+            FactKind.ENTITY,
+            occurrence=_occurrence_at(instruction, combined, quantity_start),
+        )))
+        events.append({"outcome": "bare_quantity_folded_into_object", "fact_id": quantity_fact.text_span.quote})
 
     # Split compound monetary constraints so contradictory bounds cannot be
     # hidden inside a single fact.
@@ -191,7 +257,7 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
     for region_start, _region_end, marker, body in condition_regions:
         # Action-success/completion clauses are represented by action dependency
         # edges, not duplicate authorization guards.
-        if _ACTION_SUCCESS.search(body) and len([f for _, f in staged if f.kind is FactKind.ACTION]) > 1:
+        if _ACTION_SUCCESS.search(body) and action_count > 1:
             continue
         if marker == "after" and not _PREDICATE_CUE.search(body):
             continue

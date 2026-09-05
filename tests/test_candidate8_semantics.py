@@ -301,3 +301,94 @@ def test_invalid_model_relation_proposal_falls_back_to_source_grounded_graph(mon
     assert any(kind == "ACTION_OBJECT" for kind, _, _ in signatures)
     assert any(kind == "CONSTRAINT_APPLIES_TO" for kind, _, _ in signatures)
     assert parsed.provider_trace[-1]["outcome"] == "deterministic_source_fallback"
+
+
+@pytest.mark.parametrize(
+    ("instruction", "first_action", "second_action", "predicate"),
+    [
+        (
+            "Order components, then release the advance after the order succeeds.",
+            ("Order components", "ORDER"),
+            ("release the advance", "RELEASE"),
+            "after the order succeeds",
+        ),
+        (
+            "Reserve the room, then pay the deposit after the reservation is completed.",
+            ("Reserve the room", "RESERVE"),
+            ("pay the deposit", "PAY"),
+            "after the reservation is completed",
+        ),
+        (
+            "Book the venue, then pay the invoice after the booking succeeds.",
+            ("Book the venue", "BOOK"),
+            ("pay the invoice", "PAY"),
+            "after the booking succeeds",
+        ),
+    ],
+)
+def test_action_success_tail_is_only_a_dependency(instruction, first_action, second_action, predicate):
+    raw = (
+        fact("F0001", first_action[0], "ACTION", action_type=first_action[1]),
+        fact("F0002", second_action[0], "ACTION", action_type=second_action[1]),
+        fact("F0003", predicate, "PREDICATE"),
+    )
+    facts = _normalize(instruction, raw)
+    assert predicate not in {row.text_span.quote for row in facts}
+    relations = infer_candidate8_relations(instruction, facts)
+    assert sum(row.kind.value in {"AFTER_SUCCESS", "AFTER_COMPLETION"} for row in relations.relations) == 1
+    dispositions = candidate8_dispositions(instruction, facts, relations)
+    build_typed_ast(facts, relations, dispositions)
+
+
+def test_trailing_completed_context_is_non_authoritative_entity():
+    instruction = "Pay courier exactly ₹4,500 for completed route."
+    raw = (
+        fact("F0001", "Pay", "ACTION", action_type="PAY"),
+        fact("F0002", "courier", "ENTITY"),
+        fact("F0003", "exactly ₹4,500", "CONSTRAINT"),
+        fact("F0004", "completed route", "PREDICATE"),
+    )
+    facts = _normalize(instruction, raw)
+    context = next(row for row in facts if row.text_span.quote == "completed route")
+    assert context.kind.value == "ENTITY"
+    relations = infer_candidate8_relations(instruction, facts)
+    dispositions = candidate8_dispositions(instruction, facts, relations)
+    assert dispositions[context.id] is C8FactDisposition.IRRELEVANT
+    build_typed_ast(facts, relations, dispositions)
+
+
+def test_bare_numeric_constraint_is_folded_into_quantity_object():
+    instruction = "Order 125 archive folders."
+    raw = (
+        fact("F0001", "Order", "ACTION", action_type="ORDER"),
+        fact("F0002", "125", "CONSTRAINT"),
+        fact("F0003", "archive folders", "ENTITY"),
+    )
+    facts = _normalize(instruction, raw)
+    assert [(row.kind.value, row.text_span.quote) for row in facts] == [
+        ("ACTION", "Order"),
+        ("ENTITY", "125 archive folders"),
+    ]
+    relations = infer_candidate8_relations(instruction, facts)
+    dispositions = candidate8_dispositions(instruction, facts, relations)
+    build_typed_ast(facts, relations, dispositions)
+
+
+def test_condition_tail_absorbed_into_counterparty_is_split_and_guarded():
+    instruction = "Transfer the refund to the customer after finance approves."
+    raw = (
+        fact("F0001", "Transfer", "ACTION", action_type="TRANSFER"),
+        fact("F0002", "refund", "ENTITY"),
+        fact("F0003", "the customer after finance approves", "ENTITY"),
+        fact("F0004", "finance approves", "PREDICATE"),
+    )
+    facts = _normalize(instruction, raw)
+    assert "the customer" in {row.text_span.quote for row in facts}
+    assert "finance approves" in {row.text_span.quote for row in facts}
+    relations = infer_candidate8_relations(instruction, facts)
+    signatures = _relation_signatures(relations)
+    assert any(kind == "ACTION_OBJECT" for kind, _, _ in signatures)
+    assert any(kind == "ACTION_COUNTERPARTY" for kind, _, _ in signatures)
+    assert any(kind == "GUARDS_ACTION" for kind, _, _ in signatures)
+    dispositions = candidate8_dispositions(instruction, facts, relations)
+    build_typed_ast(facts, relations, dispositions)
