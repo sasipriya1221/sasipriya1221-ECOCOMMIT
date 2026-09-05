@@ -8,17 +8,29 @@ ECOCOMMIT sits between an AI agent and an economic action such as buying, paying
 
 The core principle is simple: **LLM for semantic interpretation; deterministic controls for economic authority.** Unknown or materially ambiguous authorization state fails closed. A missing or invalid receipt never unlocks a downstream checkpoint.
 
+## What a reviewer can verify in five minutes
+
+1. Clone the repository and install the hash-locked dependencies.
+2. Run the deterministic test suite.
+3. Start the local safety console.
+4. Exercise a successful simulation, an upstream-gate denial, and an injected capture failure.
+5. Inspect the correlation ID, state transitions, cleanup result, and blocked A–E evidence cards.
+
+The demo is deliberately safe: it performs **no provider call and no money movement**. It proves that the product runs and that missing authority fails closed; it is not presented as an authoritative A/B/C/D/E PASS.
+
 ## Architecture
 
-Candidate 6 follows this boundary:
+The implemented boundary is:
 
-`user instruction → semantic parser → typed Semantic IR → Boolean guard AST → static validation → deterministic normalization → deterministic ECOCOMMIT compiler → semantic-conservation verification → contract validator/evaluator → execution gates`
+`instruction → untrusted semantic proposal → grounded typed facts/relations → deterministic Boolean and dependency AST → conservation/static validation → economic contract → evidence and exposure policy → transaction-bound certificate → guarded Test/simulated execution → reconciliation and audit`
+
+The model may identify meaning. It cannot grant economic authority, choose a policy ceiling, bypass evidence, advance transaction state, or turn an unknown condition into permission. See [Technical Overview](docs/TECHNICAL_OVERVIEW.md) for the component and data-flow description.
 
 The repository is organized around that boundary:
 
 - `src/ecocommit/` — protocol implementation, Semantic IR, validation, compilation, conservation, execution and evidence logic.
 - `tests/` — deterministic regression, property/metamorphic, security, workflow and qualification tests.
-- `data/` — evaluation inputs plus Candidate-6 development and sealed-holdout material.
+- `data/` — frozen evaluation inputs and versioned candidate-development partitions.
 - `scripts/` — qualification, checkpoint, reproducibility and evidence tooling.
 - `ui/` — integrated safety-console demonstration.
 - `docs/ARCHITECTURE.md` and `docs/THREAT_MODEL.md` — architecture and trust/safety boundaries.
@@ -27,15 +39,17 @@ The repository is organized around that boundary:
 
 Checkpoint status is determined only by typed receipts, frozen protocols, exact-source workflow evidence and retained artifacts. A green CI job is not by itself a benchmark PASS. Provider failures such as HTTP 429/timeouts/5xx remain infrastructure evidence and are not silently converted into semantic success or failure.
 
-Candidate history remains visible and immutable:
+Candidate history remains visible and immutable. The latest branch result is not rewritten into a PASS merely because its workflow is green:
 
 - Candidate 1 — **FAILED**
 - Candidate 3 — **FAILED**
 - Candidate 4 — **PREREGISTERED / SUPERSEDED / NEVER RUN**
 - Candidate 5 — **FAILED**
-- Candidate 6 — final serious attempt; final status is determined only by legitimate qualification evidence
+- Candidate 6 — **SUPERSEDED after bounded development**
+- Candidate 7 — **FAILED** after the provider-limit remediation exposed a repeatable D003 semantic error
+- Candidate 8 — **ITERATIVE VISIBLE DEVELOPMENT** on PR #7; qualification and official A remain locked until its preregistered development gates pass
 
-Before Candidate 6 can open its sealed internal holdout, it must be frozen and bound by SHA-256 evidence covering the Semantic IR schema, parser prompt, Boolean semantics, validator, normalizer, compiler, conservation checker, provider policy, development suite, sealed holdout suite/gold, evaluator and protocol.
+Before any candidate can open a sealed preflight or qualification, it must be frozen and bound by SHA-256 evidence covering its parser prompts, schemas, deterministic normalizer/compiler, conservation checker, provider policy, datasets, evaluator and protocol.
 
 The one-shot internal holdout requires all gates simultaneously:
 
@@ -51,7 +65,7 @@ The one-shot internal holdout requires all gates simultaneously:
 | Semantic-conservation failures | 0 |
 | UNKNOWN → authorized | 0 |
 
-Only an internal qualification PASS can unlock Candidate-6's official frozen Checkpoint-A run. Official A remains one-shot with case pass ≥ 90%, selective reliability ≥ 95%, autonomous coverage ≥ 55%, and ambiguous clarification accuracy ≥ 80%.
+Only an internal qualification PASS can unlock the official frozen Checkpoint-A run. Official A remains one-shot with case pass ≥ 90%, selective reliability ≥ 95%, autonomous coverage ≥ 55%, and ambiguous clarification accuracy ≥ 80%.
 
 ## Quick start
 
@@ -70,7 +84,11 @@ Follow `docs/REPRODUCIBILITY.md` for the clean-machine procedure, source/evidenc
 
 ## Local safety-console demo
 
-The `ui/` application demonstrates the economic-control boundary without weakening qualification gates. Use `docs/DEMO_RUNBOOK.md` for the intended walkthrough and `docs/PITCH_OUTLINE.md` for a concise presentation sequence. Demo output is not treated as benchmark evidence unless a checkpoint protocol explicitly binds it.
+The `ui/` application demonstrates the economic-control boundary without weakening qualification gates. Use the exact [five-minute demo runbook](docs/DEMO_RUNBOOK.md). Demo output is not treated as benchmark evidence unless a checkpoint protocol explicitly binds it.
+
+## Failure recovery
+
+The failure trail is part of the work, not hidden history. Candidate 7 first hit a Groq output-token-per-minute rejection because the request ceiling exceeded the free-tier OTPM limit. Reducing the bound ceiling to 900 removed the infrastructure failure and exposed the real semantic defect: D003 failed 5/5 while D009 passed 5/5. Candidate 7 was frozen as failed rather than retried until lucky. Candidate 8 then moved into a separate, visible-data-only development protocol. Its first two iterations improved from 25% to 75% while retaining 100% selective reliability and zero fail-open outcomes in iteration 2. See [Failure Recovery](docs/FAILURE_RECOVERY.md) for the evidence-linked chronology and engineering lessons.
 
 ## Evidence and reports
 
@@ -79,6 +97,8 @@ Key evidence documents are:
 - `docs/SUBMISSION_EVIDENCE.md` — authoritative evidence index and checkpoint status.
 - `docs/REPRODUCIBILITY.md` — exact-source reproduction instructions.
 - `docs/ARCHITECTURE.md` — system architecture.
+- `docs/TECHNICAL_OVERVIEW.md` — concise implementation and trust-boundary description.
+- `docs/FAILURE_RECOVERY.md` — provider, semantic and development-failure chronology.
 - `docs/THREAT_MODEL.md` — threat and safety model.
 - `docs/DEPLOYMENT_READINESS.md` — deployment/readiness constraints.
 - `docs/ENGINEERING_LOG.md` — engineering chronology.
