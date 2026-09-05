@@ -13,7 +13,7 @@ Status vocabulary is strict:
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 FAILED (selective reliability); NOT PASSED** | Candidate 5 is permanently mathematically failed: best possible selective reliability is 46/49 = 93.88%, below 95%. Preserve the failure and missed-stop evidence; never rerun or resume Candidate 5 into a pass. A typed A receipt exists only if all four unchanged gates pass. |
+| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 FAILED; Candidate 6 FAILED DEVELOPMENT QUALIFICATION; Candidate 7 INCONCLUSIVE / PROVIDER_LIMITED; NOT PASSED** | Candidate 7 exact-source D003/D009 qualification stopped after its first provider call returned HTTP 429. It produced no accepted semantic output and does not admit the official 80-case gate. A typed A receipt exists only if all four unchanged gates pass. |
 | B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | A passing typed A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
@@ -24,6 +24,14 @@ Acceptance remains sequential and evidence-gated even when engineering proceeds 
 ---
 
 ## Checkpoint A
+
+### Candidate 7 — exact-source qualification INCONCLUSIVE / PROVIDER_LIMITED
+
+The hard-bound qualification ran once as GitHub Actions run `33944653729`, attempt 1. The launcher checked out and verified frozen Candidate-7 source `12d121f80a6cacd94376c6d2b7bce7dff5212eb5`, selected mode `candidate7-d003-d009`, and invoked only `scripts/candidate7_pass2_qualification.py`. Artifact `9962936517` (`candidate7-pass2-qualification-33944653729-attempt-1`) has archive SHA-256 `f55e6d6284bfe4c142c39de782eda815a229aabe4fa7eadb5aaa6b38d95fdd2d`.
+
+The first D003 request returned sanitized transient `HTTP_429`; the frozen fail-fast policy stopped immediately. Provider calls: 1. Accepted semantic outputs: 0. D009 was not called. The green workflow conclusion reflects correct evidence preservation and is not a semantic pass. `evidence/candidate7-frozen-qualification-inconclusive.json` pins the source binding and retained row/summary hashes. No retry, official Checkpoint-A case access, holdout access, or Candidate-8 work occurred.
+
+Candidate 7 therefore remains **INCONCLUSIVE / PROVIDER_LIMITED**. Checkpoint A cannot begin without a legitimate Candidate-7 qualification PASS.
 
 ### Frozen acceptance rule
 
