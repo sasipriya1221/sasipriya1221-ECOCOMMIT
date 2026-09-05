@@ -1,10 +1,7 @@
 name: Candidate 8 - Visible Development Iteration
 
 on:
-  push:
-    branches: [candidate8-development-clean]
-    paths:
-      - '.github/candidate8-visible-development-trigger'
+  workflow_dispatch:
 
 concurrency:
   group: candidate8-visible-development
@@ -61,7 +58,7 @@ jobs:
       - name: Focused deterministic gate before provider calls
         run: |
           python -m pytest tests/test_candidate8_semantics.py -p no:cacheprovider --basetemp .test-tmp-c8-provider-gate
-          python -m compileall -q src/ecocommit/candidate8.py src/ecocommit/candidate8_logic.py src/ecocommit/candidate8_provider.py src/ecocommit/candidate8_relation_checklist.py scripts/candidate8_develop.py
+          python -m compileall -q src/ecocommit/candidate8.py src/ecocommit/candidate8_logic.py src/ecocommit/candidate8_normalize.py src/ecocommit/candidate8_provider.py src/ecocommit/candidate8_relation_checklist.py scripts/candidate8_develop.py
           git diff --check
 
       - name: Prepare development evidence directory

@@ -10,8 +10,7 @@ from pathlib import Path
 
 from ecocommit.candidate7_evaluator import aggregate, score_case
 from ecocommit.candidate8 import run_candidate8
-from ecocommit.candidate8_provider import GroqCandidate8Provider, PASS2_SYSTEM_PROMPT
-from ecocommit.candidate7_provider import PASS1_SYSTEM_PROMPT
+from ecocommit.candidate8_provider import GroqCandidate8Provider, PASS1_SYSTEM_PROMPT_C8, PASS2_SYSTEM_PROMPT
 
 
 PARTITIONS = {
@@ -85,7 +84,7 @@ def run(partition: str, output_dir: Path) -> int:
         "max_completion_tokens": provider.max_completion_tokens,
         "temperature": 0,
         "reasoning_effort": "none",
-        "pass1_prompt_sha256": _sha(PASS1_SYSTEM_PROMPT),
+        "pass1_prompt_sha256": _sha(PASS1_SYSTEM_PROMPT_C8),
         "pass2_prompt_sha256": _sha(PASS2_SYSTEM_PROMPT),
         "dataset_sha256": hashlib.sha256(data_path.read_bytes()).hexdigest(),
         "gold_sha256": hashlib.sha256(gold_path.read_bytes()).hexdigest(),

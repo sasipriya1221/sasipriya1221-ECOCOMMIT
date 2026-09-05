@@ -5,6 +5,11 @@ import pytest
 from ecocommit.candidate7_flat import LabeledFact, Relation, RelationBatch
 from ecocommit.candidate7_relation_checklist import Pass2DecisionBatch
 from ecocommit.candidate8_logic import C8FactDisposition, C8RelationType, build_typed_ast, verify_ast_conservation
+from ecocommit.candidate8_normalize import (
+    candidate8_dispositions,
+    infer_candidate8_relations,
+    normalize_candidate8_facts,
+)
 from ecocommit.candidate8_provider import GroqCandidate8Provider
 from ecocommit.candidate8_relation_checklist import semantic_dispositions, validate_and_materialize_pass2
 
@@ -177,3 +182,122 @@ def test_provider_configuration_is_hard_bound():
         GroqCandidate8Provider("not-a-real-key", max_completion_tokens=901)
     with pytest.raises(ValueError, match="C8_MODEL_MUST_BE_QWEN_3_6_27B"):
         GroqCandidate8Provider("not-a-real-key", model="other/model")
+
+
+def _normalize(instruction, raw):
+    return normalize_candidate8_facts(instruction, tuple(raw)).facts
+
+
+def _relation_signatures(batch):
+    return {(r.kind.value, r.left, r.right) for r in batch.relations}
+
+
+def test_source_grounded_normalizer_builds_direct_object_counterparty_and_constraint():
+    instruction = "Pay the invoice to the carrier exactly ₹21,700."
+    raw = (
+        fact("F0001", "Pay", "ACTION", action_type="PAY"),
+        fact("F0002", "invoice", "ENTITY"),
+        fact("F0003", "carrier", "ENTITY"),
+        fact("F0004", "exactly ₹21,700", "CONSTRAINT"),
+    )
+    facts = _normalize(instruction, raw)
+    relations = infer_candidate8_relations(instruction, facts)
+    by_quote = {f.text_span.quote: f.id for f in facts}
+    assert ("ACTION_OBJECT", by_quote["Pay"], by_quote["invoice"]) in _relation_signatures(relations)
+    assert ("ACTION_COUNTERPARTY", by_quote["Pay"], by_quote["carrier"]) in _relation_signatures(relations)
+    assert ("CONSTRAINT_APPLIES_TO", by_quote["exactly ₹21,700"], by_quote["Pay"]) in _relation_signatures(relations)
+
+
+def test_source_grounded_normalizer_atomizes_nested_boolean_guard():
+    instruction = "Order supplies only if inventory is low and either branch A or branch B requests replenishment."
+    raw = (
+        fact("F0001", "Order", "ACTION", action_type="ORDER"),
+        fact("F0002", "supplies", "ENTITY"),
+        fact("F0003", "inventory is low and either branch A or branch B requests replenishment", "PREDICATE"),
+    )
+    facts = _normalize(instruction, raw)
+    predicates = [f for f in facts if f.kind.value == "PREDICATE"]
+    assert [f.text_span.quote for f in predicates] == ["inventory is low", "branch A", "branch B requests replenishment"]
+    relations = infer_candidate8_relations(instruction, facts)
+    kinds = [r.kind.value for r in relations.relations]
+    assert kinds.count("GUARDS_ACTION") == 3
+    assert "ALL_OF" in kinds
+    assert "ANY_OF" in kinds
+
+
+def test_unless_is_a_blocking_predicate_not_an_exception():
+    instruction = "Release the deposit unless inspection fails."
+    raw = (
+        fact("F0001", "Release the deposit", "ACTION", action_type="RELEASE"),
+        fact("F0002", "deposit", "ENTITY"),
+        fact("F0003", "inspection fails", "EXCEPTION"),
+    )
+    facts = _normalize(instruction, raw)
+    assert not [f for f in facts if f.kind.value == "EXCEPTION"]
+    relations = infer_candidate8_relations(instruction, facts)
+    assert "BLOCKS_ACTION" in {r.kind.value for r in relations.relations}
+
+
+def test_vague_budget_and_subjective_selection_become_blocking_ambiguity():
+    instruction = "Buy a high-quality laptop at an affordable price."
+    raw = (
+        fact("F0001", "Buy", "ACTION", action_type="BUY"),
+        fact("F0002", "a high-quality laptop", "ENTITY"),
+        fact("F0003", "an affordable price", "CONSTRAINT"),
+    )
+    facts = _normalize(instruction, raw)
+    ambiguities = [f for f in facts if f.kind.value == "AMBIGUITY"]
+    assert ambiguities
+    relations = infer_candidate8_relations(instruction, facts)
+    dispositions = candidate8_dispositions(instruction, facts, relations)
+    assert all(dispositions[f.id] is C8FactDisposition.USED for f in ambiguities)
+
+
+def test_sequence_builds_dependency_without_duplicate_success_guard():
+    instruction = "Order components, then release the advance after the order succeeds."
+    raw = (
+        fact("F0001", "Order components", "ACTION", action_type="ORDER"),
+        fact("F0002", "components", "ENTITY"),
+        fact("F0003", "release the advance", "ACTION", action_type="RELEASE"),
+        fact("F0004", "advance", "ENTITY"),
+        fact("F0005", "the order succeeds", "PREDICATE"),
+    )
+    facts = _normalize(instruction, raw)
+    relations = infer_candidate8_relations(instruction, facts)
+    kinds = [r.kind.value for r in relations.relations]
+    assert kinds.count("AFTER_SUCCESS") == 1
+    assert "GUARDS_ACTION" not in kinds
+
+
+def test_irrelevant_trailing_context_is_removed_from_authority_graph():
+    instruction = "Pay courier exactly ₹4,500 for completed route."
+    raw = (
+        fact("F0001", "Pay", "ACTION", action_type="PAY"),
+        fact("F0002", "courier", "ENTITY"),
+        fact("F0003", "exactly ₹4,500", "CONSTRAINT"),
+        fact("F0004", "completed route", "ENTITY"),
+    )
+    facts = _normalize(instruction, raw)
+    relations = infer_candidate8_relations(instruction, facts)
+    dispositions = candidate8_dispositions(instruction, facts, relations)
+    context = next(f for f in facts if f.text_span.quote == "completed route")
+    assert dispositions[context.id] is C8FactDisposition.IRRELEVANT
+
+
+def test_invalid_model_relation_proposal_falls_back_to_source_grounded_graph(monkeypatch):
+    provider = GroqCandidate8Provider("not-a-real-key", min_request_interval_seconds=0)
+    replies = iter([
+        ({"facts": [
+            {"text_span":{"quote":"Pay","occurrence":1},"kind":"ACTION","polarity":"POSITIVE","action_type":"PAY"},
+            {"text_span":{"quote":"printer","occurrence":1},"kind":"ENTITY","polarity":"POSITIVE","action_type":None},
+            {"text_span":{"quote":"exactly ₹32,500","occurrence":1},"kind":"CONSTRAINT","polarity":"POSITIVE","action_type":None},
+        ]}, {"attempt":1,"candidate_sha256":"facts","finish_reason":"stop"}),
+        ({"wrong": []}, {"attempt":1,"candidate_sha256":"bad-1","finish_reason":"stop"}),
+        ({"wrong": []}, {"attempt":2,"candidate_sha256":"bad-2","finish_reason":"stop"}),
+    ])
+    monkeypatch.setattr(provider, "_request", lambda messages, attempt: next(replies))
+    parsed = provider.parse_with_metadata("Pay printer exactly ₹32,500 for completed run.")
+    signatures = _relation_signatures(parsed.relations)
+    assert any(kind == "ACTION_OBJECT" for kind, _, _ in signatures)
+    assert any(kind == "CONSTRAINT_APPLIES_TO" for kind, _, _ in signatures)
+    assert parsed.provider_trace[-1]["outcome"] == "deterministic_source_fallback"

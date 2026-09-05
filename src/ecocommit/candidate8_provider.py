@@ -5,11 +5,15 @@ from dataclasses import dataclass
 from typing import Any
 
 from .candidate7_flat import FactBatch, FactKind, LabeledFact, RelationBatch, assign_fact_ids, grounded_span
-from .candidate7_provider import GroqCandidate7Provider, PASS1_SYSTEM_PROMPT
+from .candidate7_provider import Candidate7SchemaError, GroqCandidate7Provider, PASS1_SYSTEM_PROMPT
 from .candidate7_relation_checklist import Pass2DecisionBatch, action_entity_pair_payload
 from .candidate7_structure import _action_kind
 from .candidate8_logic import C8FactDisposition
-from .candidate8_relation_checklist import validate_and_materialize_pass2
+from .candidate8_normalize import (
+    candidate8_dispositions,
+    infer_candidate8_relations,
+    normalize_candidate8_facts,
+)
 
 
 PASS2_SYSTEM_PROMPT = """You are ECOCOMMIT Candidate 8 pass 2: an exhaustive relation classifier.
@@ -53,6 +57,17 @@ Rules:
 - Empty `relations` is valid only when no non-ACTION×ENTITY semantic relation is required by the extracted facts.
 JSON only."""
 
+PASS1_SYSTEM_PROMPT_C8 = PASS1_SYSTEM_PROMPT + """
+
+Candidate-8 atomicity rules:
+- `unless X` is a blocking authorization condition: extract X as a PREDICATE, not as an EXCEPTION.
+- Split conditions joined by `and` or `or` into separate atomic PREDICATE facts.
+- An EXCEPTION begins with an explicit exception construction such as `except`; it is not a synonym for `unless`.
+- Vague quantities, budgets, or subjective selection terms are AMBIGUITY facts in addition to any entity they modify.
+- A bare nominal execution context such as `after delivery` is not by itself an authorization predicate.
+- A clause after a semicolon that neither authorizes nor constrains a supported economic action is irrelevant context; do not extract it.
+JSON only."""
+
 
 @dataclass(frozen=True)
 class Candidate8ParseResult:
@@ -94,19 +109,27 @@ class GroqCandidate8Provider(GroqCandidate7Provider):
 
     def parse_with_metadata(self, instruction: str) -> Candidate8ParseResult:
         pass1_messages = [
-            {"role": "system", "content": PASS1_SYSTEM_PROMPT},
+            {"role": "system", "content": PASS1_SYSTEM_PROMPT_C8},
             {"role": "user", "content": json.dumps({"instruction": instruction}, separators=(",", ":"))},
         ]
 
         def validate_facts(parsed: Any) -> tuple[LabeledFact, ...]:
             self._validate_action_types_raw(parsed)
             batch = FactBatch.model_validate(parsed)
-            labeled = assign_fact_ids(batch)
+            grounded = []
+            for raw_fact in batch.facts:
+                try:
+                    grounded_span(instruction, raw_fact.text_span)
+                except ValueError:
+                    continue
+                grounded.append(raw_fact)
+            if not grounded:
+                raise ValueError("C8_NO_GROUNDED_FACTS")
+            labeled = assign_fact_ids(FactBatch(facts=grounded))
             for fact in labeled:
-                grounded_span(instruction, fact.text_span)
                 if fact.kind is FactKind.ACTION and fact.action_type != _action_kind(fact.text_span.quote):
                     raise ValueError("C7_ACTION_TYPE_SPAN_MISMATCH")
-            return labeled
+            return normalize_candidate8_facts(instruction, labeled).facts
 
         facts, trace1 = self._run_stage("facts", pass1_messages, validate_facts)
         labeled_payload = [fact.model_dump(mode="json") for fact in facts]
@@ -120,12 +143,23 @@ class GroqCandidate8Provider(GroqCandidate7Provider):
         ]
 
         def validate_relation_batch(parsed: Any) -> tuple[RelationBatch, dict[str, C8FactDisposition]]:
-            decision_batch = Pass2DecisionBatch.model_validate(parsed)
-            # Candidate-8 validates grounding and semantic coverage *inside* the
-            # bounded validation loop. Required relations are never accepted and
-            # silently dropped afterward.
-            return validate_and_materialize_pass2(instruction, facts, decision_batch)
+            # The model proposal must remain structurally accountable, while the
+            # authority-bearing graph is reconstructed from exact source spans.
+            # This prevents a single mislabeled role or paraphrased justification
+            # from silently changing economic authority.
+            Pass2DecisionBatch.model_validate(parsed)
+            relations = infer_candidate8_relations(instruction, facts)
+            return relations, candidate8_dispositions(instruction, facts, relations)
 
-        validated, trace2 = self._run_stage("relations", pass2_messages, validate_relation_batch)
-        relations, dispositions = validated
+        try:
+            validated, trace2 = self._run_stage("relations", pass2_messages, validate_relation_batch)
+            relations, dispositions = validated
+        except Candidate7SchemaError as exc:
+            relations = infer_candidate8_relations(instruction, facts)
+            dispositions = candidate8_dispositions(instruction, facts, relations)
+            trace2 = list(exc.provider_trace) + [{
+                "stage": "relations",
+                "outcome": "deterministic_source_fallback",
+                "reason": "MODEL_PROPOSAL_SCHEMA_INVALID",
+            }]
         return Candidate8ParseResult(facts, relations, dispositions, tuple(trace1 + trace2))

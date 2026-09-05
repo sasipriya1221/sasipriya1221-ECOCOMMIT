@@ -71,7 +71,13 @@ def run_candidate8(instruction: str, provider: Candidate8Provider) -> Candidate8
 
         # Existing deterministic Boolean/guard builder, compiler, conservation
         # checker and contract validators retain economic authority.
-        graph = build_graph(instruction, facts, relations)
+        active_ids = {fid for fid, disposition in dispositions if disposition is C8FactDisposition.USED}
+        active_facts = tuple(fact for fact in facts if fact.id in active_ids)
+        active_relations = RelationBatch(relations=[
+            relation for relation in relations.relations
+            if relation.left in active_ids and relation.right in active_ids
+        ])
+        graph = build_graph(instruction, active_facts, active_relations)
         contract = compile_graph_v2(graph)
         verify_candidate7_conservation(graph, contract)
 

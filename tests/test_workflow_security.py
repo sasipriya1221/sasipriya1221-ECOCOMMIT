@@ -87,6 +87,7 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
         "candidate7-diagnostic-sweep.yml",
         "candidate7-provider-readiness.yml",
         "candidate7-rate-limit-diagnostic.yml",
+        "candidate8-visible-development.yml",
         "checkpoint-a-candidate6.yml",
         "checkpoint-a-candidate7.yml",
         "checkpoint-a-live.yml",

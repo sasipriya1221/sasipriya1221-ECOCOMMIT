@@ -18,7 +18,7 @@ _NUMBER_WORDS = {
 
 _DURATION_NUMBER = r"(?:\d+(?:\.\d+)?|" + "|".join(_NUMBER_WORDS) + r"|a|an|another)"
 _DURATION_UNIT = r"(?:day|days|week|weeks|month|months|year|years)"
-_TEMPORAL_DURATION_RE = re.compile(rf"\bfor\s+{_DURATION_NUMBER}\s+{_DURATION_UNIT}\b", re.I)
+_TEMPORAL_DURATION_RE = re.compile(rf"\b(?:for|within)\s+{_DURATION_NUMBER}\s+{_DURATION_UNIT}\b", re.I)
 
 
 def _constraint_kind_v2(text: str) -> str:
@@ -30,6 +30,8 @@ def _constraint_kind_v2(text: str) -> str:
             raise
     if _TEMPORAL_DURATION_RE.search(text):
         return "TEMPORAL_DURATION"
+    if re.search(r"(?:₹|\b(?:rs\.?|inr)\s*)\s*[+-]?\d", text, re.I):
+        return "EXACT_TOTAL_COST"
     raise ValueError("C7_CONSTRAINT_KIND_UNSUPPORTED")
 
 
@@ -215,7 +217,8 @@ def compile_graph_v2(graph: C7Graph) -> EconomicIntentContract:
         text = fact.text_span.quote
         if "₹" in text and re.search(r"\b(?:add|above|extra|up to)\b", text, re.I):
             amount, currency = _money(text)
-            effect = f"ADD_MONETARY_ALLOWANCE:{currency}:{amount.normalize()}"
+            amount_text = format(amount, "f").rstrip("0").rstrip(".") if "." in format(amount, "f") else format(amount, "f")
+            effect = f"ADD_MONETARY_ALLOWANCE:{currency}:{amount_text}"
         else:
             effect = "BLOCK_ACTION"
         when = "TRUE" if not conditions else "AND(" + ",".join(conditions) + ")"
