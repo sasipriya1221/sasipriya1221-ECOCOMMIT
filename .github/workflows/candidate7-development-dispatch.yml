@@ -1,11 +1,11 @@
 name: Candidate 7 - Frozen Qualification (Exact SHA)
-run-name: Candidate 7 Frozen Qualification 12d121f80a6cacd94376c6d2b7bce7dff5212eb5
+run-name: Candidate 7 Frozen Qualification 763528a220c8bf922fff0d8c899700a880c3d3c7
 
 on:
   workflow_dispatch:
 
 concurrency:
-  group: candidate7-frozen-qualification-12d121f80a6cacd94376c6d2b7bce7dff5212eb5
+  group: candidate7-frozen-qualification-763528a220c8bf922fff0d8c899700a880c3d3c7
   cancel-in-progress: false
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
         with:
-          ref: 12d121f80a6cacd94376c6d2b7bce7dff5212eb5
+          ref: 763528a220c8bf922fff0d8c899700a880c3d3c7
           fetch-depth: 1
           persist-credentials: false
 
@@ -25,10 +25,10 @@ jobs:
         shell: python
         run: |
           import hashlib, json, os, subprocess
-          expected = "12d121f80a6cacd94376c6d2b7bce7dff5212eb5"
+          expected = "763528a220c8bf922fff0d8c899700a880c3d3c7"
           actual = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
           if actual != expected:
-              raise SystemExit(f"checked out {actual}, expected frozen Candidate-7 source {expected}")
+              raise SystemExit(f"checked out {actual}, expected amended Candidate-7 source {expected}")
           payload = {
               "candidate": "A-CANDIDATE-7",
               "candidate_sha": actual,
@@ -56,7 +56,7 @@ jobs:
           python -m pip install --no-deps --no-build-isolation -e .
           python -m pip check
 
-      - name: Verify frozen qualification harness
+      - name: Verify qualification harness
         run: |
           python -m pytest tests -p no:cacheprovider --basetemp .test-tmp-c7-frozen-qual
           python -m pytest diagnostic_tests/candidate7_qualification_harness_mock_tests.py -p no:cacheprovider --basetemp .test-tmp-c7-harness
@@ -70,7 +70,7 @@ jobs:
           mkdir -p artifacts/candidate7-pass2-qualification
           cp /tmp/candidate7-binding/source-binding.json artifacts/candidate7-pass2-qualification/source-binding.json
 
-      - name: Run frozen Candidate-7 D003/D009 qualification
+      - name: Run amended Candidate-7 D003/D009 qualification
         env:
           ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
         run: python scripts/candidate7_pass2_qualification.py qualify --directory artifacts/candidate7-pass2-qualification
