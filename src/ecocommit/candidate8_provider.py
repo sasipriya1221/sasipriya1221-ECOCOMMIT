@@ -1,23 +1,14 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import Any
 
-from .candidate7_flat import (
-    FactBatch,
-    FactKind,
-    RelationBatch,
-    assign_fact_ids,
-    drop_ungrounded_relations,
-    grounded_span,
-)
-from .candidate7_provider import (
-    Candidate7ParseResult,
-    GroqCandidate7Provider,
-    PASS1_SYSTEM_PROMPT,
-)
+from .candidate7_flat import FactBatch, FactKind, LabeledFact, RelationBatch, assign_fact_ids, grounded_span
+from .candidate7_provider import GroqCandidate7Provider, PASS1_SYSTEM_PROMPT
 from .candidate7_relation_checklist import Pass2DecisionBatch, action_entity_pair_payload
 from .candidate7_structure import _action_kind
+from .candidate8_logic import C8FactDisposition
 from .candidate8_relation_checklist import validate_and_materialize_pass2
 
 
@@ -33,39 +24,46 @@ For EVERY supplied ACTION x ENTITY pair, emit exactly one action_entity_decision
 No supplied pair may be omitted, duplicated, or replaced with a different pair.
 
 ROLE SEMANTICS — apply these mechanically and consistently:
-- ACTION_OBJECT means the grammatical/direct source object or complement of the action. This is a syntactic/source role, not an ontological type. A person or organization can therefore be ACTION_OBJECT when it directly follows the action as its object.
-- ACTION_COUNTERPARTY means a separate participant explicitly related to the action outside the direct-object slot, normally introduced by wording such as `to`, `from`, `with`, `through`, `via`, `by`, or `at`.
-- Do NOT label a bare source-local direct object as ACTION_COUNTERPARTY merely because it denotes a payee, supplier, contractor, organization, or person.
-- Generic role examples: in `Pay the carrier`, `carrier` is ACTION_OBJECT. In `Pay the invoice to the carrier`, `invoice` is ACTION_OBJECT and `carrier` is ACTION_COUNTERPARTY. In `Transfer the refund to the customer`, `refund` is ACTION_OBJECT and `customer` is ACTION_COUNTERPARTY.
+- ACTION_OBJECT is the grammatical/direct source object or complement of the action. It is a source role, not an ontological type. A person or organization can be ACTION_OBJECT when it occupies that direct-object slot.
+- ACTION_COUNTERPARTY is a separate participant explicitly related outside the direct-object slot, normally introduced by `to`, `from`, `with`, `through`, `via`, `by`, or `at`.
+- Never label a bare source-local direct object ACTION_COUNTERPARTY merely because it denotes a payee, supplier, contractor, organization, or person.
+- Generic examples: `Pay the carrier` => carrier is ACTION_OBJECT. `Pay the invoice to the carrier` => invoice is ACTION_OBJECT and carrier is ACTION_COUNTERPARTY. `Transfer the refund to the customer` => refund is ACTION_OBJECT and customer is ACTION_COUNTERPARTY.
 
 The `relations` list is only for non-ACTION×ENTITY relations. Each relation has exactly:
   kind, left, right, justification_span
-Allowed relation kinds there:
+Allowed kinds:
 PREDICATE_SUBJECT, CONSTRAINT_APPLIES_TO, GUARDS_ACTION, BLOCKS_ACTION,
 AFTER_COMPLETION, AFTER_SUCCESS, EXCEPTION_TARGET, EXCEPTION_WHEN,
 AMBIGUITY_TARGET, ALL_OF, ANY_OF.
 
 Rules:
-- ACTION_OBJECT and ACTION_COUNTERPARTY MUST be expressed only through `action_entity_decisions`, never in `relations`.
-- `NONE` is a first-class required decision when a supplied ACTION×ENTITY pair has no explicit semantic relationship.
-- Every non-NONE justification_span must be an exact verbatim substring of the instruction that establishes the claimed relationship.
-- Prefer source-local evidence and preserve grammatical argument structure before semantic-world assumptions.
-- You may reference ONLY the existing F#### IDs supplied in the input.
-- Do not create any new identifier of any kind.
-- Do not output facts, prose, nested Boolean ASTs, groups, or derived semantic objects.
-- ALL_OF and ANY_OF classify pairwise logical relationships between existing PREDICATE facts only.
-- GUARDS_ACTION means the predicate must explicitly be an authorization condition for the action to execute. Do not infer GUARDS_ACTION from mere proximity, topic similarity, sequence, or co-occurrence.
-- BLOCKS_ACTION means the predicate explicitly prevents the action when it holds.
-- AFTER_COMPLETION / AFTER_SUCCESS are directed: left is the later/dependent ACTION, right is the prerequisite ACTION.
+- ACTION_OBJECT and ACTION_COUNTERPARTY appear only in `action_entity_decisions`.
+- `NONE` is required when a supplied pair has no explicit relationship.
+- Every non-NONE justification_span and every relation justification_span MUST be an exact verbatim substring of the instruction that establishes the claimed relationship.
+- Every monetary/numeric/temporal CONSTRAINT must be linked to the ACTION it constrains with CONSTRAINT_APPLIES_TO.
+- Every authorization PREDICATE must be semantically linked: GUARDS_ACTION, BLOCKS_ACTION, PREDICATE_SUBJECT, ALL_OF/ANY_OF, EXCEPTION_WHEN, or AMBIGUITY_TARGET as supported by the source.
+- Every EXCEPTION must have exactly one EXCEPTION_TARGET.
+- Prefer source-local evidence and preserve grammatical argument structure before world-knowledge assumptions.
+- Reference ONLY supplied F#### IDs. Create no IDs, facts, prose, groups, or nested ASTs.
+- ALL_OF and ANY_OF classify logical relationships between existing PREDICATE facts only.
+- GUARDS_ACTION means an explicit authorization condition; do not infer it from proximity.
+- BLOCKS_ACTION means the predicate explicitly prevents execution when it holds.
+- AFTER_COMPLETION / AFTER_SUCCESS are directed: left is later action, right is prerequisite action.
 - EXCEPTION_WHEN is directed: left is PREDICATE, right is EXCEPTION.
-- Other directed relation names follow their English reading.
-- Emit only source-supported non-ACTION×ENTITY relations in `relations`; an empty `relations` list is equally valid.
-- Do not invent a relation merely to avoid an empty `relations` list.
+- Empty `relations` is valid only when no non-ACTION×ENTITY semantic relation is required by the extracted facts.
 JSON only."""
 
 
+@dataclass(frozen=True)
+class Candidate8ParseResult:
+    facts: tuple[LabeledFact, ...]
+    relations: RelationBatch
+    dispositions: dict[str, C8FactDisposition]
+    provider_trace: tuple[dict[str, Any], ...]
+
+
 class GroqCandidate8Provider(GroqCandidate7Provider):
-    """Candidate-8 keeps Candidate-7 transport/retry policy but freezes OTPM-safe output at 900."""
+    """Candidate-8 reuses hardened transport/retry code with OTPM-safe output fixed at 900."""
 
     def __init__(
         self,
@@ -79,24 +77,28 @@ class GroqCandidate8Provider(GroqCandidate7Provider):
         max_retry_delay: float = 900.0,
         min_request_interval_seconds: float = 60.0,
     ) -> None:
+        if int(max_completion_tokens) != 900:
+            raise ValueError("C8_OUTPUT_TOKEN_CEILING_MUST_BE_900")
+        if model != "qwen/qwen3.6-27b":
+            raise ValueError("C8_MODEL_MUST_BE_QWEN_3_6_27B")
         super().__init__(
             api_key,
             base_url=base_url,
             model=model,
             timeout=timeout,
             max_attempts_per_pass=max_attempts_per_pass,
-            max_completion_tokens=max_completion_tokens,
+            max_completion_tokens=900,
             max_retry_delay=max_retry_delay,
             min_request_interval_seconds=min_request_interval_seconds,
         )
 
-    def parse_with_metadata(self, instruction: str) -> Candidate7ParseResult:
+    def parse_with_metadata(self, instruction: str) -> Candidate8ParseResult:
         pass1_messages = [
             {"role": "system", "content": PASS1_SYSTEM_PROMPT},
             {"role": "user", "content": json.dumps({"instruction": instruction}, separators=(",", ":"))},
         ]
 
-        def validate_facts(parsed: Any):
+        def validate_facts(parsed: Any) -> tuple[LabeledFact, ...]:
             self._validate_action_types_raw(parsed)
             batch = FactBatch.model_validate(parsed)
             labeled = assign_fact_ids(batch)
@@ -117,11 +119,13 @@ class GroqCandidate8Provider(GroqCandidate7Provider):
             }, separators=(",", ":"))},
         ]
 
-        def validate_relation_batch(parsed: Any) -> RelationBatch:
+        def validate_relation_batch(parsed: Any) -> tuple[RelationBatch, dict[str, C8FactDisposition]]:
             decision_batch = Pass2DecisionBatch.model_validate(parsed)
+            # Candidate-8 validates grounding and semantic coverage *inside* the
+            # bounded validation loop. Required relations are never accepted and
+            # silently dropped afterward.
             return validate_and_materialize_pass2(instruction, facts, decision_batch)
 
-        relations, trace2 = self._run_stage("relations", pass2_messages, validate_relation_batch)
-        grounded_relations, grounding_events = drop_ungrounded_relations(instruction, relations)
-        trace2.extend({"stage": "relations", **event} for event in grounding_events)
-        return Candidate7ParseResult(facts, grounded_relations, tuple(trace1 + trace2))
+        validated, trace2 = self._run_stage("relations", pass2_messages, validate_relation_batch)
+        relations, dispositions = validated
+        return Candidate8ParseResult(facts, relations, dispositions, tuple(trace1 + trace2))
