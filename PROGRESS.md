@@ -13,7 +13,7 @@ Status vocabulary is strict:
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 1 FAILED; Candidate 2 INCOMPLETE / NOT PROMOTABLE; Candidate 3 FAILED; Candidate 4 PREREGISTERED / SUPERSEDED / NEVER RUN; Candidate 5 FAILED; Candidate 6 FAILED DEVELOPMENT QUALIFICATION; Candidate 7 INCONCLUSIVE / PROVIDER_LIMITED; NOT PASSED** | Candidate 7 exact-source D003/D009 qualification stopped after its first provider call returned HTTP 429. It produced no accepted semantic output and does not admit the official 80-case gate. A typed A receipt exists only if all four unchanged gates pass. |
+| A — frozen semantic gate | **Candidate 7 FAILED; Candidate 8 VISIBLE DEVELOPMENT 23/24 BUT NOT READY; NOT PASSED** | The 900-token Candidate-7 amendment resolved provider rejection and exposed D003 at 0/5. Candidate-8 iteration 3 met percentage gates but dropped one guard in C8D020, so visible regression, sealed preflight, qualification and official A remain locked. |
 | B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | A passing typed A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
@@ -25,7 +25,18 @@ Acceptance remains sequential and evidence-gated even when engineering proceeds 
 
 ## Checkpoint A
 
-### Candidate 7 — exact-source qualification INCONCLUSIVE / PROVIDER_LIMITED
+### Candidate 8 — current visible development
+
+Run `33970539713` at source
+`b540de4998769cc0dd6e3a220fa00abeb8a3ce72` completed 23/24 cases (95.83%),
+100% selective reliability, 79.17% autonomous coverage and 100% ambiguous
+clarification accuracy. Artifact `9971456984` has digest
+`sha256:11a9b21340b549d4b9bc7b6f4328c80c86784123c1d930b8e7483a6215b403f1`.
+It is **NOT PASSED**: C8D020 was rejected fail-closed with one dropped guard and
+the retained summary records `passed: false`. Visible regression, sealed
+preflight, formal qualification and official A have not run.
+
+### Candidate 7 — provider-limited attempts followed by definitive failure
 
 The hard-bound qualification ran once as GitHub Actions run `33944653729`, attempt 1. The launcher checked out and verified frozen Candidate-7 source `12d121f80a6cacd94376c6d2b7bce7dff5212eb5`, selected mode `candidate7-d003-d009`, and invoked only `scripts/candidate7_pass2_qualification.py`. Artifact `9962936517` (`candidate7-pass2-qualification-33944653729-attempt-1`) has archive SHA-256 `f55e6d6284bfe4c142c39de782eda815a229aabe4fa7eadb5aaa6b38d95fdd2d`.
 
@@ -37,7 +48,13 @@ A third exact-source workflow attempt remained provider-limited. Run `3394465372
 
 After a non-semantic Groq project/API-key recovery, exactly one unchanged frozen qualification was dispatched as run `33952460161`, attempt 1, from supervisor source `01fce86e7c1ef17b1a64b215d0837f6614a5f348`. Artifact `9965264711` (`candidate7-pass2-qualification-33952460161-attempt-1`) has GitHub archive SHA-256 `d149fd8c05c8e0122a85640c994b1e92ecff2947f9ac62ca86255645a48c6316`. The exact Candidate-7 SHA, harness and mode were preserved. The first D003 call again returned transient `HTTP_429`; accepted outputs were zero, D009 was not called, and no official/holdout cases were opened. `evidence/candidate7-frozen-qualification-post-recovery-inconclusive.json` pins this terminal provider-limited submission attempt.
 
-Candidate 7 therefore remains **INCONCLUSIVE / PROVIDER_LIMITED**. Checkpoint A cannot begin without a legitimate Candidate-7 qualification PASS. The post-recovery attempt is terminal for the current submission path: no further retry-until-lucky provider call is permitted, and A–D remain blocked behind the absent typed A receipt.
+Those attempts remained **INCONCLUSIVE / PROVIDER_LIMITED**. A preregistered
+infrastructure-only amendment then lowered the requested output ceiling to 900,
+below Groq's 1,000 OTPM limit. The amended run `33957313516`, artifact
+`9966909942`, completed ten provider calls with zero provider/schema failures:
+D003 scored 0/5 and D009 scored 5/5. Candidate 7 is therefore definitively
+**FAILED** and remains frozen. Candidate 8 is a separate development candidate;
+no Candidate-7 result was rewritten or retried into a pass.
 
 Candidate-7 official-A infrastructure is now published and locally execution-ready without a provider call. It includes a qualification-PASS-only preregistration builder, exact frozen candidate and supervisor source/component/dataset/evaluator/criteria/runner/workflow bindings, a non-benchmark readiness lane, a one-shot class-aware early-stopping runner, typed `A-CANDIDATE-7` receipt validation, and historical Candidate-5/6 serialization compatibility. A mocked 80-case end-to-end test proves preregistration-to-runner-to-receipt-to-B loading without using benchmark gold feedback or making a provider call; the final local regression is 524/524 passing. The three new workflows are manual-only and cannot run from a push. This readiness state is not an A pass and cannot bypass the missing Candidate-7 qualification PASS.
 

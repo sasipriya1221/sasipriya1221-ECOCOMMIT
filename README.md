@@ -2,6 +2,10 @@
 
 **Evidence-calibrated safety controls for AI agents that can create irreversible economic commitments.**
 
+**Razorpay AI Buildathon:** Track 1 — AI Growth & Agentic Commerce. Start with
+the concise [judge-facing submission](docs/BUILDATHON_SUBMISSION.md), then run
+the [five-minute demonstration](docs/DEMO_RUNBOOK.md).
+
 ## Why ECOCOMMIT
 
 ECOCOMMIT sits between an AI agent and an economic action such as buying, paying, booking, hiring, transferring, renewing, reserving, releasing, cancelling, or committing. The language model may interpret semantics, but it does **not** own economic authority. Deterministic code owns validation, Boolean authorization logic, normalization, dependency handling, ambiguity blocking, semantic conservation, transaction eligibility, evidence, and execution permission.
@@ -47,7 +51,10 @@ Candidate history remains visible and immutable. The latest branch result is not
 - Candidate 5 — **FAILED**
 - Candidate 6 — **SUPERSEDED after bounded development**
 - Candidate 7 — **FAILED** after the provider-limit remediation exposed a repeatable D003 semantic error
-- Candidate 8 — **ITERATIVE VISIBLE DEVELOPMENT** on PR #7; qualification and official A remain locked until its preregistered development gates pass
+- Candidate 8 — **ITERATIVE VISIBLE DEVELOPMENT** on PR #7; iteration 3 reached
+  23/24 (95.83%) with 100% selective reliability, 79.17% autonomous coverage
+  and 100% clarification accuracy, but remains `passed: false` because one guard
+  was dropped in C8D020. Qualification and official A remain locked.
 
 Before any candidate can open a sealed preflight or qualification, it must be frozen and bound by SHA-256 evidence covering its parser prompts, schemas, deterministic normalizer/compiler, conservation checker, provider policy, datasets, evaluator and protocol.
 
@@ -88,12 +95,13 @@ The `ui/` application demonstrates the economic-control boundary without weakeni
 
 ## Failure recovery
 
-The failure trail is part of the work, not hidden history. Candidate 7 first hit a Groq output-token-per-minute rejection because the request ceiling exceeded the free-tier OTPM limit. Reducing the bound ceiling to 900 removed the infrastructure failure and exposed the real semantic defect: D003 failed 5/5 while D009 passed 5/5. Candidate 7 was frozen as failed rather than retried until lucky. Candidate 8 then moved into a separate, visible-data-only development protocol. Its first two iterations improved from 25% to 75% while retaining 100% selective reliability and zero fail-open outcomes in iteration 2. See [Failure Recovery](docs/FAILURE_RECOVERY.md) for the evidence-linked chronology and engineering lessons.
+The failure trail is part of the work, not hidden history. Candidate 7 first hit a Groq output-token-per-minute rejection because the request ceiling exceeded the free-tier OTPM limit. Reducing the bound ceiling to 900 removed the infrastructure failure and exposed the real semantic defect: D003 failed 5/5 while D009 passed 5/5. Candidate 7 was frozen as failed rather than retried until lucky. Candidate 8 then moved into a separate, visible-data-only development protocol. Its three visible iterations improved from 25%, to 75%, to 95.83%. Iteration 3 still failed the safety gate because C8D020 dropped one guard; the rejection remained fail-closed. See [Failure Recovery](docs/FAILURE_RECOVERY.md) for the evidence-linked chronology and engineering lessons.
 
 ## Evidence and reports
 
 Key evidence documents are:
 
+- `docs/BUILDATHON_SUBMISSION.md` — Track-1 fit and direct judge rubric mapping.
 - `docs/SUBMISSION_EVIDENCE.md` — authoritative evidence index and checkpoint status.
 - `docs/REPRODUCIBILITY.md` — exact-source reproduction instructions.
 - `docs/ARCHITECTURE.md` — system architecture.

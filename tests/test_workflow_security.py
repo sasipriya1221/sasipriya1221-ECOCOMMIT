@@ -105,10 +105,14 @@ def test_candidate7_development_dispatch_is_manual_hard_bound_and_secret_scoped(
     trigger_block = workflow.split("\nconcurrency:", 1)[0]
     assert re.search(r"(?m)^  workflow_dispatch:\s*$", trigger_block)
     assert not re.search(r"(?m)^  (?:push|pull_request(?:_target)?):", trigger_block)
-    frozen_sha = "12d121f80a6cacd94376c6d2b7bce7dff5212eb5"
+    # Candidate 7's only preregistered amendment lowered the provider output
+    # ceiling to 900 tokens without changing its semantic architecture.  The
+    # manual workflow must remain hard-bound to that amended source.
+    frozen_sha = "763528a220c8bf922fff0d8c899700a880c3d3c7"
     assert "source_sha" not in trigger_block
     assert f"ref: {frozen_sha}" in workflow
     assert f'expected = "{frozen_sha}"' in workflow
+    assert "expected amended Candidate-7 source" in workflow
     assert "persist-credentials: false" in workflow
     assert "ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}" in workflow
     assert "python -m pytest" in workflow
