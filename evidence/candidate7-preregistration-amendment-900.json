@@ -1,0 +1,38 @@
+{
+  "candidate": "A-CANDIDATE-7",
+  "status": "PREREGISTERED_AMENDMENT",
+  "authoritative_label": "Candidate-7 amended provider protocol; not unchanged frozen Candidate-7",
+  "original_frozen_source_sha": "12d121f80a6cacd94376c6d2b7bce7dff5212eb5",
+  "amended_source_sha": "763528a220c8bf922fff0d8c899700a880c3d3c7",
+  "authorized_change": {
+    "component": "Groq output-token ceiling only",
+    "source_setting_before": 1536,
+    "provider_observed_effective_requested_output_tokens_on_latest_429": 1424,
+    "source_setting_after": 900,
+    "reason": "Groq qwen/qwen3.6-27b free-tier OTPM limit is 1000; the prior request was rejected before execution because requested output exceeded that ceiling"
+  },
+  "preserved_unchanged": [
+    "Candidate-7 architecture",
+    "PASS1_SYSTEM_PROMPT",
+    "PASS2_SYSTEM_PROMPT",
+    "model qwen/qwen3.6-27b",
+    "development/qualification data",
+    "qualification harness and evaluator semantics",
+    "decision thresholds",
+    "normalization and semantic validation logic",
+    "deterministic compiler and conservation logic"
+  ],
+  "prior_attempt_policy": {
+    "classification": "INCONCLUSIVE / PROVIDER_LIMITED",
+    "authoritative_pass_fail": false,
+    "applies_to": "all Candidate-7 qualification and diagnostic executions before this amendment that were blocked or interrupted by provider limits",
+    "known_retained_example": {
+      "run_id": 33884198703,
+      "D009_status": "interrupted/cancelled after provider-limited execution",
+      "retained_evidence_artifact": "candidate7-diagnostic-d009-33884198703-attempt-1"
+    }
+  },
+  "execution_rule": "Run exactly one qualification against amended_source_sha. If qualification passes under the pre-existing evaluator and thresholds, Candidate-7 may proceed to a newly bound official Checkpoint-A preregistration and then A -> B -> C -> D -> E. If qualification fails, stop Candidate-7 and do not patch or rerun qualification.",
+  "official_checkpoint_a_cases_used_for_this_amendment": false,
+  "holdout_opened_for_this_amendment": false
+}
