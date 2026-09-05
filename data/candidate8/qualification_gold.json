@@ -1,0 +1,25 @@
+{
+  "suite": "candidate8-qualification-gold-v1",
+  "cases": [
+    {"case_id":"Q8Q001","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"PAY","object_terms":["auditor"]}],"constraints":[["EXACT_TOTAL_COST","12000"]]}},
+    {"case_id":"Q8Q002","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"HIRE","object_terms":["consultant"]}],"guards":[{"root":"ATOM","atoms":1,"terms":["compliance","clearance","current"]}]}},
+    {"case_id":"Q8Q003","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"TRANSFER","object_terms":["grant"]}],"guards":[{"root":"ATOM","atoms":1,"terms":["finance","approves"]}]}},
+    {"case_id":"Q8Q004","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"BOOK","object_terms":["venue"]}]}},
+    {"case_id":"Q8Q005","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"ORDER","object_terms":["shipping","labels"],"quantity":"60"}],"constraints":[["MAX_TOTAL_COST","5000"]]}},
+    {"case_id":"Q8Q006","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"RELEASE","object_terms":["deposit"]}],"guards":[{"root":"ATOM","atoms":1,"terms":["inspection","passes"]}]}},
+    {"case_id":"Q8Q007","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"BUY","object_terms":["monitors"],"quantity":"8"}]}},
+    {"case_id":"Q8Q008","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"RESERVE","object_terms":["vans"],"quantity":"2"}]}},
+    {"case_id":"Q8Q009","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"RENEW","object_terms":["support","contract"]}]}},
+    {"case_id":"Q8Q010","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"PAY","object_terms":["invoice"]}],"guards":[{"root":"ATOM","atoms":1,"terms":["delivery","accepted"]}]}},
+    {"case_id":"Q8Q011","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"PAY","object_terms":["technician"]}],"constraints":[["EXACT_TOTAL_COST","7500"]]}},
+    {"case_id":"Q8Q012","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"TRANSFER","object_terms":["reimbursement"]}]}},
+    {"case_id":"Q8Q013","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"HIRE","object_terms":["agency"]}]}},
+    {"case_id":"Q8Q014","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"ORDER","object_terms":["replacement","filters"]}],"guards":[{"root":"AND","atoms":2,"terms":["stock","below","15","maintenance","approves"]}]}},
+    {"case_id":"Q8Q015","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"BUY","object_terms":["backup","router"]}],"guards":[{"root":"OR","atoms":2,"terms":["primary","router","fails","it","emergency"]}]}},
+    {"case_id":"Q8Q016","expected_status":"COMPILED","gold_semantic_ir":{"actions":[{"kind":"RENEW","object_terms":["membership"]}],"guards":[{"root":"NOT","atoms":1,"min_not":1,"terms":["department","cancel"]}]}},
+    {"case_id":"Q8Q017","expected_status":"CLARIFICATION_REQUIRED","gold_semantic_ir":{"ambiguity_any":["UNDEFINED_QUANTITY","SUBJECTIVE_SELECTION_CRITERION"]}},
+    {"case_id":"Q8Q018","expected_status":"CLARIFICATION_REQUIRED","gold_semantic_ir":{"ambiguity_any":["SUBJECTIVE_SELECTION_CRITERION","UNCLEAR_COUNTERPARTY"]}},
+    {"case_id":"Q8Q019","expected_status":"CLARIFICATION_REQUIRED","gold_semantic_ir":{"ambiguity_any":["UNDEFINED_BUDGET","SUBJECTIVE_SELECTION_CRITERION"]}},
+    {"case_id":"Q8Q020","expected_status":"REJECTED","gold_semantic_ir":{"reject_code":"IR_CONTRADICTORY_CONSTRAINTS"}}
+  ]
+}
