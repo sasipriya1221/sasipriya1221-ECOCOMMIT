@@ -35,6 +35,8 @@ The same exact workflow was legitimately rerun once as attempt 2. Artifact `9963
 
 Candidate 7 therefore remains **INCONCLUSIVE / PROVIDER_LIMITED**. Checkpoint A cannot begin without a legitimate Candidate-7 qualification PASS. No additional provider call is justified while capacity remains unconfirmed; the earliest legitimate provider action is the unchanged frozen qualification only after independent evidence of provider recovery and explicit preservation of the no-retry-until-lucky rule.
 
+Candidate-7 official-A infrastructure is now locally execution-ready without a provider call. It includes a qualification-PASS-only preregistration builder, exact frozen-source/component/dataset/evaluator/criteria bindings, a non-benchmark readiness lane, a one-shot class-aware early-stopping runner, typed `A-CANDIDATE-7` receipt validation, and historical Candidate-5/6 serialization compatibility. The three new workflows are manual-only and cannot run from a push. This readiness state is not an A pass and cannot bypass the missing Candidate-7 qualification PASS.
+
 ### Frozen acceptance rule
 
 All four thresholds must pass together in one complete real-model 80-case run:

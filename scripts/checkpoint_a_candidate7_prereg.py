@@ -5,6 +5,7 @@ and never treats a readiness template as a final preregistration.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import subprocess
@@ -120,3 +121,42 @@ def build_preregistration(candidate_root: Path, binding: dict[str, Any], summary
     }
     value["preregistration_sha256"] = canonical_sha256(value)
     return value
+
+
+def verify_preregistration(candidate_root: Path, value: dict[str, Any], binding: dict[str, Any], summary: dict[str, Any]) -> None:
+    expected = build_preregistration(candidate_root, binding, summary, qualification_artifact=value.get("qualification", {}).get("artifact", ""), qualification_archive_sha256=value.get("qualification", {}).get("archive_sha256", ""))
+    if value != expected or value.get("preregistration_sha256") != canonical_sha256({k: v for k, v in value.items() if k != "preregistration_sha256"}):
+        raise ValueError("Candidate-7 official preregistration mismatch")
+
+
+def load(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("evidence must be a JSON object")
+    return value
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--candidate-root", type=Path, required=True)
+    parser.add_argument("--binding", type=Path, required=True)
+    parser.add_argument("--summary", type=Path, required=True)
+    parser.add_argument("--qualification-artifact", required=True)
+    parser.add_argument("--qualification-archive-sha256", required=True)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--verify", type=Path)
+    args = parser.parse_args()
+    binding, summary = load(args.binding), load(args.summary)
+    if args.verify:
+        verify_preregistration(args.candidate_root.resolve(), load(args.verify), binding, summary)
+        return 0
+    if not args.output:
+        raise SystemExit("--output required")
+    value = build_preregistration(args.candidate_root.resolve(), binding, summary, qualification_artifact=args.qualification_artifact, qualification_archive_sha256=args.qualification_archive_sha256)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
