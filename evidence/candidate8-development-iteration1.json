@@ -1,0 +1,39 @@
+{
+  "artifact_digest": "sha256:dc1a467cf99c8c6840d2146080c2ef42ae74cfceb538c4a783dda0169ea15ec9",
+  "artifact_id": 9968316176,
+  "artifact_name": "candidate8-visible-development-33959690847-attempt-1",
+  "candidate": "A-CANDIDATE-8",
+  "classification": "DEVELOPMENT_NOT_READY",
+  "counts": {
+    "ambiguous_correct": 0,
+    "ambiguous_total": 3,
+    "autonomous": 10,
+    "case_passes": 6,
+    "dropped_exceptions": 1,
+    "dropped_guards": 5,
+    "fail_open": 1,
+    "processed": 24,
+    "schema_or_validation_failures": 12,
+    "total": 24
+  },
+  "development_source_sha": "1600a9d7d8f469d2b948f8b4ec0b548e4cae1c48",
+  "formal_qualification_started": false,
+  "metrics": {
+    "ambiguous_clarification_accuracy": 0.0,
+    "autonomous_coverage": 0.4166666666666667,
+    "case_pass_rate": 0.25,
+    "selective_semantic_reliability": 0.6
+  },
+  "official_checkpoint_a_cases_used": false,
+  "root_causes": [
+    "rejection-only handling of structurally usable relation proposals",
+    "compound conditions not consistently atomized before Boolean compilation",
+    "unless misclassified as an exception instead of a blocking guard",
+    "vague budget and subjective selection semantics not consistently promoted to ambiguity",
+    "within-duration and bare-money constraint normalization gaps",
+    "scientific-notation formatting in monetary exception evidence",
+    "irrelevant trailing context entering the authority graph"
+  ],
+  "run_id": 33959690847,
+  "sealed_preflight_opened": false
+}
