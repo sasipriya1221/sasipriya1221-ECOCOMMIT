@@ -2,9 +2,7 @@
 
 **Evidence-calibrated safety controls for AI agents that can create irreversible economic commitments.**
 
-**Razorpay AI Buildathon:** Track 1 — AI Growth & Agentic Commerce. Start with
-the concise [judge-facing submission](docs/BUILDATHON_SUBMISSION.md), then run
-the [five-minute demonstration](docs/DEMO_RUNBOOK.md).
+**Razorpay AI Buildathon — Track 1: AI Growth & Agentic Commerce.**
 
 ## Why ECOCOMMIT
 
@@ -24,9 +22,17 @@ The demo is deliberately safe: it performs **no provider call and no money movem
 
 ## Architecture
 
-The implemented boundary is:
-
-`instruction → untrusted semantic proposal → grounded typed facts/relations → deterministic Boolean and dependency AST → conservation/static validation → economic contract → evidence and exposure policy → transaction-bound certificate → guarded Test/simulated execution → reconciliation and audit`
+```mermaid
+flowchart TD
+    A["User economic instruction"] --> B["AI semantic interpretation"]
+    B --> C["Grounded facts and relations"]
+    C --> D["Deterministic AST and contract compiler"]
+    D --> E{"Safety, evidence and exposure gates"}
+    E -->|Denied or unclear| F["Clarify or fail closed"]
+    E -->|Authorized| G["Transaction-bound certificate"]
+    G --> H["Razorpay Test or simulated execution"]
+    H --> I["Reconciliation and audit trail"]
+```
 
 The model may identify meaning. It cannot grant economic authority, choose a policy ceiling, bypass evidence, advance transaction state, or turn an unknown condition into permission. See [Technical Overview](docs/TECHNICAL_OVERVIEW.md) for the component and data-flow description.
 
@@ -39,24 +45,68 @@ The repository is organized around that boundary:
 - `ui/` — integrated safety-console demonstration.
 - `docs/ARCHITECTURE.md` and `docs/THREAT_MODEL.md` — architecture and trust/safety boundaries.
 
+## Technical stack
+
+| Layer | Technology | Role |
+|---|---|---|
+| Frontend | HTML5, CSS3, vanilla JavaScript | Responsive safety console, scenario controls, gate state, exposure and audit display |
+| Backend/API | Python 3.11+, WSGI | Commit simulation, status, metrics, guarded Test execution and webhook endpoints |
+| Validation | Pydantic 2 | Strict typed facts, relations, contracts, receipts and provider payloads |
+| AI interpretation | Groq OpenAI-compatible API, `qwen/qwen3.6-27b` | Two-pass grounded fact extraction and relation classification |
+| Deterministic safety | Python policy engine, Boolean/dependency AST, conservation checker | Authority decisions, caps, ambiguity handling and fail-closed enforcement |
+| Persistence | SQLite with WAL/FULL-sync controls | Commitments, payments, idempotency, webhook evidence and restart recovery |
+| Payments | Razorpay REST API, Checkout and HMAC-SHA256 webhooks | Test Mode order, authorization, capture, refund and reconciliation boundary |
+| Testing | pytest | Deterministic, security, workflow, property/metamorphic and integration tests |
+| CI/evidence | GitHub Actions, SHA-256 manifests and typed receipts | Exact-source validation and retained artifact provenance |
+| Deployment | WSGI and hardened nginx templates | Prepared TLS/reverse-proxy single-host deployment boundary |
+
 ## Checkpoint truth
 
-Checkpoint status is determined only by typed receipts, frozen protocols, exact-source workflow evidence and retained artifacts. A green CI job is not by itself a benchmark PASS. Provider failures such as HTTP 429/timeouts/5xx remain infrastructure evidence and are not silently converted into semantic success or failure.
+The product is runnable now in its deterministic local demonstration. The
+remaining evidence chain is intentionally sequential so that no implementation,
+workflow colour or screenshot can substitute for an authoritative receipt.
 
-Candidate history remains visible and immutable. The latest branch result is not rewritten into a PASS merely because its workflow is green:
+```mermaid
+flowchart TD
+    C8["Candidate 8 development"] --> R["Visible regression"]
+    R --> P["Sealed preflight"]
+    P --> Q["Formal qualification"]
+    Q --> A["Checkpoint A: official 80 cases"]
+    A --> B["Checkpoint B: Razorpay Test lifecycle"]
+    B --> C["Checkpoint C: final TEL experiment"]
+    C --> D["Checkpoint D: integrated proof"]
+    D --> E["Checkpoint E: release package"]
+```
 
-- Candidate 1 — **FAILED**
-- Candidate 3 — **FAILED**
-- Candidate 4 — **PREREGISTERED / SUPERSEDED / NEVER RUN**
-- Candidate 5 — **FAILED**
-- Candidate 6 — **SUPERSEDED after bounded development**
-- Candidate 7 — **FAILED** after the provider-limit remediation exposed a repeatable D003 semantic error
-- Candidate 8 — **ITERATIVE VISIBLE DEVELOPMENT** on PR #7; iteration 3 reached
-  23/24 (95.83%) with 100% selective reliability, 79.17% autonomous coverage
-  and 100% clarification accuracy, but remains `passed: false` because one guard
-  was dropped in C8D020. Qualification and official A remain locked.
+### Remaining execution process
 
-Before any candidate can open a sealed preflight or qualification, it must be frozen and bound by SHA-256 evidence covering its parser prompts, schemas, deterministic normalizer/compiler, conservation checker, provider policy, datasets, evaluator and protocol.
+1. Correct the remaining general C8D020 entity/guard boundary and repeat visible development.
+2. Run the separate visible regression partition.
+3. Freeze the exact Candidate-8 source and consume the sealed preflight once.
+4. Run formal Candidate-8 qualification.
+5. If qualified, run the official frozen 80-case Checkpoint A evaluation.
+6. With an A receipt, execute the provenance-first Razorpay Test Mode lifecycle and produce B evidence.
+7. With A+B receipts, run the frozen Total Economic Loss comparison for C.
+8. Load legitimate A/B/C receipts through the API/UI and retain the integrated D proof.
+9. Produce the exact-source reproduction, evidence index and final E release package.
+
+Current development position: Candidate 8 has reached **23/24 visible cases
+(95.83%)**, with 100% selective reliability, 79.17% autonomous coverage and
+100% clarification accuracy. One unresolved guard case remains fail-closed and
+must be corrected before the next stage.
+
+### Expected post-submission validation timeline
+
+| Work | Expected duration if no new blocker appears |
+|---|---:|
+| C8D020 correction and deterministic validation | 20–40 minutes |
+| Visible-development rerun | 45–60 minutes |
+| Regression, sealed preflight and qualification | 1–2 hours |
+| Official Checkpoint A with free-tier provider pacing | 2–4 hours |
+| Final B/C/D/E execution and evidence | 1–3+ hours |
+
+Before any sealed or official execution, the exact source, prompts, schemas,
+provider policy, dataset, evaluator and thresholds are cryptographically bound.
 
 The one-shot internal holdout requires all gates simultaneously:
 
@@ -115,9 +165,11 @@ Machine-verifiable receipts and GitHub Actions artifacts remain authoritative ov
 
 ## Submission evidence status
 
-The repository intentionally does **not** claim that every checkpoint is green. Final A/B/C/D/E status must be read from the latest committed receipts and `docs/SUBMISSION_EVIDENCE.md`. Frozen failures and blocked gates remain visible rather than being rewritten.
-
-The unattended Candidate-6 supervisor is designed to fail closed: it may advance only when machine-verifiable prerequisite evidence proves eligibility, and it cannot turn missing, invalid, failed, blocked or incomplete evidence into a PASS.
+The public repository contains the complete implementation, runnable local
+product, architecture, security model, test suite, evidence framework and
+post-submission execution path. Formal candidate qualification and final A–E
+receipts remain sequential validation work. See `SUBMISSION_STATUS.md` for the
+current machine-evidence boundary.
 
 ## Safety and limitations
 
