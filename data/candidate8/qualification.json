@@ -1,0 +1,26 @@
+{
+  "suite": "candidate8-qualification-v1",
+  "purpose": "Fresh Candidate-8 internal qualification; not development data; official Checkpoint-A excluded",
+  "cases": [
+    ["Q8Q001", "Pay the auditor exactly ₹12,000 for the completed review."],
+    ["Q8Q002", "Hire a consultant only if compliance clearance is current."],
+    ["Q8Q003", "Transfer the grant to the partner only if finance approves."],
+    ["Q8Q004", "Book the venue through the events agency."],
+    ["Q8Q005", "Order 60 shipping labels with a total cost cap of ₹5,000."],
+    ["Q8Q006", "Release the deposit to the landlord only if inspection passes."],
+    ["Q8Q007", "Buy 8 monitors from the approved supplier."],
+    ["Q8Q008", "Reserve 2 vans with the rental company."],
+    ["Q8Q009", "Renew the support contract through the vendor."],
+    ["Q8Q010", "Pay the invoice to the printer only if the delivery is accepted."],
+    ["Q8Q011", "Pay the technician exactly ₹7,500 after the repair is completed."],
+    ["Q8Q012", "Transfer the reimbursement to the employee."],
+    ["Q8Q013", "Hire the agency through the broker."],
+    ["Q8Q014", "Order replacement filters only if stock is below 15 and maintenance approves."],
+    ["Q8Q015", "Buy the backup router only if the primary router fails or IT declares an emergency."],
+    ["Q8Q016", "Renew the membership only if the department does not cancel it."],
+    ["Q8Q017", "Order a reasonable number of archive folders."],
+    ["Q8Q018", "Select a suitable vendor for the service."],
+    ["Q8Q019", "Buy equipment within an affordable budget."],
+    ["Q8Q020", "Order parts with a maximum total cost of ₹10,000 and a minimum total cost of ₹15,000."]
+  ]
+}
