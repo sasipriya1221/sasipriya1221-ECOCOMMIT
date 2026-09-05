@@ -1,10 +1,7 @@
 name: Candidate 7 - D003 Pass2 Diagnostic Incremental
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/candidate7-diagnostic-d003-incremental.yml
+  workflow_dispatch:
 
 jobs:
   resample-d003:

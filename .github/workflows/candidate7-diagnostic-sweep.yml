@@ -1,10 +1,7 @@
 name: Candidate 7 - Diagnostic Sweep
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/candidate7-diagnostic-sweep.yml
+  workflow_dispatch:
 
 permissions:
   contents: read

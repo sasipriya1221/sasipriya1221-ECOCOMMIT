@@ -1,10 +1,7 @@
 name: Candidate 7 - Groq Rate Limit Diagnostic
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/candidate7-rate-limit-diagnostic.yml
+  workflow_dispatch:
 
 # One-shot reprobe authorized 2026-09-04 before final Candidate 7 qualification.
 jobs:
