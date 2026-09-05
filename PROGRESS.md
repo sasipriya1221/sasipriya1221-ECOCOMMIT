@@ -31,7 +31,9 @@ The hard-bound qualification ran once as GitHub Actions run `33944653729`, attem
 
 The first D003 request returned sanitized transient `HTTP_429`; the frozen fail-fast policy stopped immediately. Provider calls: 1. Accepted semantic outputs: 0. D009 was not called. The green workflow conclusion reflects correct evidence preservation and is not a semantic pass. `evidence/candidate7-frozen-qualification-inconclusive.json` pins the source binding and retained row/summary hashes. No retry, official Checkpoint-A case access, holdout access, or Candidate-8 work occurred.
 
-Candidate 7 therefore remains **INCONCLUSIVE / PROVIDER_LIMITED**. Checkpoint A cannot begin without a legitimate Candidate-7 qualification PASS.
+The same exact workflow was legitimately rerun once as attempt 2. Artifact `9963027900` (`candidate7-pass2-qualification-33944653729-attempt-2`) has archive SHA-256 `d6488b18aa8b923de69ca772ce6503e5dd4cb84c3b7dd6d2e0c37d9bdd00c787`. It independently verified the same frozen source, mode, and harness, then received transient `HTTP_429` on its first D003 provider call. It again stopped immediately with zero accepted outputs and no D009 call. `evidence/candidate7-frozen-qualification-attempt-2-inconclusive.json` pins that evidence.
+
+Candidate 7 therefore remains **INCONCLUSIVE / PROVIDER_LIMITED**. Checkpoint A cannot begin without a legitimate Candidate-7 qualification PASS. No additional provider call is justified while capacity remains unconfirmed; the earliest legitimate provider action is the unchanged frozen qualification only after independent evidence of provider recovery and explicit preservation of the no-retry-until-lucky rule.
 
 ### Frozen acceptance rule
 

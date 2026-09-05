@@ -4,7 +4,7 @@ Authoritative status as of Candidate-7 qualification run `33944653729`:
 
 | Stage | Status | Evidence / blocker |
 |---|---|---|
-| Candidate 7 qualification | **INCONCLUSIVE / PROVIDER_LIMITED** | Exact frozen source `12d121f...`; artifact `9962936517`; the first provider call returned transient HTTP 429 and the harness stopped with zero accepted outputs. |
+| Candidate 7 qualification | **INCONCLUSIVE / PROVIDER_LIMITED** | Exact frozen source `12d121f...`; attempts 1 and 2 produced artifacts `9962936517` and `9963027900`. Each stopped after its first D003 call returned transient HTTP 429, with zero accepted outputs and no D009 call. |
 | Checkpoint A | **BLOCKED / NOT PASSED** | Candidate 7 has not qualified; no authoritative typed A receipt exists. |
 | Checkpoint B | **LOCALLY VALIDATED / NOT PASSED** | Final fresh Razorpay Test lifecycle is gated by a legitimate A receipt. |
 | Checkpoint C | **LOCALLY VALIDATED / NOT RUN** | Final one-shot held-out comparison is gated by legitimate A and B receipts. |
