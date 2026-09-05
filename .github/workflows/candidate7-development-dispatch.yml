@@ -1,64 +1,48 @@
-name: Candidate 7 - Development Qualification (Dispatcher)
-run-name: Candidate 7 Dev ${{ inputs.source_sha }}
+name: Candidate 7 - Frozen Qualification (Exact SHA)
+run-name: Candidate 7 Frozen Qualification 12d121f80a6cacd94376c6d2b7bce7dff5212eb5
 
 on:
   workflow_dispatch:
-    inputs:
-      source_sha:
-        description: Exact Candidate-7 source commit SHA to qualify
-        required: true
-        type: string
 
 concurrency:
-  group: candidate7-development-dispatch-${{ inputs.source_sha }}
+  group: candidate7-frozen-qualification-12d121f80a6cacd94376c6d2b7bce7dff5212eb5
   cancel-in-progress: false
 
 jobs:
-  qualify:
+  candidate7_frozen_qualification:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
-      - name: Validate exact source input
-        shell: python
-        env:
-          CANDIDATE7_SOURCE_SHA: ${{ inputs.source_sha }}
-        run: |
-          import os, re
-          sha = os.environ["CANDIDATE7_SOURCE_SHA"]
-          if not re.fullmatch(r"[0-9a-f]{40}", sha):
-              raise SystemExit("source_sha must be an exact lowercase 40-hex commit SHA")
-
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: 12d121f80a6cacd94376c6d2b7bce7dff5212eb5
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Bind exact Candidate-7 source
+      - name: Fail closed unless exact frozen source is checked out
         shell: python
-        env:
-          CANDIDATE7_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           import hashlib, json, os, subprocess
-          expected = os.environ["CANDIDATE7_SOURCE_SHA"]
+          expected = "12d121f80a6cacd94376c6d2b7bce7dff5212eb5"
           actual = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
           if actual != expected:
-              raise SystemExit(f"checked out {actual}, expected {expected}")
+              raise SystemExit(f"checked out {actual}, expected frozen Candidate-7 source {expected}")
           payload = {
               "candidate": "A-CANDIDATE-7",
               "candidate_sha": actual,
+              "qualification_mode": "candidate7-d003-d009",
+              "qualification_harness": "scripts/candidate7_pass2_qualification.py",
               "dispatcher_run_id": os.environ["GITHUB_RUN_ID"],
               "dispatcher_run_attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
-              "development_suite": "data/candidate6/development.json",
-              "development_gold": "data/candidate6/development_gold.json",
               "official_checkpoint_a_cases_used": False,
               "holdout_opened": False,
           }
           raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
           payload["binding_sha256"] = hashlib.sha256(raw).hexdigest()
-          with open("/tmp/candidate7-source-binding.json", "w", encoding="utf-8") as fh:
+          os.makedirs("/tmp/candidate7-binding", exist_ok=True)
+          with open("/tmp/candidate7-binding/source-binding.json", "w", encoding="utf-8") as fh:
               json.dump(payload, fh, indent=2, sort_keys=True)
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -72,28 +56,30 @@ jobs:
           python -m pip install --no-deps --no-build-isolation -e .
           python -m pip check
 
-      - name: Deterministic pre-provider gate
+      - name: Verify frozen qualification harness
         run: |
-          python -m pytest -p no:cacheprovider --basetemp .test-tmp-c7-dev
-          python -m compileall -q src scripts tests
+          python -m pytest tests -p no:cacheprovider --basetemp .test-tmp-c7-frozen-qual
+          python -m pytest diagnostic_tests/candidate7_qualification_harness_mock_tests.py -p no:cacheprovider --basetemp .test-tmp-c7-harness
+          python -m compileall -q src scripts tests diagnostic_tests
+          node --check ui/app.js
           git diff --check
+          python scripts/candidate7_pass2_qualification.py self-check
 
-      - name: Run 60-case Candidate-7 development qualification
+      - name: Prepare exact evidence directory
+        run: |
+          mkdir -p artifacts/candidate7-pass2-qualification
+          cp /tmp/candidate7-binding/source-binding.json artifacts/candidate7-pass2-qualification/source-binding.json
+
+      - name: Run frozen Candidate-7 D003/D009 qualification
         env:
           ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
-        run: python scripts/candidate7_qualify.py --output-dir artifacts/candidate7-development
+        run: python scripts/candidate7_pass2_qualification.py qualify --directory artifacts/candidate7-pass2-qualification
 
-      - name: Attach exact source binding to evidence
-        if: always()
-        run: |
-          mkdir -p artifacts/candidate7-development
-          cp /tmp/candidate7-source-binding.json artifacts/candidate7-development/source-binding.json
-
-      - name: Preserve complete development evidence
+      - name: Preserve complete sanitized qualification evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: candidate7-development-${{ github.run_id }}-attempt-${{ github.run_attempt }}
-          path: artifacts/candidate7-development/
+          name: candidate7-pass2-qualification-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: artifacts/candidate7-pass2-qualification/
           if-no-files-found: warn
           retention-days: 30

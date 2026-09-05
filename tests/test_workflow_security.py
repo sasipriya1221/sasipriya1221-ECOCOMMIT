@@ -93,17 +93,22 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
     ]
 
 
-def test_candidate7_development_dispatch_is_manual_exact_source_and_secret_scoped():
+def test_candidate7_development_dispatch_is_manual_hard_bound_and_secret_scoped():
     workflow = (WORKFLOWS / "candidate7-development-dispatch.yml").read_text(encoding="utf-8")
     trigger_block = workflow.split("\nconcurrency:", 1)[0]
     assert re.search(r"(?m)^  workflow_dispatch:\s*$", trigger_block)
     assert not re.search(r"(?m)^  (?:push|pull_request(?:_target)?):", trigger_block)
-    assert "source_sha" in trigger_block
-    assert "ref: ${{ inputs.source_sha }}" in workflow
+    frozen_sha = "12d121f80a6cacd94376c6d2b7bce7dff5212eb5"
+    assert "source_sha" not in trigger_block
+    assert f"ref: {frozen_sha}" in workflow
+    assert f'expected = "{frozen_sha}"' in workflow
     assert "persist-credentials: false" in workflow
     assert "ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}" in workflow
     assert "python -m pytest" in workflow
-    assert "candidate7_qualify.py" in workflow
+    assert "python scripts/candidate7_pass2_qualification.py self-check" in workflow
+    assert "python scripts/candidate7_pass2_qualification.py qualify --directory artifacts/candidate7-pass2-qualification" in workflow
+    assert "candidate7_qualify.py" not in workflow
+    assert '"qualification_mode": "candidate7-d003-d009"' in workflow
     assert "official_checkpoint_a_cases_used" in workflow
     assert "holdout_opened" in workflow
 
@@ -118,6 +123,9 @@ def test_candidate7_request_bridge_is_secretless_exact_source_and_duplicate_safe
     assert "candidate7-structural-semantic-fix" in workflow
     assert "duplicate Candidate-7 development dispatch for this exact source refused" in workflow
     assert "gh workflow run candidate7-development-dispatch.yml" in workflow
+    assert "-f source_sha=" not in workflow
+    assert '"candidate7-d003-d009"' in workflow
+    assert '"scripts/candidate7_pass2_qualification.py"' in workflow
     assert "persist-credentials: false" in workflow
 
 

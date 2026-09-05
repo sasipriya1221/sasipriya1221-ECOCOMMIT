@@ -4,5 +4,7 @@
   "development_suite": "data/candidate6/development.json",
   "development_gold": "data/candidate6/development_gold.json",
   "official_checkpoint_a_cases_used": false,
-  "holdout_opened": false
+  "holdout_opened": false,
+  "qualification_harness": "scripts/candidate7_pass2_qualification.py",
+  "qualification_mode": "candidate7-d003-d009"
 }

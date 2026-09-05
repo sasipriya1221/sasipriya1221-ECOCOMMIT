@@ -48,7 +48,12 @@ jobs:
           if branch != sha:
               raise SystemExit(f"Candidate-7 branch head {branch} != requested source {sha}")
 
-          target_title = f"Candidate 7 Dev {sha}"
+          if request.get("qualification_mode") != "candidate7-d003-d009":
+              raise SystemExit("request must select the frozen D003/D009 qualification mode")
+          if request.get("qualification_harness") != "scripts/candidate7_pass2_qualification.py":
+              raise SystemExit("request must select the hardened Candidate-7 qualification harness")
+
+          target_title = f"Candidate 7 Frozen Qualification {sha}"
           existing = subprocess.check_output([
               "gh", "api", f"repos/{os.environ['GH_REPO']}/actions/workflows/candidate7-development-dispatch.yml/runs?event=workflow_dispatch&per_page=100",
               "--jq", ".workflow_runs[].display_title",
@@ -56,13 +61,9 @@ jobs:
           if target_title in existing:
               raise SystemExit("duplicate Candidate-7 development dispatch for this exact source refused")
 
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-              fh.write(f"source_sha={sha}\n")
-
-      - name: Dispatch exact-source Candidate-7 development qualification
+      - name: Dispatch hard-bound Candidate-7 frozen qualification
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          SOURCE_SHA: ${{ steps.request.outputs.source_sha }}
         run: |
-          gh workflow run candidate7-development-dispatch.yml --repo "$GH_REPO" --ref main -f source_sha="$SOURCE_SHA"
+          gh workflow run candidate7-development-dispatch.yml --repo "$GH_REPO" --ref main
