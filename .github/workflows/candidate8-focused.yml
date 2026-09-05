@@ -10,6 +10,14 @@ on:
       - 'evidence/candidate8-*.json'
       - 'scripts/candidate8_*.py'
       - 'data/candidate8-development/**'
+  pull_request:
+    paths:
+      - 'src/ecocommit/candidate8*.py'
+      - 'tests/test_candidate8_semantics.py'
+      - '.github/workflows/candidate8-focused.yml'
+      - 'evidence/candidate8-*.json'
+      - 'scripts/candidate8_*.py'
+      - 'data/candidate8-development/**'
   workflow_dispatch:
 
 concurrency:
@@ -39,5 +47,5 @@ jobs:
         run: python -m pytest tests/test_candidate8_semantics.py -p no:cacheprovider --basetemp .test-tmp-c8-focused
       - name: Candidate-8 static checks
         run: |
-          python -m compileall -q src/ecocommit/candidate8.py src/ecocommit/candidate8_logic.py src/ecocommit/candidate8_provider.py src/ecocommit/candidate8_relation_checklist.py tests/test_candidate8_semantics.py
+          python -m compileall -q src/ecocommit/candidate8.py src/ecocommit/candidate8_logic.py src/ecocommit/candidate8_provider.py src/ecocommit/candidate8_relation_checklist.py scripts/candidate8_develop.py tests/test_candidate8_semantics.py
           git diff --check
