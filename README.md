@@ -4,6 +4,12 @@
 
 **Razorpay AI Buildathon — Track 1: AI Growth & Agentic Commerce.**
 
+## Project links
+
+- **Demo video:** [Watch ECOCOMMIT on YouTube](https://youtu.be/WjkrzrcffXk)
+- **Application:** [Local safety console](http://127.0.0.1:8765/) — available after following Quick Start below
+- **Technical submission:** [Architecture, engineering evidence and Buildathon fit](docs/BUILDATHON_SUBMISSION.md)
+
 ## Why ECOCOMMIT
 
 ECOCOMMIT sits between an AI agent and an economic action such as buying, paying, booking, hiring, transferring, renewing, reserving, releasing, cancelling, or committing. The language model may interpret semantics, but it does **not** own economic authority. Deterministic code owns validation, Boolean authorization logic, normalization, dependency handling, ambiguity blocking, semantic conservation, transaction eligibility, evidence, and execution permission.
