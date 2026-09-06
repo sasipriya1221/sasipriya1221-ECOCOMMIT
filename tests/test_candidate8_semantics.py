@@ -490,6 +490,7 @@ def test_fail_closed_disposition_error_preserves_sanitized_partial_evidence(monk
 @pytest.mark.parametrize(
     ("entity_quote", "expected_status", "expected_unresolved"),
     [
+        ("to the customer", "COMPILED", None),
         ("refund to the customer", "REJECTED", "refund to the customer"),
         ("the customer after finance approves", "COMPILED", None),
         ("refund to the customer after finance approves", "REJECTED", "refund to the customer"),
@@ -523,3 +524,31 @@ def test_crossing_entity_variants_preserve_authority_or_diagnostic_span(
         assert result.unresolved_fact is not None
         assert result.unresolved_fact.kind.value == "ENTITY"
         assert result.unresolved_fact.text_span.quote == expected_unresolved
+
+
+@pytest.mark.parametrize(
+    ("instruction", "object_quote", "entity_quote", "nominal_quote"),
+    [
+        ("Transfer the refund to the customer.", "the refund", "to the customer", "the customer"),
+        ("Collect the parcel from the supplier.", "the parcel", "from the supplier", "the supplier"),
+        ("Settle the invoice with the carrier.", "the invoice", "with the carrier", "the carrier"),
+    ],
+)
+def test_leading_role_marker_entity_is_canonicalized_and_conserved(
+    instruction, object_quote, entity_quote, nominal_quote,
+):
+    action_quote = instruction.split(" ", 1)[0]
+    raw = (
+        fact("F0001", action_quote, "ACTION", action_type=action_quote.upper()),
+        fact("F0002", object_quote, "ENTITY"),
+        fact("F0003", entity_quote, "ENTITY"),
+    )
+    normalized = normalize_candidate8_facts(instruction, raw)
+    assert nominal_quote in {row.text_span.quote for row in normalized.facts}
+    assert any(event["outcome"] == "leading_role_marker_removed_from_entity" for event in normalized.events)
+    relations = infer_candidate8_relations(instruction, normalized.facts)
+    assert sum(row.kind.value == "ACTION_COUNTERPARTY" for row in relations.relations) == 1
+    dispositions = candidate8_dispositions(instruction, normalized.facts, relations)
+    assert set(dispositions) == {row.id for row in normalized.facts}
+    assert set(dispositions.values()) == {C8FactDisposition.USED}
+    build_typed_ast(normalized.facts, relations, dispositions)

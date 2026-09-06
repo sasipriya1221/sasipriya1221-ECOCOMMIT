@@ -194,6 +194,20 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
                     quote = entity_quote
                     events.append({"outcome": "condition_tail_removed_from_entity", "fact_id": fact.id})
 
+        # A pass-1 extractor can include the grammatical role marker in an
+        # ENTITY span (for example, ``to the customer``). Canonicalize that
+        # exact source span to its nominal complement. The retained source gap
+        # still contains the marker, so relation inference deterministically
+        # assigns ACTION_COUNTERPARTY instead of losing the entity disposition.
+        # This is a source-grammar rewrite, not an irrelevance disposition.
+        leading_role = re.match(r"^(?:to|from|with|through|via|by|at)\s+(.+)$", quote.strip(), re.I)
+        if kind is FactKind.ENTITY and leading_role is not None:
+            entity_quote = leading_role.group(1)
+            entity_start = start + quote.lower().find(entity_quote.lower())
+            quote = entity_quote
+            start = entity_start
+            events.append({"outcome": "leading_role_marker_removed_from_entity", "fact_id": fact.id})
+
         if kind is FactKind.CONSTRAINT and not _BARE_MONEY.search(quote) and re.search(r"\b(?:budget|affordable|reasonable)\b", quote, re.I):
             kind = FactKind.AMBIGUITY
             events.append({"outcome": "vague_constraint_retyped", "fact_id": fact.id})
@@ -213,7 +227,13 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
             staged.append((context_start, _make_fact(context_quote, FactKind.ENTITY, occurrence=_occurrence_at(instruction, context_quote, context_start))))
             events.append({"outcome": "nominal_after_context_retyped", "fact_id": fact.id})
             continue
-        staged.append((start, _make_fact(quote, kind, polarity, fact.action_type, occurrence=fact.text_span.occurrence)))
+        staged.append((start, _make_fact(
+            quote,
+            kind,
+            polarity,
+            fact.action_type,
+            occurrence=_occurrence_at(instruction, quote, start),
+        )))
 
     # A bare number between an action and its following object is a quantity,
     # not a monetary/temporal constraint. Fold it into the exact object span so
