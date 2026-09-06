@@ -158,7 +158,7 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
     for fact in facts:
         if fact.id in covered_condition_fact_ids:
             continue
-        start, _ = grounded_span(instruction, fact.text_span)
+        start, end = grounded_span(instruction, fact.text_span)
         quote = fact.text_span.quote
         kind = fact.kind
         polarity = fact.polarity

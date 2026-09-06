@@ -392,3 +392,35 @@ def test_condition_tail_absorbed_into_counterparty_is_split_and_guarded():
     assert any(kind == "GUARDS_ACTION" for kind, _, _ in signatures)
     dispositions = candidate8_dispositions(instruction, facts, relations)
     build_typed_ast(facts, relations, dispositions)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        (
+            fact("F0001", "Transfer", "ACTION", action_type="TRANSFER"),
+            fact("F0002", "the customer after finance approves", "ENTITY"),
+            fact("F0003", "finance approves", "PREDICATE"),
+            fact("F0004", "refund", "ENTITY"),
+        ),
+        (
+            fact("F0001", "finance approves", "PREDICATE"),
+            fact("F0002", "the customer after finance approves", "ENTITY"),
+            fact("F0003", "Transfer", "ACTION", action_type="TRANSFER"),
+            fact("F0004", "refund", "ENTITY"),
+        ),
+    ],
+)
+def test_condition_tail_split_is_independent_of_provider_fact_order(raw):
+    instruction = "Transfer the refund to the customer after finance approves."
+    facts = _normalize(instruction, raw)
+    assert "the customer after finance approves" not in {row.text_span.quote for row in facts}
+    assert "the customer" in {row.text_span.quote for row in facts}
+    relations = infer_candidate8_relations(instruction, facts)
+    signatures = _relation_signatures(relations)
+    assert sum(kind == "GUARDS_ACTION" for kind, _, _ in signatures) == 1
+    assert sum(kind == "ACTION_OBJECT" for kind, _, _ in signatures) == 1
+    assert sum(kind == "ACTION_COUNTERPARTY" for kind, _, _ in signatures) == 1
+    dispositions = candidate8_dispositions(instruction, facts, relations)
+    assert set(dispositions) == {row.id for row in facts}
+    build_typed_ast(facts, relations, dispositions)
