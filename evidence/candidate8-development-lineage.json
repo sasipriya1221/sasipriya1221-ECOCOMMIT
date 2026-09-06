@@ -1,0 +1,21 @@
+{
+  "schema":"ecocommit.candidate8.development-lineage.v1",
+  "candidate":"A-CANDIDATE-8",
+  "status":"DEVELOPMENT_ONLY",
+  "base_main_sha":"d47306c79160e55e6cb484e9ce16128e1a9ecabc",
+  "clean_port_commit":"2e2d450b452f6a016904c54fec65e5be8ff30001",
+  "superseded_development_branch":"candidate8-semantic-role-redesign",
+  "superseded_pr":6,
+  "active_branch":"candidate8-development-clean",
+  "active_pr":7,
+  "candidate7_authoritative_failure":{"run_id":33957313516,"artifact_id":9966909942,"status":"FAILED"},
+  "d003_status":"DISCLOSED_DEVELOPMENT_REGRESSION",
+  "official_checkpoint_a_cases_used":false,
+  "formal_candidate8_qualification_started":false,
+  "preflight_plaintext_materialized":false,
+  "notes":[
+    "Candidate-7 evidence and historical source branches are not modified.",
+    "Candidate-7 support modules are copied by exact blob identity solely as reused deterministic infrastructure.",
+    "Previously authored Candidate-8 qualification files were deliberately excluded from the clean lineage because they cannot serve as untouched formal qualification evidence."
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "ecocommit.candidate8.preflight-protocol.v1",
+  "candidate": "A-CANDIDATE-8",
+  "purpose": "readiness preflight only; never formal qualification",
+  "status": "GENERATOR_BOUND_SET_NOT_YET_MATERIALIZED",
+  "separation_rule": "Preflight plaintext cases and gold must not exist in the repository during implementation. After temporary implementation freeze, a CI job must generate one set from a fresh cryptographic random seed, evaluate it in the same job, retain only hashes/aggregate metrics in logs, and seal the full cases+gold+outputs as a restricted workflow artifact. The assistant must not inspect individual preflight cases or gold before/during execution.",
+  "required_coverage": [
+    "AND", "OR", "nested_AND_OR", "negation", "IF_THEN", "UNLESS",
+    "prerequisites", "alternatives", "numeric_constraints", "temporal_constraints",
+    "references_pronouns", "multiple_entities", "ordered_actions", "ambiguity",
+    "conflicts", "irrelevant_clauses", "direct_object_role", "explicit_counterparty",
+    "exceptions", "unrelated_regressions"
+  ],
+  "minimum_cases": 20,
+  "readiness_margins": {
+    "case_pass_rate": 0.95,
+    "selective_semantic_reliability": 0.98,
+    "autonomous_coverage": 0.65,
+    "ambiguous_clarification_accuracy": 0.90,
+    "schema_validation_failures": 0,
+    "known_structural_failures": 0,
+    "conservation_failures": 0
+  },
+  "failure_policy": "If readiness misses, expose only aggregate/general failure categories; do not inspect or tune to individual sealed cases. Return to visible development and require a newly generated independently seeded preflight before another preflight.",
+  "formal_qualification_independence": "Passing preflight does not authorize calling this set formal qualification. Formal qualification requires a separate fresh untouched dataset."
+}

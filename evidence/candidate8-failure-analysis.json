@@ -1,0 +1,36 @@
+{
+  "schema":"ecocommit.candidate8.failure-analysis.v1",
+  "candidate7":{"status":"FAILED","run_id":33957313516,"artifact_id":9966909942,"source_sha":"763528a220c8bf922fff0d8c899700a880c3d3c7"},
+  "instruction":"Pay printer exactly ₹32,500 for completed run.",
+  "expected_facts":[
+    {"id":"F0001","kind":"ACTION","quote":"Pay","action_type":"PAY"},
+    {"id":"F0002","kind":"ENTITY","quote":"printer"},
+    {"id":"F0003","kind":"CONSTRAINT","quote":"exactly ₹32,500"},
+    {"id":"F0004","kind":"ENTITY","quote":"completed run"}
+  ],
+  "expected_relations":[["ACTION_OBJECT","F0001","F0002"],["CONSTRAINT_APPLIES_TO","F0003","F0001"]],
+  "expected_boolean":{"guards":[]},
+  "evidence_limitations":[
+    "The retained qualification artifact does not store raw provider JSON; it stores response SHA-256, post-grounding relation signatures, grounding-drop count and correctness.",
+    "The exact kind/text of the dropped relation is therefore NOT_RETAINED and is not reconstructed as observed evidence."
+  ],
+  "attempts":[
+    {"attempt":1,"pass1":"FIXED_HARNESS_FACTS","fact_ids":"DETERMINISTIC","provider_response_sha256":"06165b945f615fb712906a8ef4371f9a4161ad1bb56178d370008dfdd48f4b13","finish_reason":"stop","pass2_status":"accepted","post_grounding_relations":[["ACTION_COUNTERPARTY","F0001","F0002"]],"grounding_drop_count":1,"raw_provider_json":"NOT_RETAINED","boolean":{"guards":[]},"replay_compile":"REJECTED:C7_CONSTRAINT_TARGET_CARDINALITY","evaluator":"FAIL:missing ACTION_OBJECT(F0001,F0002); retained ACTION_COUNTERPARTY(F0001,F0002)"},
+    {"attempt":2,"pass1":"FIXED_HARNESS_FACTS","fact_ids":"DETERMINISTIC","provider_response_sha256":"06165b945f615fb712906a8ef4371f9a4161ad1bb56178d370008dfdd48f4b13","finish_reason":"stop","pass2_status":"accepted","post_grounding_relations":[["ACTION_COUNTERPARTY","F0001","F0002"]],"grounding_drop_count":1,"raw_provider_json":"NOT_RETAINED","boolean":{"guards":[]},"replay_compile":"REJECTED:C7_CONSTRAINT_TARGET_CARDINALITY","evaluator":"FAIL:missing ACTION_OBJECT(F0001,F0002); retained ACTION_COUNTERPARTY(F0001,F0002)"},
+    {"attempt":3,"pass1":"FIXED_HARNESS_FACTS","fact_ids":"DETERMINISTIC","provider_response_sha256":"06165b945f615fb712906a8ef4371f9a4161ad1bb56178d370008dfdd48f4b13","finish_reason":"stop","pass2_status":"accepted","post_grounding_relations":[["ACTION_COUNTERPARTY","F0001","F0002"]],"grounding_drop_count":1,"raw_provider_json":"NOT_RETAINED","boolean":{"guards":[]},"replay_compile":"REJECTED:C7_CONSTRAINT_TARGET_CARDINALITY","evaluator":"FAIL:missing ACTION_OBJECT(F0001,F0002); retained ACTION_COUNTERPARTY(F0001,F0002)"},
+    {"attempt":4,"pass1":"FIXED_HARNESS_FACTS","fact_ids":"DETERMINISTIC","provider_response_sha256":"06165b945f615fb712906a8ef4371f9a4161ad1bb56178d370008dfdd48f4b13","finish_reason":"stop","pass2_status":"accepted","post_grounding_relations":[["ACTION_COUNTERPARTY","F0001","F0002"]],"grounding_drop_count":1,"raw_provider_json":"NOT_RETAINED","boolean":{"guards":[]},"replay_compile":"REJECTED:C7_CONSTRAINT_TARGET_CARDINALITY","evaluator":"FAIL:missing ACTION_OBJECT(F0001,F0002); retained ACTION_COUNTERPARTY(F0001,F0002)"},
+    {"attempt":5,"pass1":"FIXED_HARNESS_FACTS","fact_ids":"DETERMINISTIC","provider_response_sha256":"06165b945f615fb712906a8ef4371f9a4161ad1bb56178d370008dfdd48f4b13","finish_reason":"stop","pass2_status":"accepted","post_grounding_relations":[["ACTION_COUNTERPARTY","F0001","F0002"]],"grounding_drop_count":1,"raw_provider_json":"NOT_RETAINED","boolean":{"guards":[]},"replay_compile":"REJECTED:C7_CONSTRAINT_TARGET_CARDINALITY","evaluator":"FAIL:missing ACTION_OBJECT(F0001,F0002); retained ACTION_COUNTERPARTY(F0001,F0002)"}
+  ],
+  "root_cause":{
+    "primary_class":"ACTION_ENTITY_ROLE_CLASSIFICATION",
+    "primary_mechanism":"Candidate-7 permits an immediately source-local bare entity after an action verb to remain ACTION_COUNTERPARTY when no later ACTION_OBJECT competes for the role. The deterministic locality verifier only rejects this inversion when a later object is simultaneously present, so a stable model role error survives validation.",
+    "secondary_class":"REQUIRED_RELATION_ABSENT_AFTER_GROUNDING",
+    "secondary_mechanism":"The expected monetary constraint-target relation is absent after grounding in every retained trace. Each attempt records one grounding drop, but its exact raw relation is not retained, so identity is evidence-limited.",
+    "excluded_primary_causes":["provider transport/rate limit","output truncation","schema rejection","fact extraction in this fixed-fact harness","Boolean composition","guard construction","negation","temporal parsing","numeric parsing","evaluator mismatch"],
+    "downstream_effect":"With the retained post-grounding relations, graph construction has no guard and deterministic compilation fails closed with C7_CONSTRAINT_TARGET_CARDINALITY; independently, the qualification harness fails the action/entity role semantics before compilation."
+  },
+  "candidate8_boundary":{
+    "required":"Typed action/entity role evidence plus deterministic structural validation; required semantic relations must be conserved or fail closed.",
+    "forbidden":["D003 wording checks","D003 identifiers/constants","benchmark IDs in production logic","gold lookup","official-A access","threshold/evaluator weakening"]
+  }
+}

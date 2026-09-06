@@ -1,0 +1,49 @@
+{
+  "candidate": "A-CANDIDATE-8",
+  "source_failure_candidate": "A-CANDIDATE-7",
+  "candidate7_failure_run": 33957313516,
+  "candidate7_failure_artifact_id": 9966909942,
+  "candidate7_status": "FAILED",
+  "known_development_case": "D003",
+  "observations": {
+    "attempts": 5,
+    "schema_accepted": 5,
+    "provider_failures": 0,
+    "validation_failures": 0,
+    "finish_reason": "stop",
+    "identical_provider_response_hash_across_attempts": true,
+    "post_grounding_relation_signatures": [
+      ["ACTION_COUNTERPARTY", "F0001", "F0002"]
+    ],
+    "grounding_drops_per_attempt": 1
+  },
+  "diagnosis": {
+    "primary_failure_class": "ACTION_ENTITY_ROLE_CLASSIFICATION",
+    "mechanism": "Candidate-7 permits an immediately source-local bare entity following an action verb to be classified as ACTION_COUNTERPARTY. The ECOCOMMIT semantic ontology and gold semantics treat that bare grammatical/direct object as the action object, even when the noun denotes a person or organization. Candidate-7 only rejects a local-counterparty classification when a later entity is simultaneously promoted to object, so a lone local entity can remain incorrectly classified as counterpart.",
+    "not_supported_as_primary_causes": [
+      "provider transport failure",
+      "output truncation",
+      "schema rejection",
+      "fact extraction failure in the D003 qualification harness",
+      "Boolean composition",
+      "guard construction",
+      "negation",
+      "temporal composition",
+      "numeric parsing",
+      "deterministic contract compilation",
+      "evaluator mismatch"
+    ],
+    "secondary_observation": "One non-action/entity relation was dropped by source-grounding in each D003 attempt, but the qualification failure remains even after excluding that dropped relation because the retained action/entity role is wrong."
+  },
+  "candidate8_general_correction_boundary": {
+    "allowed": "Clarify and deterministically validate the general distinction between a bare source-local direct object and an explicitly prepositioned/relational counterparty.",
+    "forbidden": [
+      "D003 string matching",
+      "case identifiers in production logic",
+      "D003 monetary constants",
+      "gold-answer lookup",
+      "official Checkpoint-A data access",
+      "threshold or evaluator changes"
+    ]
+  }
+}
