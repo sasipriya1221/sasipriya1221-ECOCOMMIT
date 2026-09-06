@@ -66,6 +66,9 @@ def run(partition: str, output_dir: Path) -> int:
             } if result.logical_ast else None,
             "contract_sha256": result.contract.canonical_hash() if result.contract else None,
             "provider_trace": trace,
+            "normalization_events": list(result.normalization_events),
+            "dispositions": [(fid, disposition.value) for fid, disposition in result.dispositions],
+            "unresolved_fact": result.unresolved_fact.model_dump(mode="json") if result.unresolved_fact else None,
             "score": asdict(score),
         }
         (output_dir / f"{cid}.json").write_text(json.dumps(row, indent=2, sort_keys=True, default=str), encoding="utf-8")

@@ -20,6 +20,16 @@ from .candidate7_flat import (
 from .candidate8_logic import C8FactDisposition
 
 
+class Candidate8DispositionError(ValueError):
+    """Fail-closed disposition error carrying sanitized partial evidence."""
+
+    def __init__(self, code: str, fact: LabeledFact, partial_dispositions: dict[str, C8FactDisposition]) -> None:
+        super().__init__(code)
+        self.code = code
+        self.fact = fact
+        self.partial_dispositions = dict(partial_dispositions)
+
+
 _CONDITION_MARKER = re.compile(r"\b(only\s+if|unless|if|after)\b", re.I)
 _BOOLEAN_SPLIT = re.compile(r"\s+\b(and|or)\b\s+", re.I)
 _VAGUE_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -466,5 +476,9 @@ def candidate8_dispositions(
         if fact.kind is FactKind.PREDICATE and _ACTION_SUCCESS.search(fact.text_span.quote):
             dispositions[fact.id] = C8FactDisposition.IRRELEVANT
             continue
-        raise ValueError(f"C8_UNRESOLVED_{fact.kind.value}_DISPOSITION")
+        raise Candidate8DispositionError(
+            f"C8_UNRESOLVED_{fact.kind.value}_DISPOSITION",
+            fact,
+            dispositions,
+        )
     return dispositions

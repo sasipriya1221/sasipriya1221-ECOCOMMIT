@@ -9,6 +9,7 @@ from .candidate7_flat import LabeledFact, RelationBatch
 from .candidate7_provider import Candidate7SchemaError
 from .candidate7_structure import C7Graph, build_graph
 from .candidate8_logic import C8FactDisposition, C8LogicalAST, build_typed_ast, verify_ast_conservation
+from .candidate8_provider import Candidate8EvidenceError
 from .interpreter import ProviderRequestError
 
 
@@ -28,6 +29,8 @@ class Candidate8Result:
     blocked_actions: frozenset[str]
     error_code: str | None = None
     provider_trace: tuple[dict[str, Any], ...] = ()
+    normalization_events: tuple[dict[str, str], ...] = ()
+    unresolved_fact: LabeledFact | None = None
 
 
 def _empty_result(
@@ -38,6 +41,8 @@ def _empty_result(
     dispositions: tuple[tuple[str, C8FactDisposition], ...],
     error_code: str,
     trace: tuple[dict[str, Any], ...],
+    normalization_events: tuple[dict[str, str], ...] = (),
+    unresolved_fact: LabeledFact | None = None,
 ) -> Candidate8Result:
     return Candidate8Result(
         status=status,
@@ -50,6 +55,8 @@ def _empty_result(
         blocked_actions=frozenset(),
         error_code=error_code,
         provider_trace=trace,
+        normalization_events=normalization_events,
+        unresolved_fact=unresolved_fact,
     )
 
 
@@ -58,6 +65,7 @@ def run_candidate8(instruction: str, provider: Candidate8Provider) -> Candidate8
     relations: RelationBatch | None = None
     dispositions: tuple[tuple[str, C8FactDisposition], ...] = ()
     trace: tuple[dict[str, Any], ...] = ()
+    normalization_events: tuple[dict[str, str], ...] = ()
     try:
         parsed = provider.parse_with_metadata(instruction)
         facts = parsed.facts
@@ -65,6 +73,7 @@ def run_candidate8(instruction: str, provider: Candidate8Provider) -> Candidate8
         disposition_map = dict(parsed.dispositions)
         dispositions = tuple(sorted(disposition_map.items(), key=lambda item: item[0]))
         trace = parsed.provider_trace
+        normalization_events = tuple(getattr(parsed, "normalization_events", ()))
 
         logical_ast = build_typed_ast(facts, relations, disposition_map)
         verify_ast_conservation(logical_ast, relations)
@@ -95,6 +104,18 @@ def run_candidate8(instruction: str, provider: Candidate8Provider) -> Candidate8
             dispositions=dispositions,
             blocked_actions=graph.blocked_actions,
             provider_trace=trace,
+            normalization_events=normalization_events,
+        )
+    except Candidate8EvidenceError as exc:
+        return _empty_result(
+            status="REJECTED",
+            facts=exc.facts,
+            relations=exc.relations,
+            dispositions=tuple(sorted(exc.dispositions.items(), key=lambda item: item[0])),
+            error_code=exc.code,
+            trace=exc.provider_trace,
+            normalization_events=exc.normalization_events,
+            unresolved_fact=exc.unresolved_fact,
         )
     except ProviderRequestError as exc:
         provider_trace = tuple(getattr(exc, "provider_trace", ()) or trace)

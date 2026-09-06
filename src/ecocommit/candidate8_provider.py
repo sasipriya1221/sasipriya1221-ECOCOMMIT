@@ -10,6 +10,7 @@ from .candidate7_relation_checklist import Pass2DecisionBatch, action_entity_pai
 from .candidate7_structure import _action_kind
 from .candidate8_logic import C8FactDisposition
 from .candidate8_normalize import (
+    Candidate8DispositionError,
     candidate8_dispositions,
     infer_candidate8_relations,
     normalize_candidate8_facts,
@@ -75,6 +76,31 @@ class Candidate8ParseResult:
     relations: RelationBatch
     dispositions: dict[str, C8FactDisposition]
     provider_trace: tuple[dict[str, Any], ...]
+    normalization_events: tuple[dict[str, str], ...] = ()
+
+
+class Candidate8EvidenceError(ValueError):
+    """Fail-closed parser error with source-grounded, sanitized diagnostics."""
+
+    def __init__(
+        self,
+        code: str,
+        *,
+        facts: tuple[LabeledFact, ...],
+        relations: RelationBatch | None,
+        dispositions: dict[str, C8FactDisposition],
+        normalization_events: tuple[dict[str, str], ...],
+        provider_trace: tuple[dict[str, Any], ...],
+        unresolved_fact: LabeledFact | None = None,
+    ) -> None:
+        super().__init__(code)
+        self.code = code
+        self.facts = facts
+        self.relations = relations
+        self.dispositions = dict(dispositions)
+        self.normalization_events = normalization_events
+        self.provider_trace = provider_trace
+        self.unresolved_fact = unresolved_fact
 
 
 class GroqCandidate8Provider(GroqCandidate7Provider):
@@ -108,6 +134,7 @@ class GroqCandidate8Provider(GroqCandidate7Provider):
         )
 
     def parse_with_metadata(self, instruction: str) -> Candidate8ParseResult:
+        normalization_events: tuple[dict[str, str], ...] = ()
         pass1_messages = [
             {"role": "system", "content": PASS1_SYSTEM_PROMPT_C8},
             {"role": "user", "content": json.dumps({"instruction": instruction}, separators=(",", ":"))},
@@ -129,7 +156,10 @@ class GroqCandidate8Provider(GroqCandidate7Provider):
             for fact in labeled:
                 if fact.kind is FactKind.ACTION and fact.action_type != _action_kind(fact.text_span.quote):
                     raise ValueError("C7_ACTION_TYPE_SPAN_MISMATCH")
-            return normalize_candidate8_facts(instruction, labeled).facts
+            nonlocal normalization_events
+            normalized = normalize_candidate8_facts(instruction, labeled)
+            normalization_events = normalized.events
+            return normalized.facts
 
         facts, trace1 = self._run_stage("facts", pass1_messages, validate_facts)
         labeled_payload = [fact.model_dump(mode="json") for fact in facts]
@@ -151,15 +181,44 @@ class GroqCandidate8Provider(GroqCandidate7Provider):
             relations = infer_candidate8_relations(instruction, facts)
             return relations, candidate8_dispositions(instruction, facts, relations)
 
+        relations: RelationBatch | None = None
+        dispositions: dict[str, C8FactDisposition] = {}
+        trace2: list[dict[str, Any]] = []
         try:
-            validated, trace2 = self._run_stage("relations", pass2_messages, validate_relation_batch)
-            relations, dispositions = validated
-        except Candidate7SchemaError as exc:
-            relations = infer_candidate8_relations(instruction, facts)
-            dispositions = candidate8_dispositions(instruction, facts, relations)
-            trace2 = list(exc.provider_trace) + [{
-                "stage": "relations",
-                "outcome": "deterministic_source_fallback",
-                "reason": "MODEL_PROPOSAL_SCHEMA_INVALID",
-            }]
-        return Candidate8ParseResult(facts, relations, dispositions, tuple(trace1 + trace2))
+            try:
+                validated, trace2 = self._run_stage("relations", pass2_messages, validate_relation_batch)
+                relations, dispositions = validated
+            except Candidate7SchemaError as exc:
+                trace2 = list(exc.provider_trace) + [{
+                    "stage": "relations",
+                    "outcome": "deterministic_source_fallback",
+                    "reason": "MODEL_PROPOSAL_SCHEMA_INVALID",
+                }]
+                relations = infer_candidate8_relations(instruction, facts)
+                dispositions = candidate8_dispositions(instruction, facts, relations)
+        except Candidate8DispositionError as exc:
+            raise Candidate8EvidenceError(
+                exc.code,
+                facts=facts,
+                relations=relations,
+                dispositions=exc.partial_dispositions,
+                normalization_events=normalization_events,
+                provider_trace=tuple(trace1 + trace2),
+                unresolved_fact=exc.fact,
+            ) from exc
+        except Exception as exc:
+            raise Candidate8EvidenceError(
+                str(exc),
+                facts=facts,
+                relations=relations,
+                dispositions=dispositions,
+                normalization_events=normalization_events,
+                provider_trace=tuple(trace1 + trace2),
+            ) from exc
+        return Candidate8ParseResult(
+            facts,
+            relations,
+            dispositions,
+            tuple(trace1 + trace2),
+            normalization_events,
+        )

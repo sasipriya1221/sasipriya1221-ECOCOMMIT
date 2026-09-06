@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from ecocommit.candidate8 import run_candidate8
 from ecocommit.candidate7_flat import LabeledFact, Relation, RelationBatch
 from ecocommit.candidate7_relation_checklist import Pass2DecisionBatch
 from ecocommit.candidate8_logic import C8FactDisposition, C8RelationType, build_typed_ast, verify_ast_conservation
@@ -451,3 +452,74 @@ def test_determiner_equivalent_entity_duplicates_are_canonicalized(entities):
     dispositions = candidate8_dispositions(instruction, facts, relations)
     assert set(dispositions) == {row.id for row in facts}
     build_typed_ast(facts, relations, dispositions)
+
+
+def test_fail_closed_disposition_error_preserves_sanitized_partial_evidence(monkeypatch):
+    instruction = "Transfer the refund to the customer after finance approves."
+    provider = GroqCandidate8Provider("not-a-real-key", min_request_interval_seconds=0)
+    replies = iter([
+        ({"facts": [
+            {"text_span":{"quote":"Transfer","occurrence":1},"kind":"ACTION","polarity":"POSITIVE","action_type":"TRANSFER"},
+            {"text_span":{"quote":"refund","occurrence":1},"kind":"ENTITY","polarity":"POSITIVE","action_type":None},
+            {"text_span":{"quote":"refund to the customer","occurrence":1},"kind":"ENTITY","polarity":"POSITIVE","action_type":None},
+            {"text_span":{"quote":"customer","occurrence":1},"kind":"ENTITY","polarity":"POSITIVE","action_type":None},
+            {"text_span":{"quote":"finance approves","occurrence":1},"kind":"PREDICATE","polarity":"POSITIVE","action_type":None},
+        ]}, {"attempt":1,"candidate_sha256":"facts","finish_reason":"stop"}),
+        ({"wrong": []}, {"attempt":1,"candidate_sha256":"bad-1","finish_reason":"stop"}),
+        ({"wrong": []}, {"attempt":2,"candidate_sha256":"bad-2","finish_reason":"stop"}),
+    ])
+    monkeypatch.setattr(provider, "_request", lambda messages, attempt: next(replies))
+
+    result = run_candidate8(instruction, provider)
+
+    assert result.status == "REJECTED"
+    assert result.error_code == "C8_UNRESOLVED_ENTITY_DISPOSITION"
+    assert result.contract is None
+    assert result.graph is None
+    assert result.logical_ast is None
+    assert result.blocked_actions == frozenset()
+    assert result.facts
+    assert result.relations is not None
+    assert result.dispositions
+    assert result.unresolved_fact is not None
+    assert result.unresolved_fact.text_span.quote == "refund to the customer"
+    assert result.provider_trace
+    assert result.provider_trace[-1]["outcome"] == "deterministic_source_fallback"
+
+
+@pytest.mark.parametrize(
+    ("entity_quote", "expected_status", "expected_unresolved"),
+    [
+        ("refund to the customer", "REJECTED", "refund to the customer"),
+        ("the customer after finance approves", "COMPILED", None),
+        ("refund to the customer after finance approves", "REJECTED", "refund to the customer"),
+    ],
+)
+def test_crossing_entity_variants_preserve_authority_or_diagnostic_span(
+    monkeypatch, entity_quote, expected_status, expected_unresolved,
+):
+    instruction = "Transfer the refund to the customer after finance approves."
+    provider = GroqCandidate8Provider("not-a-real-key", min_request_interval_seconds=0)
+    replies = iter([
+        ({"facts": [
+            {"text_span":{"quote":"Transfer","occurrence":1},"kind":"ACTION","polarity":"POSITIVE","action_type":"TRANSFER"},
+            {"text_span":{"quote":"refund","occurrence":1},"kind":"ENTITY","polarity":"POSITIVE","action_type":None},
+            {"text_span":{"quote":entity_quote,"occurrence":1},"kind":"ENTITY","polarity":"POSITIVE","action_type":None},
+            {"text_span":{"quote":"customer","occurrence":1},"kind":"ENTITY","polarity":"POSITIVE","action_type":None},
+            {"text_span":{"quote":"finance approves","occurrence":1},"kind":"PREDICATE","polarity":"POSITIVE","action_type":None},
+        ]}, {"attempt":1,"candidate_sha256":"facts","finish_reason":"stop"}),
+        ({"wrong": []}, {"attempt":1,"candidate_sha256":"bad-1","finish_reason":"stop"}),
+        ({"wrong": []}, {"attempt":2,"candidate_sha256":"bad-2","finish_reason":"stop"}),
+    ])
+    monkeypatch.setattr(provider, "_request", lambda messages, attempt: next(replies))
+    result = run_candidate8(instruction, provider)
+    assert result.status == expected_status
+    assert result.facts and result.relations is not None
+    if expected_unresolved is None:
+        assert result.contract is not None
+        assert result.unresolved_fact is None
+    else:
+        assert result.contract is None
+        assert result.unresolved_fact is not None
+        assert result.unresolved_fact.kind.value == "ENTITY"
+        assert result.unresolved_fact.text_span.quote == expected_unresolved
