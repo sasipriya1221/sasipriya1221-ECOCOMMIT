@@ -287,6 +287,27 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
         seen.add(key)
         deduped.append((start, fact))
 
+    # Models sometimes emit both a determiner-bearing entity and its nested
+    # head noun (for example, ``the refund`` and ``refund``). They denote the
+    # same exact source operand when they share an end boundary. Keeping both
+    # would let relation inference select one and leave the duplicate without a
+    # disposition. Canonicalize that extraction redundancy before IDs exist.
+    canonical_entities: dict[tuple[int, str], tuple[int, Fact]] = {}
+    for start, fact in deduped:
+        if fact.kind is not FactKind.ENTITY:
+            continue
+        head = re.sub(r"^(?:the|a|an)\s+", "", fact.text_span.quote.strip(), flags=re.I).lower()
+        end = start + len(fact.text_span.quote)
+        key = (end, head)
+        current = canonical_entities.get(key)
+        if current is None or len(fact.text_span.quote) > len(current[1].text_span.quote):
+            canonical_entities[key] = (start, fact)
+    selected_entity_ids = {id(fact) for _, fact in canonical_entities.values()}
+    deduped = [
+        (start, fact) for start, fact in deduped
+        if fact.kind is not FactKind.ENTITY or id(fact) in selected_entity_ids
+    ]
+
     normalized = assign_fact_ids(FactBatch(facts=[fact for _, fact in deduped]))
     return NormalizedCandidate8Input(normalized, tuple(events))
 

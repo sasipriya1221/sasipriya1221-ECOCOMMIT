@@ -424,3 +424,30 @@ def test_condition_tail_split_is_independent_of_provider_fact_order(raw):
     dispositions = candidate8_dispositions(instruction, facts, relations)
     assert set(dispositions) == {row.id for row in facts}
     build_typed_ast(facts, relations, dispositions)
+
+
+@pytest.mark.parametrize(
+    "entities",
+    [
+        ("refund", "the refund", "the customer"),
+        ("the refund", "customer", "the customer"),
+        ("refund", "the refund", "customer", "the customer"),
+    ],
+)
+def test_determiner_equivalent_entity_duplicates_are_canonicalized(entities):
+    instruction = "Transfer the refund to the customer after finance approves."
+    raw = [fact("F0001", "Transfer", "ACTION", action_type="TRANSFER")]
+    raw.extend(fact(f"F{index:04d}", quote, "ENTITY") for index, quote in enumerate(entities, 2))
+    raw.append(fact(f"F{len(raw) + 1:04d}", "finance approves", "PREDICATE"))
+    facts = _normalize(instruction, raw)
+    entity_quotes = {row.text_span.quote for row in facts if row.kind.value == "ENTITY"}
+    assert not ({"refund", "the refund"} <= entity_quotes)
+    assert not ({"customer", "the customer"} <= entity_quotes)
+    relations = infer_candidate8_relations(instruction, facts)
+    kinds = [row.kind.value for row in relations.relations]
+    assert kinds.count("ACTION_OBJECT") == 1
+    assert kinds.count("ACTION_COUNTERPARTY") == 1
+    assert kinds.count("GUARDS_ACTION") == 1
+    dispositions = candidate8_dispositions(instruction, facts, relations)
+    assert set(dispositions) == {row.id for row in facts}
+    build_typed_ast(facts, relations, dispositions)
