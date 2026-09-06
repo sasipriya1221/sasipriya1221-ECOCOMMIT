@@ -7,10 +7,10 @@ from typing import Any
 from .candidate7_flat import FactBatch, FactKind, LabeledFact, RelationBatch, assign_fact_ids, grounded_span
 from .candidate7_provider import Candidate7SchemaError, GroqCandidate7Provider, PASS1_SYSTEM_PROMPT
 from .candidate7_relation_checklist import Pass2DecisionBatch, action_entity_pair_payload
-from .candidate7_structure import _action_kind
 from .candidate8_logic import C8FactDisposition
 from .candidate8_normalize import (
     Candidate8DispositionError,
+    candidate8_action_kind,
     candidate8_dispositions,
     infer_candidate8_relations,
     normalize_candidate8_facts,
@@ -154,7 +154,7 @@ class GroqCandidate8Provider(GroqCandidate7Provider):
                 raise ValueError("C8_NO_GROUNDED_FACTS")
             labeled = assign_fact_ids(FactBatch(facts=grounded))
             for fact in labeled:
-                if fact.kind is FactKind.ACTION and fact.action_type != _action_kind(fact.text_span.quote):
+                if fact.kind is FactKind.ACTION and fact.action_type != candidate8_action_kind(fact.text_span.quote):
                     raise ValueError("C7_ACTION_TYPE_SPAN_MISMATCH")
             nonlocal normalization_events
             normalized = normalize_candidate8_facts(instruction, labeled)
