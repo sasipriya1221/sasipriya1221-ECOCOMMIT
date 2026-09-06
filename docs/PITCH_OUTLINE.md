@@ -1,5 +1,7 @@
 # Five-Minute Pitch Outline
 
+Selected submission: **Track 1 — AI Growth & Agentic Commerce**.
+
 This outline is ready for rehearsal, but its final metric, complete Razorpay
 payment lifecycle, screenshot, and video evidence slots remain blocked. Bracketed
 evidence cues may be filled only from the retained final bundle described in
@@ -55,9 +57,8 @@ simulation banner visible. Do not imply Razorpay execution.
 Explain the checkpoint discipline:
 
 - A has frozen live semantic thresholds and cannot pass on a partial run;
-- B has two real Razorpay authentication/order subgates, but its retained result
-  explicitly says B8 is false because Checkout authorization and capture did not
-  run; B, C, and D remain blocked on their real dependencies;
+- B's deterministic Test Mode lifecycle is implemented, but final authorization,
+  capture, refund and reconciliation remain blocked without an A PASS receipt;
 - C retains error rows and forbids preliminary artifacts from becoming final; and
 - E keeps absent screenshots, video, complete provider-lifecycle results, and
   final metrics visibly blocked.
@@ -67,12 +68,14 @@ all gates pass.]**
 
 ## 4:05–4:35 — What broke and what that proves
 
-Choose three concrete examples from `ENGINEERING_LOG.md`:
+Use the evidence-linked recovery story in `FAILURE_RECOVERY.md`:
 
-- provider/schema failures led to immutable per-case resumability;
-- a certificate-only capture gap led to exact progressive-state/hold binding; and
-- a label-only UI simulation led to a real deterministic local component flow
-  with visible blocked and cleanup paths.
+- Groq HTTP 429 was traced to a 1,424-token request exceeding the free-tier
+  1,000 OTPM ceiling, then corrected through a preregistered 900-token amendment;
+- the recovered run exposed Candidate 7's genuine D003 failure, which was frozen
+  instead of retried until lucky; and
+- Candidate 8 improved from 25%, to 75%, to 95.83%, but its remaining dropped
+  guard keeps development, sealed preflight and formal qualification blocked.
 
 The message is not that nothing failed; it is that failures became regression
 tests and retained evidence.
@@ -88,6 +91,9 @@ Close on the product boundary:
 Final results cue: **[BLOCKED — do not insert benchmark percentages, TEL savings,
 Razorpay payment success, screenshots, or a video URL until the final evidence
 manifest is complete.]**
+
+Current truthful closing: the local product is runnable; Candidate 8 is 23/24 in
+visible development; formal qualification and A–E remain pending.
 
 ## Delivery checklist
 

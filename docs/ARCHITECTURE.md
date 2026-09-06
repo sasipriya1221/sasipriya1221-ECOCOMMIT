@@ -79,24 +79,23 @@ They never grant authority.
 
 ### Live Checkpoint A path
 
-The live runner calls an allowlisted HTTPS OpenAI-compatible provider, validates
-every model-supplied required field before defaults, permits one bounded schema
-correction, scores frozen cases, and writes redacted per-attempt trace metadata,
-including transient retries that later recover. Terminal schema evidence records
-whether the correction request actually ran. Candidate 3 binds rows to dataset/
-case/prompt/schema/evaluator/runner/criteria/provider/source digests and
-recomputes semantic results during aggregation. Immutable attempt artifacts
-support resume of provider deferrals, including a transient outage that
-interrupts correction or consumes the request budget before correction, and
-reject conflicts. Completed correction failures and non-transient provider
-errors remain terminal.
+The current semantic path uses two model passes: a flat source-grounded fact
+inventory followed by typed relation classification. Deterministic code assigns
+fact IDs, normalizes grammatical roles, constructs the Boolean/dependency AST,
+checks conservation and compiles the economic contract. Model output never
+directly grants authority.
 
-Candidate 1 is mathematically failed. Candidate 2 ran remotely but two attempts
-remained incomplete and exposed the correction/deferral classification defect. Candidate
-3 is the runner-only correction. Its run `33590028177` completed attempt 2 with
-`C002` passed, `A002` unchanged failed, 78 provider-deferred cases, no complete
-aggregate, and no receipt. A therefore has not passed the frozen gate, and no
-rapid retry is justified while the same HTTP 429 condition persists.
+The provider runner uses an allowlisted HTTPS OpenAI-compatible endpoint,
+strictly validates model fields, applies bounded retry policy, records sanitized
+attempt metadata and distinguishes provider deferral, schema rejection and
+semantic failure. Datasets, prompts, schemas, evaluator, thresholds and exact
+source are digest-bound before sealed or official execution.
+
+Candidate 7 is frozen as failed after its provider-limit amendment exposed D003
+at 0/5. Candidate 8 remains in visible development: iteration 3 reached 23/24
+and met every percentage threshold but recorded one dropped guard in C8D020, so
+its summary correctly says `passed: false`. Visible regression, sealed preflight,
+formal qualification and the official 80-case Checkpoint A have not run.
 
 ### Deterministic B path
 

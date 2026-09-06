@@ -1,8 +1,8 @@
 # Demo Runbook
 
-This runbook covers the current local safety-console demo. It does not substitute
-for the final integrated demo or video, both of which remain blocked in
-`SUBMISSION_EVIDENCE.md`.
+This runbook records a five-minute reviewer demonstration of the runnable local
+safety console. It proves product composition and fail-closed behavior. It does
+not substitute local simulation for authoritative checkpoint receipts.
 
 ## Preflight
 
@@ -32,6 +32,23 @@ Every A–E card must remain blocked because the local server deliberately loads
 authoritative gate evidence. The real-money card must remain disabled.
 
 ## Demonstration sequence
+
+## Five-minute recording timeline
+
+| Time | Show | Say |
+|---:|---|---|
+| 0:00–0:35 | Repository root, README and test command | “ECOCOMMIT separates probabilistic interpretation from deterministic economic authority.” |
+| 0:35–1:05 | Start the server and open the console | “This is an intentionally labelled local simulation: no provider calls and no money movement.” |
+| 1:05–2:05 | `HAPPY_PATH` | Point out the cap, certificate-controlled state sequence, simulated capture and audit correlation ID. |
+| 2:05–2:55 | `CHECKPOINT_A_BLOCKED` | Show that a plausible contract cannot execute without an authoritative upstream receipt; authorized and captured amounts remain zero. |
+| 2:55–3:45 | `CAPTURE_FAILURE` | Show the failed state, zero capture and simulated hold cleanup. |
+| 3:45–4:25 | Architecture and trust boundary | Explain that the model proposes semantics while validation, evidence, state transitions, idempotency and payment authority are deterministic. |
+| 4:25–5:00 | Failure-recovery document and current status | Summarize OTPM diagnosis, Candidate-7 semantic failure, Candidate-8 development, and the decision not to fabricate checkpoint PASS states. |
+
+Keep the browser zoom high enough that the simulation banner, outcome, amounts,
+state sequence and correlation ID remain readable. Do not show secrets, local
+environment files, provider dashboards, payment credentials or real financial
+information.
 
 ### 1. Happy-path composition
 
@@ -102,10 +119,9 @@ Stop the demo and state the blocker if any of these occurs:
 - a secret, provider credential, or live/test provider call is requested; or
 - the source revision/working-tree state is unknown.
 
-## Final demo/video gate
+## Evidence wording for the recording
 
-The final submission recording must be made only after A/B/C/D are integrated and
-their required evidence is retained. At that point, replace this local sequence
-with the final run, record the exact source revision and evidence digests, and
-update the blocked media slots in `SUBMISSION_EVIDENCE.md`. Until then, do not add
-a video URL or present local screenshots as final evidence.
+Call this a **runnable local product demonstration**. Do not call it a completed
+Razorpay lifecycle or an A/B/C/D/E PASS. If a later authoritative receipt exists,
+show its exact source revision and digest separately; otherwise keep the relevant
+checkpoint visibly BLOCKED or NOT RUN.
