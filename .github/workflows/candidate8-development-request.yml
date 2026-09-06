@@ -1,0 +1,64 @@
+name: Candidate 8 - Visible Development Request Bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - evidence/candidate8-development-request.json
+
+concurrency:
+  group: candidate8-visible-development-request-bridge
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Validate exact Candidate-8 development request
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          import json, os, re, subprocess
+          from pathlib import Path
+
+          request = json.loads(Path('evidence/candidate8-development-request.json').read_text(encoding='utf-8'))
+          if request.get('candidate') != 'A-CANDIDATE-8':
+              raise SystemExit('invalid Candidate-8 request marker')
+          if request.get('mode') != 'VISIBLE_DEVELOPMENT' or request.get('partition') != 'development':
+              raise SystemExit('request must remain visible development')
+          source = request.get('source_sha', '')
+          if not re.fullmatch(r'[0-9a-f]{40}', source):
+              raise SystemExit('source_sha must be exact lowercase 40-hex')
+          if any(request.get(key) is not False for key in (
+              'sealed_preflight', 'formal_qualification', 'official_checkpoint_a_cases_used'
+          )):
+              raise SystemExit('later gates must remain unopened')
+          branch = subprocess.check_output([
+              'gh', 'api', f"repos/{os.environ['GH_REPO']}/branches/candidate8-development-clean",
+              '--jq', '.commit.sha',
+          ], text=True).strip()
+          if branch != source:
+              raise SystemExit(f'Candidate-8 branch head {branch} != requested source {source}')
+          existing = subprocess.check_output([
+              'gh', 'api',
+              f"repos/{os.environ['GH_REPO']}/actions/workflows/candidate8-visible-development.yml/runs?event=workflow_dispatch&per_page=100",
+              '--jq', '.workflow_runs[].head_sha',
+          ], text=True).splitlines()
+          if source in existing:
+              raise SystemExit('duplicate Candidate-8 development dispatch for exact source refused')
+
+      - name: Dispatch exact Candidate-8 visible development
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run candidate8-visible-development.yml --repo "$GH_REPO" --ref candidate8-development-clean
