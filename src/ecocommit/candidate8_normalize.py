@@ -206,6 +206,24 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
             if fact.action_type != source_kind:
                 raise ValueError("C7_ACTION_TYPE_SPAN_MISMATCH")
             if _action_kind(quote) != source_kind:
+                # Preserve the grounded direct-object suffix before reducing
+                # the action span for Candidate 7's frozen compiler.  Pass 1
+                # is allowed to emit a combined ACTION span (for example,
+                # ``Release payment``) without a duplicate ENTITY.  Dropping
+                # that suffix would preserve the verb but lose the economic
+                # object.  Materializing it as an exact-source ENTITY keeps
+                # both roles explicit; normal deduplication below collapses it
+                # when the provider already emitted the same entity.
+                suffix = quote[source_match.end():].strip()
+                if suffix:
+                    suffix_offset = quote.find(suffix, source_match.end())
+                    suffix_start = start + suffix_offset
+                    staged.append((suffix_start, _make_fact(
+                        suffix,
+                        FactKind.ENTITY,
+                        occurrence=_occurrence_at(instruction, suffix, suffix_start),
+                    )))
+                    events.append({"outcome": "action_object_suffix_materialized", "fact_id": fact.id})
                 quote = source_match.group(0)
                 start += source_match.start()
                 events.append({"outcome": "action_lexeme_canonicalized", "fact_id": fact.id})
