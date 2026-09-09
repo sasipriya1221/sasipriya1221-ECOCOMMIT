@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: candidate8-visible-regression-frozen-45b1654d
+  group: candidate8-visible-regression-frozen-ed3ffd31
   cancel-in-progress: false
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
       - name: Check out frozen Candidate-8 source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
         with:
-          ref: 45b1654d0f07093de25baff4838f891275513f31
+          ref: ed3ffd31c213d4f3198c47dc3fe641552102c767
           fetch-depth: 1
           persist-credentials: false
 
@@ -27,7 +27,7 @@ jobs:
           import hashlib, json, os, subprocess
           from pathlib import Path
 
-          expected = '45b1654d0f07093de25baff4838f891275513f31'
+          expected = 'ed3ffd31c213d4f3198c47dc3fe641552102c767'
           actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
           if actual != expected:
               raise SystemExit(f'frozen source mismatch: {actual}')
@@ -41,9 +41,11 @@ jobs:
               'max_completion_tokens': 900,
               'temperature': 0,
               'reasoning_effort': 'none',
-              'development_pass_run_id': '34027837682',
-              'development_artifact_id': '9988294253',
-              'development_artifact_digest': 'sha256:4798bbc29bd7b311692df5151e989842d37e95fc06af7fbfdc2414d148d7c4ca',
+              'development_pass_run_id': '34052199164',
+              'development_pass_run_attempt': 2,
+              'development_artifact_id': '10005594543',
+              'development_artifact_digest': 'sha256:e4ae9b436874f33d88008512b4918ff7c5909e6861c490457774a17adf2bdd4a',
+              'development_summary_sha256': 'fa2e1d5e78bd4d025781e0a885dac39861fd63b18d823dca7a757fd924567eb2',
               'development_passed': True,
               'sealed_preflight': False,
               'formal_qualification': False,
@@ -74,8 +76,8 @@ jobs:
           echo 'ec53f37d2475a42eab1f243412ca6a3450c33a4d4a56030fe929a0cadc8241d3  data/candidate8-development/regression_gold.json' | sha256sum --check --strict
           echo 'b2afe486b52bd88619910206d1e207952bb94514deb3d96e4f968b0f95c3a095  scripts/candidate8_develop.py' | sha256sum --check --strict
           echo 'cac4226b7a8ebb0db8adcd3d93a61dd4c3c4815aff28bb51a102fa3a9fce5316  src/ecocommit/candidate7_evaluator.py' | sha256sum --check --strict
-          echo '2c5905182b2874bb827bafe60a33abb280a35cb57383f36d6f9c06178b6378de  src/ecocommit/candidate8_provider.py' | sha256sum --check --strict
-          echo 'bac53c11d3a16b7ebd0ea5c68f780714b7f8d3c3654abbb14c5e97015a1beb93  src/ecocommit/candidate8_normalize.py' | sha256sum --check --strict
+          echo '9ee661b1de9965b824e8713a44d92f7ec0b503372d4da1f95daacc1430bc0267  src/ecocommit/candidate8_provider.py' | sha256sum --check --strict
+          echo 'b8ebdf721586fb3ffd1fbea99ea49d36a7be472a1c4adb52f1bbe603ca6898c5  src/ecocommit/candidate8_normalize.py' | sha256sum --check --strict
           python -m pytest tests/test_candidate8_semantics.py -p no:cacheprovider --basetemp .test-tmp-c8-regression
           git diff --check
 
@@ -95,7 +97,7 @@ jobs:
           if not path.exists():
               raise SystemExit('visible regression summary missing')
           summary = json.loads(path.read_text(encoding='utf-8'))
-          if summary.get('source_sha') != '45b1654d0f07093de25baff4838f891275513f31':
+          if summary.get('source_sha') != 'ed3ffd31c213d4f3198c47dc3fe641552102c767':
               raise SystemExit('summary source mismatch')
           if summary.get('partition') != 'regression':
               raise SystemExit('summary partition mismatch')

@@ -13,7 +13,7 @@ Status vocabulary is strict:
 
 | Checkpoint | Current state | What is still required |
 |---|---|---|
-| A — frozen semantic gate | **Candidate 7 FAILED; Candidate 8 VISIBLE DEVELOPMENT 23/24 BUT NOT READY; NOT PASSED** | The 900-token Candidate-7 amendment resolved provider rejection and exposed D003 at 0/5. Candidate-8 iteration 3 met percentage gates but dropped one guard in C8D020, so visible regression, sealed preflight, qualification and official A remain locked. |
+| A — frozen semantic gate | **Candidate 7 FAILED; Candidate 8 VISIBLE DEVELOPMENT PASSED; NOT QUALIFIED / A NOT PASSED** | Candidate-8 run `34052199164`, attempt 2, passed 24/24 with every zero-tolerance safety counter at zero. Post-repair visible regression is the next gate; sealed preflight, formal qualification and official A remain locked until it passes. |
 | B — deterministic economic safety | **B1–B7 + B8 implementation locally validated; pre-order provenance defect fixed; NOT PASSED** | A passing typed A receipt plus a fresh post-fix Razorpay Test authorization/capture/webhook/refund lifecycle and final B receipt |
 | C — comparative benchmark | **RAW-ROW FINAL RUNNER + PREREGISTRATION CHAIN LOCALLY VALIDATED; NOT PASSED** | Passing A+B receipts, genuine frozen held-out inputs/costs/rows, and the one-shot preregistered final run |
 | D — product/API/UI/operations | **AUTHORITATIVE LOADER + DURABLE TEST PATH + DEPLOYMENT CONTRACT LOCALLY VALIDATED; NOT PASSED** | Real A/B/C receipts, hosted TLS/security/operations evidence, and final integrated D receipt |
@@ -27,14 +27,21 @@ Acceptance remains sequential and evidence-gated even when engineering proceeds 
 
 ### Candidate 8 — current visible development
 
-Run `33970539713` at source
-`b540de4998769cc0dd6e3a220fa00abeb8a3ce72` completed 23/24 cases (95.83%),
-100% selective reliability, 79.17% autonomous coverage and 100% ambiguous
-clarification accuracy. Artifact `9971456984` has digest
-`sha256:11a9b21340b549d4b9bc7b6f4328c80c86784123c1d930b8e7483a6215b403f1`.
-It is **NOT PASSED**: C8D020 was rejected fail-closed with one dropped guard and
-the retained summary records `passed: false`. Visible regression, sealed
-preflight, formal qualification and official A have not run.
+Run `34052199164`, attempt 2, at source
+`ed3ffd31c213d4f3198c47dc3fe641552102c767` completed 24/24 cases (100%),
+100% selective reliability, 83.33% autonomous coverage and 100% ambiguous
+clarification accuracy. Fail-open errors, dropped guards, dropped exceptions,
+conservation failures, UNKNOWN-to-authorized errors, known-regression failures
+and provider-deferred cases were all zero. Artifact `10005594543` has digest
+`sha256:e4ae9b436874f33d88008512b4918ff7c5909e6861c490457774a17adf2bdd4a`;
+the retained `summary.json` has SHA-256
+`fa2e1d5e78bd4d025781e0a885dac39861fd63b18d823dca7a757fd924567eb2`
+and records `passed: true`.
+
+This is a **VISIBLE DEVELOPMENT PASS**, not formal Candidate-8 qualification or
+Checkpoint-A PASS. The next gate is the post-repair visible regression bound to
+this exact source and evidence. Sealed preflight, formal qualification and
+official A have not run.
 
 ### Candidate 7 — provider-limited attempts followed by definitive failure
 

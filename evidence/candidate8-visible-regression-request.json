@@ -1,0 +1,13 @@
+{
+  "candidate": "A-CANDIDATE-8",
+  "candidate_source_sha": "ed3ffd31c213d4f3198c47dc3fe641552102c767",
+  "development_artifact_digest": "sha256:e4ae9b436874f33d88008512b4918ff7c5909e6861c490457774a17adf2bdd4a",
+  "development_artifact_id": "10005594543",
+  "development_pass_run_attempt": 2,
+  "development_pass_run_id": "34052199164",
+  "development_summary_sha256": "fa2e1d5e78bd4d025781e0a885dac39861fd63b18d823dca7a757fd924567eb2",
+  "official_checkpoint_a_cases_used": false,
+  "partition": "regression",
+  "request": "RUN_ONCE",
+  "sealed_preflight_used": false
+}

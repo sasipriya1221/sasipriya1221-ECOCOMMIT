@@ -1,0 +1,83 @@
+name: Candidate 8 - Visible Regression Request Bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - evidence/candidate8-visible-regression-request.json
+
+concurrency:
+  group: candidate8-visible-regression-request-bridge-ed3ffd31
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Validate exact Candidate-8 regression request
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          import json, os, subprocess
+          from pathlib import Path
+
+          expected_source = 'ed3ffd31c213d4f3198c47dc3fe641552102c767'
+          expected_run = '34052199164'
+          expected_attempt = 2
+          expected_artifact = '10005594543'
+          expected_digest = 'sha256:e4ae9b436874f33d88008512b4918ff7c5909e6861c490457774a17adf2bdd4a'
+          request = json.loads(Path('evidence/candidate8-visible-regression-request.json').read_text(encoding='utf-8'))
+          required = {
+              'candidate': 'A-CANDIDATE-8',
+              'candidate_source_sha': expected_source,
+              'development_pass_run_id': expected_run,
+              'development_pass_run_attempt': expected_attempt,
+              'development_artifact_id': expected_artifact,
+              'development_artifact_digest': expected_digest,
+              'partition': 'regression',
+              'request': 'RUN_ONCE',
+              'sealed_preflight_used': False,
+              'official_checkpoint_a_cases_used': False,
+          }
+          for key, value in required.items():
+              if request.get(key) != value:
+                  raise SystemExit(f'invalid regression request binding: {key}')
+
+          branch = subprocess.check_output([
+              'gh', 'api', f"repos/{os.environ['GH_REPO']}/branches/candidate8-development-clean",
+              '--jq', '.commit.sha',
+          ], text=True).strip()
+          if branch != expected_source:
+              raise SystemExit(f'Candidate-8 branch head {branch} != frozen source {expected_source}')
+
+          artifact = json.loads(subprocess.check_output([
+              'gh', 'api', f"repos/{os.environ['GH_REPO']}/actions/artifacts/{expected_artifact}",
+          ], text=True))
+          if str(artifact.get('workflow_run', {}).get('id')) != expected_run:
+              raise SystemExit('development artifact run binding mismatch')
+          if artifact.get('digest') != expected_digest or artifact.get('expired') is not False:
+              raise SystemExit('development artifact digest/availability mismatch')
+
+          existing = subprocess.check_output([
+              'gh', 'api',
+              f"repos/{os.environ['GH_REPO']}/actions/workflows/candidate8-visible-regression.yml/runs?event=workflow_dispatch&per_page=100",
+              '--jq', '.workflow_runs[].head_sha',
+          ], text=True).splitlines()
+          if os.environ['GITHUB_SHA'] in existing:
+              raise SystemExit('duplicate Candidate-8 regression dispatch for this exact request refused')
+
+      - name: Dispatch exact Candidate-8 visible regression
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run candidate8-visible-regression.yml --repo "$GH_REPO" --ref main

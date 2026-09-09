@@ -141,6 +141,21 @@ def test_candidate7_request_bridge_is_secretless_exact_source_and_duplicate_safe
     assert "persist-credentials: false" in workflow
 
 
+def test_candidate8_regression_bridge_is_secretless_exact_source_and_duplicate_safe():
+    workflow = (WORKFLOWS / "candidate8-visible-regression-request.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert re.search(r"(?m)^  push:\s*$", trigger_block)
+    assert "evidence/candidate8-visible-regression-request.json" in trigger_block
+    assert "secrets." not in workflow
+    assert "actions: write" in workflow
+    assert "ed3ffd31c213d4f3198c47dc3fe641552102c767" in workflow
+    assert "34052199164" in workflow
+    assert "10005594543" in workflow
+    assert "duplicate Candidate-8 regression dispatch for this exact request refused" in workflow
+    assert "gh workflow run candidate8-visible-regression.yml" in workflow
+    assert "persist-credentials: false" in workflow
+
+
 def test_candidate6_freeze_workflow_is_manual_secretless_and_single_purpose():
     workflow = (WORKFLOWS / "candidate6-freeze.yml").read_text(encoding="utf-8")
     trigger_block = workflow.split("\nconcurrency:", 1)[0]
