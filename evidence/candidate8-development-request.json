@@ -4,9 +4,9 @@
   "mode": "VISIBLE_DEVELOPMENT",
   "official_checkpoint_a_cases_used": false,
   "partition": "development",
-  "reason": "Visible regression C8R006 exposed a source-order action/object vocabulary collision; focused and full deterministic regressions pass after the general correction.",
+  "reason": "Visible regression run 34319058414 exposed one general action-object preservation defect at C8R006. Candidate-8 now materializes the exact grounded object suffix before canonicalizing the leading action verb; exact-source focused CI 34322194832 and full regression 34322194829 pass.",
   "sealed_preflight": false,
-  "source_sha": "ed3ffd31c213d4f3198c47dc3fe641552102c767",
-  "visible_regression_failure_artifact_id": "9994587416",
-  "visible_regression_failure_run_id": "34050016337"
+  "source_sha": "850a7b5f1f21d7951cd4a9a840c0bebbb635d594",
+  "visible_regression_failure_artifact_id": "10091784062",
+  "visible_regression_failure_run_id": "34319058414"
 }
