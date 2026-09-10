@@ -7,7 +7,7 @@ on:
       - evidence/candidate8-visible-regression-request.json
 
 concurrency:
-  group: candidate8-visible-regression-request-bridge-ed3ffd31
+  group: candidate8-visible-regression-request-bridge-850a7b5f
   cancel-in-progress: false
 
 jobs:
@@ -31,11 +31,12 @@ jobs:
           import json, os, subprocess
           from pathlib import Path
 
-          expected_source = 'ed3ffd31c213d4f3198c47dc3fe641552102c767'
-          expected_run = '34052199164'
-          expected_attempt = 2
-          expected_artifact = '10005594543'
-          expected_digest = 'sha256:e4ae9b436874f33d88008512b4918ff7c5909e6861c490457774a17adf2bdd4a'
+          expected_source = '850a7b5f1f21d7951cd4a9a840c0bebbb635d594'
+          expected_run = '34322382314'
+          expected_attempt = 1
+          expected_artifact = '10093914827'
+          expected_digest = 'sha256:b2ce264c2df986adbe9e41e97b3484200b71d4fa519dafac479b50815e2249b4'
+          expected_summary = '24fc8854a05fff78bef9f24719c919f464c1501bf4965857608d8d1486c6a028'
           request = json.loads(Path('evidence/candidate8-visible-regression-request.json').read_text(encoding='utf-8'))
           required = {
               'candidate': 'A-CANDIDATE-8',
@@ -44,6 +45,7 @@ jobs:
               'development_pass_run_attempt': expected_attempt,
               'development_artifact_id': expected_artifact,
               'development_artifact_digest': expected_digest,
+              'development_summary_sha256': expected_summary,
               'partition': 'regression',
               'request': 'RUN_ONCE',
               'sealed_preflight_used': False,

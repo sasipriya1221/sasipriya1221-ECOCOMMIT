@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: candidate8-visible-regression-frozen-ed3ffd31
+  group: candidate8-visible-regression-frozen-850a7b5f
   cancel-in-progress: false
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
       - name: Check out frozen Candidate-8 source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
         with:
-          ref: ed3ffd31c213d4f3198c47dc3fe641552102c767
+          ref: 850a7b5f1f21d7951cd4a9a840c0bebbb635d594
           fetch-depth: 1
           persist-credentials: false
 
@@ -27,7 +27,7 @@ jobs:
           import hashlib, json, os, subprocess
           from pathlib import Path
 
-          expected = 'ed3ffd31c213d4f3198c47dc3fe641552102c767'
+          expected = '850a7b5f1f21d7951cd4a9a840c0bebbb635d594'
           actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
           if actual != expected:
               raise SystemExit(f'frozen source mismatch: {actual}')
@@ -41,11 +41,16 @@ jobs:
               'max_completion_tokens': 900,
               'temperature': 0,
               'reasoning_effort': 'none',
-              'development_pass_run_id': '34052199164',
-              'development_pass_run_attempt': 2,
-              'development_artifact_id': '10005594543',
-              'development_artifact_digest': 'sha256:e4ae9b436874f33d88008512b4918ff7c5909e6861c490457774a17adf2bdd4a',
-              'development_summary_sha256': 'fa2e1d5e78bd4d025781e0a885dac39861fd63b18d823dca7a757fd924567eb2',
+              'development_pass_run_id': '34322382314',
+              'development_pass_run_attempt': 1,
+              'development_artifact_id': '10093914827',
+              'development_artifact_digest': 'sha256:b2ce264c2df986adbe9e41e97b3484200b71d4fa519dafac479b50815e2249b4',
+              'development_summary_sha256': '24fc8854a05fff78bef9f24719c919f464c1501bf4965857608d8d1486c6a028',
+              'regression_dataset_sha256': 'd086f3e9a8b62efcb498eb243496d6aa59bad93c6cfd499835db8af0a914ce00',
+              'regression_gold_sha256': 'ec53f37d2475a42eab1f243412ca6a3450c33a4d4a56030fe929a0cadc8241d3',
+              'pass1_prompt_sha256': '1cb84e6390e46bc3526caa6bf32376d17b115ad927d5ea1946f6459b6681b26e',
+              'pass2_prompt_sha256': '1c583d515793557d23a5c061850b641d43650fda384912d9588ce148b520dc23',
+              'evaluator_sha256': 'cac4226b7a8ebb0db8adcd3d93a61dd4c3c4815aff28bb51a102fa3a9fce5316',
               'development_passed': True,
               'sealed_preflight': False,
               'formal_qualification': False,
@@ -77,7 +82,7 @@ jobs:
           echo 'b2afe486b52bd88619910206d1e207952bb94514deb3d96e4f968b0f95c3a095  scripts/candidate8_develop.py' | sha256sum --check --strict
           echo 'cac4226b7a8ebb0db8adcd3d93a61dd4c3c4815aff28bb51a102fa3a9fce5316  src/ecocommit/candidate7_evaluator.py' | sha256sum --check --strict
           echo '9ee661b1de9965b824e8713a44d92f7ec0b503372d4da1f95daacc1430bc0267  src/ecocommit/candidate8_provider.py' | sha256sum --check --strict
-          echo 'b8ebdf721586fb3ffd1fbea99ea49d36a7be472a1c4adb52f1bbe603ca6898c5  src/ecocommit/candidate8_normalize.py' | sha256sum --check --strict
+          echo '6147d81f8472d3602f6a3c84cf89935a8e76092f3977633aff6fe1db7ea06401  src/ecocommit/candidate8_normalize.py' | sha256sum --check --strict
           python -m pytest tests/test_candidate8_semantics.py -p no:cacheprovider --basetemp .test-tmp-c8-regression
           git diff --check
 
@@ -97,10 +102,24 @@ jobs:
           if not path.exists():
               raise SystemExit('visible regression summary missing')
           summary = json.loads(path.read_text(encoding='utf-8'))
-          if summary.get('source_sha') != 'ed3ffd31c213d4f3198c47dc3fe641552102c767':
+          if summary.get('source_sha') != '850a7b5f1f21d7951cd4a9a840c0bebbb635d594':
               raise SystemExit('summary source mismatch')
           if summary.get('partition') != 'regression':
               raise SystemExit('summary partition mismatch')
+          expected = {
+              'provider': 'Groq',
+              'model': 'qwen/qwen3.6-27b',
+              'max_completion_tokens': 900,
+              'temperature': 0,
+              'reasoning_effort': 'none',
+              'pass1_prompt_sha256': '1cb84e6390e46bc3526caa6bf32376d17b115ad927d5ea1946f6459b6681b26e',
+              'pass2_prompt_sha256': '1c583d515793557d23a5c061850b641d43650fda384912d9588ce148b520dc23',
+              'dataset_sha256': 'd086f3e9a8b62efcb498eb243496d6aa59bad93c6cfd499835db8af0a914ce00',
+              'gold_sha256': 'ec53f37d2475a42eab1f243412ca6a3450c33a4d4a56030fe929a0cadc8241d3',
+          }
+          for key, value in expected.items():
+              if summary.get(key) != value:
+                  raise SystemExit(f'summary configuration mismatch: {key}')
 
       - name: Preserve complete visible-regression evidence
         if: always()
