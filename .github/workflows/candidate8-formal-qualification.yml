@@ -18,7 +18,7 @@ jobs:
         with: {python-version: '3.11', cache: pip, cache-dependency-path: supervisor/requirements-dev.lock}
       - name: Install and validate exact frozen boundary
         run: |
-          python -m pip install --require-hashes -r supervisor/requirements-dev.lock
+          (cd supervisor && python -m pip install --require-hashes -r requirements-dev.lock)
           python -m pip install --no-deps --no-build-isolation -e candidate
           python -m pip check
           test "$(git -C candidate rev-parse HEAD)" = "850a7b5f1f21d7951cd4a9a840c0bebbb635d594"
