@@ -56,7 +56,8 @@ jobs:
               if str(artifact.get('workflow_run', {}).get('id')) != str(request[prefix+'_run_id']):
                   raise SystemExit(f'{prefix} artifact/run mismatch')
           existing = json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/workflows/candidate8-sealed-preflight.yml/runs?event=workflow_dispatch&per_page=100"], text=True))
-          semantic_runs = [run for run in existing.get('workflow_runs', []) if run.get('id') != 34439780826]
+          pre_provider_infrastructure_runs = {34439780826, 34440325706}
+          semantic_runs = [run for run in existing.get('workflow_runs', []) if run.get('id') not in pre_provider_infrastructure_runs]
           if semantic_runs:
               raise SystemExit('Candidate-8 sealed preflight already has history; duplicate dispatch refused')
 

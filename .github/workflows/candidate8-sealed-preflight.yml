@@ -52,7 +52,7 @@ jobs:
           echo 'cac4226b7a8ebb0db8adcd3d93a61dd4c3c4815aff28bb51a102fa3a9fce5316  candidate/src/ecocommit/candidate7_evaluator.py' | sha256sum --check --strict
           echo '9ee661b1de9965b824e8713a44d92f7ec0b503372d4da1f95daacc1430bc0267  candidate/src/ecocommit/candidate8_provider.py' | sha256sum --check --strict
           echo '6147d81f8472d3602f6a3c84cf89935a8e76092f3977633aff6fe1db7ea06401  candidate/src/ecocommit/candidate8_normalize.py' | sha256sum --check --strict
-          python -m pytest supervisor/tests/test_candidate8_sealed_preflight.py candidate/tests/test_candidate8_semantics.py -p no:cacheprovider --basetemp .test-tmp-c8-sealed
+          (cd candidate && PYTHONPATH="$PWD/src" python -m pytest tests/test_candidate8_semantics.py ../supervisor/tests/test_candidate8_sealed_preflight.py --rootdir=. -p no:cacheprovider --basetemp ../.test-tmp-c8-sealed)
           git -C supervisor diff --check
           git -C candidate diff --check
 
