@@ -1,0 +1,16 @@
+{
+  "candidate": "A-CANDIDATE-8",
+  "development_artifact_digest": "sha256:b2ce264c2df986adbe9e41e97b3484200b71d4fa519dafac479b50815e2249b4",
+  "development_artifact_id": "10093914827",
+  "development_attempt": 1,
+  "development_run_id": "34322382314",
+  "formal_qualification": false,
+  "official_checkpoint_a_cases_used": false,
+  "regression_artifact_digest": "sha256:b89c17f068257f0cd3b323064e778153efb49ecb285489ca691c96db6079a2c8",
+  "regression_artifact_id": "10136732309",
+  "regression_attempt": 1,
+  "regression_run_id": "34436075032",
+  "request": "RUN_ONCE",
+  "sealed_gold_inspected": false,
+  "source_sha": "850a7b5f1f21d7951cd4a9a840c0bebbb635d594"
+}
