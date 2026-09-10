@@ -11,6 +11,7 @@
   "regression_attempt": 1,
   "regression_run_id": "34436075032",
   "request": "RUN_ONCE",
+  "request_revision": 2,
   "sealed_gold_inspected": false,
   "source_sha": "850a7b5f1f21d7951cd4a9a840c0bebbb635d594"
 }
