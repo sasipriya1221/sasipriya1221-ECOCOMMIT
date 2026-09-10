@@ -87,6 +87,7 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
         "candidate7-diagnostic-sweep.yml",
         "candidate7-provider-readiness.yml",
         "candidate7-rate-limit-diagnostic.yml",
+        "candidate8-sealed-preflight.yml",
         "candidate8-visible-development.yml",
         "candidate8-visible-regression.yml",
         "checkpoint-a-candidate6.yml",
@@ -148,12 +149,27 @@ def test_candidate8_regression_bridge_is_secretless_exact_source_and_duplicate_s
     assert "evidence/candidate8-visible-regression-request.json" in trigger_block
     assert "secrets." not in workflow
     assert "actions: write" in workflow
-    assert "ed3ffd31c213d4f3198c47dc3fe641552102c767" in workflow
-    assert "34052199164" in workflow
-    assert "10005594543" in workflow
+    assert "850a7b5f1f21d7951cd4a9a840c0bebbb635d594" in workflow
+    assert "34322382314" in workflow
+    assert "10093914827" in workflow
     assert "duplicate Candidate-8 regression dispatch for this exact request refused" in workflow
     assert "gh workflow run candidate8-visible-regression.yml" in workflow
     assert "persist-credentials: false" in workflow
+
+
+def test_candidate8_sealed_preflight_is_manual_and_request_bridge_is_secretless():
+    workflow = (WORKFLOWS / "candidate8-sealed-preflight.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert re.search(r"(?m)^  workflow_dispatch:\s*$", trigger_block)
+    assert not re.search(r"(?m)^  (?:push|pull_request(?:_target)?):", trigger_block)
+    assert "850a7b5f1f21d7951cd4a9a840c0bebbb635d594" in workflow
+    assert "candidate8-sealed-preflight-restricted-" in workflow
+    assert "candidate8-sealed-preflight-aggregate-" in workflow
+    bridge = (WORKFLOWS / "candidate8-sealed-preflight-request.yml").read_text(encoding="utf-8")
+    assert "secrets." not in bridge
+    assert "actions: write" in bridge
+    assert "already has history; duplicate dispatch refused" in bridge
+    assert "gh workflow run candidate8-sealed-preflight.yml" in bridge
 
 
 def test_candidate6_freeze_workflow_is_manual_secretless_and_single_purpose():

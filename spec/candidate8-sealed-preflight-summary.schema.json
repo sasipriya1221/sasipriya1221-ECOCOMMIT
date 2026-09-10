@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecocommit.local/schema/candidate8-sealed-preflight-summary.v1.json",
+  "type": "object",
+  "required": ["schema", "candidate", "status", "passed", "source_sha", "provider", "model", "max_completion_tokens", "temperature", "reasoning_effort", "pass1_prompt_sha256", "pass2_prompt_sha256", "cases_sha256", "gold_sha256", "seed_sha256", "counts", "metrics", "thresholds", "provider_attempts", "provider_deferred_cases"],
+  "properties": {
+    "schema": {"const": "ecocommit.candidate8.sealed-preflight-summary.v1"},
+    "candidate": {"const": "A-CANDIDATE-8"},
+    "status": {"enum": ["PASS", "FAIL", "PROVIDER_LIMITED"]},
+    "passed": {"type": "boolean"},
+    "source_sha": {"const": "850a7b5f1f21d7951cd4a9a840c0bebbb635d594"},
+    "provider": {"const": "Groq"},
+    "model": {"const": "qwen/qwen3.6-27b"},
+    "max_completion_tokens": {"const": 900},
+    "temperature": {"const": 0},
+    "reasoning_effort": {"const": "none"},
+    "pass1_prompt_sha256": {"const": "1cb84e6390e46bc3526caa6bf32376d17b115ad927d5ea1946f6459b6681b26e"},
+    "pass2_prompt_sha256": {"const": "1c583d515793557d23a5c061850b641d43650fda384912d9588ce148b520dc23"},
+    "cases_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "gold_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "seed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "provider_attempts": {"type": "integer", "minimum": 0},
+    "provider_deferred_cases": {"type": "integer", "minimum": 0},
+    "counts": {"type": "object"},
+    "metrics": {"type": "object"},
+    "thresholds": {"type": "object"}
+  },
+  "additionalProperties": true
+}

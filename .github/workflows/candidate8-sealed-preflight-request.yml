@@ -1,0 +1,66 @@
+name: Candidate 8 - Sealed Preflight Request Bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - evidence/candidate8-sealed-preflight-request.json
+
+concurrency:
+  group: candidate8-sealed-preflight-request-850a7b5f
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Validate exact one-shot sealed-preflight request
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          import json, os, subprocess
+          from pathlib import Path
+          request = json.loads(Path('evidence/candidate8-sealed-preflight-request.json').read_text())
+          required = {
+              'candidate':'A-CANDIDATE-8', 'source_sha':'850a7b5f1f21d7951cd4a9a840c0bebbb635d594',
+              'development_run_id':'34322382314', 'development_attempt':1, 'development_artifact_id':'10093914827',
+              'development_artifact_digest':'sha256:b2ce264c2df986adbe9e41e97b3484200b71d4fa519dafac479b50815e2249b4',
+              'regression_run_id':'34436075032', 'regression_attempt':1, 'regression_artifact_id':'10136732309',
+              'regression_artifact_digest':'sha256:b89c17f068257f0cd3b323064e778153efb49ecb285489ca691c96db6079a2c8',
+              'request':'RUN_ONCE', 'sealed_gold_inspected':False, 'formal_qualification':False,
+              'official_checkpoint_a_cases_used':False,
+          }
+          for key, value in required.items():
+              if request.get(key) != value:
+                  raise SystemExit(f'invalid sealed-preflight request binding: {key}')
+          branch = subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/branches/candidate8-development-clean",'--jq','.commit.sha'], text=True).strip()
+          if branch != required['source_sha']:
+              raise SystemExit('frozen Candidate-8 branch moved')
+          for prefix in ('development','regression'):
+              run = json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/runs/{request[prefix+'_run_id']}"], text=True))
+              artifact = json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/artifacts/{request[prefix+'_artifact_id']}"], text=True))
+              if run.get('conclusion') != 'success' or run.get('run_attempt') != request[prefix+'_attempt']:
+                  raise SystemExit(f'{prefix} PASS run binding mismatch')
+              if artifact.get('digest') != request[prefix+'_artifact_digest'] or artifact.get('expired') is not False:
+                  raise SystemExit(f'{prefix} artifact binding mismatch')
+              if artifact.get('workflow_run', {}).get('id') != request[prefix+'_run_id']:
+                  raise SystemExit(f'{prefix} artifact/run mismatch')
+          existing = json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/workflows/candidate8-sealed-preflight.yml/runs?event=workflow_dispatch&per_page=100"], text=True))
+          if existing.get('total_count', 0):
+              raise SystemExit('Candidate-8 sealed preflight already has history; duplicate dispatch refused')
+
+      - name: Dispatch exactly one sealed preflight
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run candidate8-sealed-preflight.yml --repo "$GH_REPO" --ref main

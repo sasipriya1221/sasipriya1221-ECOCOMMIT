@@ -2,7 +2,7 @@
   "schema": "ecocommit.candidate8.preflight-protocol.v1",
   "candidate": "A-CANDIDATE-8",
   "purpose": "readiness preflight only; never formal qualification",
-  "status": "GENERATOR_BOUND_SET_NOT_YET_MATERIALIZED",
+  "status": "GENERATOR_AND_RUNNER_IMPLEMENTED_NOT_YET_EXECUTED",
   "separation_rule": "Preflight plaintext cases and gold must not exist in the repository during implementation. After temporary implementation freeze, a CI job must generate one set from a fresh cryptographic random seed, evaluate it in the same job, retain only hashes/aggregate metrics in logs, and seal the full cases+gold+outputs as a restricted workflow artifact. The assistant must not inspect individual preflight cases or gold before/during execution.",
   "required_coverage": [
     "AND", "OR", "nested_AND_OR", "negation", "IF_THEN", "UNLESS",

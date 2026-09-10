@@ -1,0 +1,155 @@
+name: Candidate 8 - Sealed Preflight
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: candidate8-sealed-preflight-frozen-850a7b5f
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Check out preflight supervisor
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          path: supervisor
+          persist-credentials: false
+
+      - name: Check out frozen Candidate-8 source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          ref: 850a7b5f1f21d7951cd4a9a840c0bebbb635d594
+          path: candidate
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: supervisor/requirements-dev.lock
+
+      - name: Install exact project dependencies
+        working-directory: supervisor
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e ../candidate
+          python -m pip check
+
+      - name: Verify frozen protocol and implementation boundary
+        run: |
+          test "$(git -C candidate rev-parse HEAD)" = "850a7b5f1f21d7951cd4a9a840c0bebbb635d594"
+          echo 'd086f3e9a8b62efcb498eb243496d6aa59bad93c6cfd499835db8af0a914ce00  candidate/data/candidate8-development/regression.json' | sha256sum --check --strict
+          echo 'ec53f37d2475a42eab1f243412ca6a3450c33a4d4a56030fe929a0cadc8241d3  candidate/data/candidate8-development/regression_gold.json' | sha256sum --check --strict
+          echo 'cac4226b7a8ebb0db8adcd3d93a61dd4c3c4815aff28bb51a102fa3a9fce5316  candidate/src/ecocommit/candidate7_evaluator.py' | sha256sum --check --strict
+          echo '9ee661b1de9965b824e8713a44d92f7ec0b503372d4da1f95daacc1430bc0267  candidate/src/ecocommit/candidate8_provider.py' | sha256sum --check --strict
+          echo '6147d81f8472d3602f6a3c84cf89935a8e76092f3977633aff6fe1db7ea06401  candidate/src/ecocommit/candidate8_normalize.py' | sha256sum --check --strict
+          python -m pytest supervisor/tests/test_candidate8_sealed_preflight.py candidate/tests/test_candidate8_semantics.py -p no:cacheprovider --basetemp .test-tmp-c8-sealed
+          git -C supervisor diff --check
+          git -C candidate diff --check
+
+      - name: Bind exact source and prerequisite PASS evidence
+        shell: python
+        run: |
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+
+          root = Path('supervisor')
+          payload = {
+              'schema': 'ecocommit.candidate8.sealed-preflight-binding.v1',
+              'candidate': 'A-CANDIDATE-8',
+              'source_sha': '850a7b5f1f21d7951cd4a9a840c0bebbb635d594',
+              'supervisor_sha': subprocess.check_output(['git', '-C', 'supervisor', 'rev-parse', 'HEAD'], text=True).strip(),
+              'development': {'run_id':'34322382314','attempt':1,'artifact_id':'10093914827','artifact_digest':'sha256:b2ce264c2df986adbe9e41e97b3484200b71d4fa519dafac479b50815e2249b4','summary_sha256':'24fc8854a05fff78bef9f24719c919f464c1501bf4965857608d8d1486c6a028'},
+              'regression': {'run_id':'34436075032','attempt':1,'artifact_id':'10136732309','artifact_digest':'sha256:b89c17f068257f0cd3b323064e778153efb49ecb285489ca691c96db6079a2c8','summary_sha256':'d8253f25979442365553ee81453de65e1f9a52c61c5e72734ac815f5f995cd0f'},
+              'provider':'Groq', 'model':'qwen/qwen3.6-27b', 'max_completion_tokens':900,
+              'temperature':0, 'reasoning_effort':'none',
+              'pass1_prompt_sha256':'1cb84e6390e46bc3526caa6bf32376d17b115ad927d5ea1946f6459b6681b26e',
+              'pass2_prompt_sha256':'1c583d515793557d23a5c061850b641d43650fda384912d9588ce148b520dc23',
+              'thresholds': {'case_pass_rate':.95,'selective_semantic_reliability':.98,'autonomous_coverage':.65,'ambiguous_clarification_accuracy':.90,'schema_validation_failures':0,'known_structural_failures':0,'conservation_failures':0},
+              'protocol_sha256': hashlib.sha256((root/'data/candidate8-preflight/SEALED_PROTOCOL.json').read_bytes()).hexdigest(),
+              'runner_sha256': hashlib.sha256((root/'scripts/candidate8_sealed_preflight.py').read_bytes()).hexdigest(),
+              'summary_schema_sha256': hashlib.sha256((root/'spec/candidate8-sealed-preflight-summary.schema.json').read_bytes()).hexdigest(),
+              'workflow_sha256': hashlib.sha256((root/'.github/workflows/candidate8-sealed-preflight.yml').read_bytes()).hexdigest(),
+              'run_id': os.environ['GITHUB_RUN_ID'], 'run_attempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+              'sealed_gold_inspected': False, 'formal_qualification': False, 'official_checkpoint_a_cases_used': False,
+          }
+          canonical = json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()
+          payload['binding_sha256'] = hashlib.sha256(canonical).hexdigest()
+          for directory in ('artifacts/candidate8-sealed-preflight/sealed','artifacts/candidate8-sealed-preflight/aggregate'):
+              path = Path(directory); path.mkdir(parents=True, exist_ok=True)
+              (path/'binding.json').write_text(json.dumps(payload, indent=2, sort_keys=True), encoding='utf-8')
+
+      - name: Run one sealed preflight
+        id: semantic
+        continue-on-error: true
+        env:
+          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
+          CANDIDATE_ROOT: ${{ github.workspace }}/candidate
+          PYTHONPATH: ${{ github.workspace }}/candidate/src
+        run: python supervisor/scripts/candidate8_sealed_preflight.py --output-root artifacts/candidate8-sealed-preflight/run
+
+      - name: Validate aggregate schema and frozen configuration
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          summary = json.loads(Path('artifacts/candidate8-sealed-preflight/run/aggregate/summary.json').read_text())
+          schema = json.loads(Path('supervisor/spec/candidate8-sealed-preflight-summary.schema.json').read_text())
+          required = set(schema['required'])
+          assert required <= set(summary)
+          for key in ('cases_sha256','gold_sha256','seed_sha256'):
+              assert len(summary[key]) == 64 and set(summary[key]) <= set('0123456789abcdef')
+          assert summary['schema'] == schema['properties']['schema']['const']
+          assert summary['candidate'] == schema['properties']['candidate']['const']
+          assert summary['source_sha'] == schema['properties']['source_sha']['const']
+          assert summary['status'] in schema['properties']['status']['enum']
+          assert summary['thresholds'] == {'case_pass': .95, 'selective_reliability': .98, 'autonomous_coverage': .65, 'clarification_accuracy': .90}
+          assert summary['counts']['fail_open'] == 0
+          assert summary['counts']['dropped_guards'] == 0
+          assert summary['counts']['dropped_exceptions'] == 0
+          assert summary['counts']['conservation_failures'] == 0
+          assert summary['counts']['unknown_authorized'] == 0
+          PY
+
+      - name: Preserve restricted sealed evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: candidate8-sealed-preflight-restricted-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/candidate8-sealed-preflight/sealed/binding.json
+            artifacts/candidate8-sealed-preflight/run/sealed/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Preserve sanitized aggregate evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: candidate8-sealed-preflight-aggregate-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            artifacts/candidate8-sealed-preflight/aggregate/binding.json
+            artifacts/candidate8-sealed-preflight/run/aggregate/summary.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce terminal semantic classification
+        if: always()
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          summary = json.loads(Path('artifacts/candidate8-sealed-preflight/run/aggregate/summary.json').read_text())
+          if summary['status'] == 'PASS' and summary['passed'] is True:
+              raise SystemExit(0)
+          if summary['status'] == 'PROVIDER_LIMITED':
+              raise SystemExit(75)
+          raise SystemExit(1)
