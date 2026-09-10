@@ -1,0 +1,12 @@
+{
+  "candidate": "A-CANDIDATE-8",
+  "official_checkpoint_a_cases_used": false,
+  "preflight_artifact_digest": "sha256:35677602df358909a0769349a19243e1be79423adffe54934b230d4ae1186a31",
+  "preflight_artifact_id": "10138944664",
+  "preflight_attempt": 1,
+  "preflight_run_id": "34440794156",
+  "preflight_summary_sha256": "c4be609bbcfe14d829c7282519648c60829589c98d017ec89f5faed380925ea0",
+  "qualification_gold_inspected": false,
+  "request": "RUN_ONCE",
+  "source_sha": "850a7b5f1f21d7951cd4a9a840c0bebbb635d594"
+}
