@@ -28,7 +28,7 @@ jobs:
           test "$(gh api repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID} --jq .run_attempt)" = "$ATTEMPT"
           test "$(gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID} --jq .digest)" = "sha256:${ARCHIVE_SHA}"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with: {artifact-ids: "${{ inputs.qualification_artifact_id }}", run-id: "${{ inputs.qualification_run_id }}", github-token: "${{ github.token }}", path: qualification}
+        with: {artifact-ids: "${{ inputs.qualification_artifact_id }}", run-id: "${{ inputs.qualification_run_id }}", github-token: "${{ github.token }}", path: qualification, merge-multiple: true}
       - name: Build immutable preregistration
         run: >-
           python supervisor/scripts/checkpoint_a_candidate8_prereg.py --candidate-root candidate
