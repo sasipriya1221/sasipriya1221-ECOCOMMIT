@@ -43,6 +43,8 @@ jobs:
           python -m pip check
 
       - name: Verify frozen protocol and implementation boundary
+        env:
+          PYTHONPATH: ${{ github.workspace }}/candidate/src
         run: |
           test "$(git -C candidate rev-parse HEAD)" = "850a7b5f1f21d7951cd4a9a840c0bebbb635d594"
           echo 'd086f3e9a8b62efcb498eb243496d6aa59bad93c6cfd499835db8af0a914ce00  candidate/data/candidate8-development/regression.json' | sha256sum --check --strict
