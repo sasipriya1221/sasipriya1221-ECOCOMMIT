@@ -53,7 +53,7 @@ jobs:
                   raise SystemExit(f'{prefix} PASS run binding mismatch')
               if artifact.get('digest') != request[prefix+'_artifact_digest'] or artifact.get('expired') is not False:
                   raise SystemExit(f'{prefix} artifact binding mismatch')
-              if artifact.get('workflow_run', {}).get('id') != request[prefix+'_run_id']:
+              if str(artifact.get('workflow_run', {}).get('id')) != str(request[prefix+'_run_id']):
                   raise SystemExit(f'{prefix} artifact/run mismatch')
           existing = json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/workflows/candidate8-sealed-preflight.yml/runs?event=workflow_dispatch&per_page=100"], text=True))
           if existing.get('total_count', 0):

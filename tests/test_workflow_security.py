@@ -169,6 +169,7 @@ def test_candidate8_sealed_preflight_is_manual_and_request_bridge_is_secretless(
     assert "secrets." not in bridge
     assert "actions: write" in bridge
     assert "already has history; duplicate dispatch refused" in bridge
+    assert "str(artifact.get('workflow_run', {}).get('id'))" in bridge
     assert "gh workflow run candidate8-sealed-preflight.yml" in bridge
 
 
