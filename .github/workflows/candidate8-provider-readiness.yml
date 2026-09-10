@@ -7,7 +7,7 @@ on:
 jobs:
   readiness:
     runs-on: ubuntu-latest
-    permissions: {contents: read, actions: read}
+    permissions: {contents: read, actions: write}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {ref: "${{ inputs.supervisor_revision }}", path: supervisor, persist-credentials: false}
@@ -34,3 +34,6 @@ jobs:
         run: python supervisor/scripts/checkpoint_a_candidate8_readiness.py --preregistration bundle/checkpoint-a-candidate8-preregistration.json --output readiness.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: {name: "checkpoint-a-candidate8-provider-readiness-${{ github.run_id }}", path: readiness.json, if-no-files-found: error, retention-days: 30}
+      - name: Continue to one-shot official evaluation
+        env: {GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}", PREREG_RUN: "${{ inputs.preregistration_run_id }}", SUPERVISOR: "${{ inputs.supervisor_revision }}"}
+        run: gh workflow run checkpoint-a-candidate8.yml --repo "$GH_REPO" --ref main -f preregistration_run_id="$PREREG_RUN" -f provider_readiness_run_id="$GITHUB_RUN_ID" -f supervisor_revision="$SUPERVISOR"

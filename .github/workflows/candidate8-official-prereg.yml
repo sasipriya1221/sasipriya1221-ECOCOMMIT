@@ -9,7 +9,7 @@ on:
 jobs:
   preregister:
     runs-on: ubuntu-latest
-    permissions: {contents: read, actions: read}
+    permissions: {contents: read, actions: write}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {ref: "${{ github.sha }}", path: supervisor, persist-credentials: false}
@@ -39,3 +39,6 @@ jobs:
         run: cp qualification/binding.json qualification/aggregate/summary.json qualification/aggregate/qualification-receipt.json bundle/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: {name: "checkpoint-a-candidate8-preregistration-${{ github.run_id }}", path: bundle/, if-no-files-found: error, retention-days: 30}
+      - name: Continue to provider readiness
+        env: {GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}"}
+        run: gh workflow run candidate8-provider-readiness.yml --repo "$GH_REPO" --ref main -f preregistration_run_id="$GITHUB_RUN_ID" -f supervisor_revision="$GITHUB_SHA"
