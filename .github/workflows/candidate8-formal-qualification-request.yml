@@ -1,0 +1,28 @@
+name: Candidate 8 - Formal Qualification Request Bridge
+on:
+  push:
+    branches: [main]
+    paths: [evidence/candidate8-formal-qualification-request.json]
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    permissions: {actions: write, contents: read}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with: {persist-credentials: false}
+      - name: Validate exact one-shot qualification request
+        shell: python
+        env: {GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}"}
+        run: |
+          import json,os,subprocess
+          from pathlib import Path
+          q=json.loads(Path('evidence/candidate8-formal-qualification-request.json').read_text()); req={'candidate':'A-CANDIDATE-8','source_sha':'850a7b5f1f21d7951cd4a9a840c0bebbb635d594','preflight_run_id':'34440794156','preflight_attempt':1,'preflight_artifact_id':'10138944664','preflight_artifact_digest':'sha256:35677602df358909a0769349a19243e1be79423adffe54934b230d4ae1186a31','preflight_summary_sha256':'c4be609bbcfe14d829c7282519648c60829589c98d017ec89f5faed380925ea0','request':'RUN_ONCE','qualification_gold_inspected':False,'official_checkpoint_a_cases_used':False}
+          for k,v in req.items():
+              if q.get(k)!=v: raise SystemExit(f'invalid qualification request: {k}')
+          a=json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/artifacts/{q['preflight_artifact_id']}"],text=True)); run=json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/runs/{q['preflight_run_id']}"],text=True));
+          if a.get('digest')!=q['preflight_artifact_digest'] or a.get('expired') is not False or run.get('conclusion')!='success': raise SystemExit('preflight PASS binding mismatch')
+          existing=json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/workflows/candidate8-formal-qualification.yml/runs?event=workflow_dispatch&per_page=100"],text=True))
+          if existing.get('total_count',0): raise SystemExit('formal qualification already has history; duplicate refused')
+      - name: Dispatch exactly one formal qualification
+        env: {GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}"}
+        run: gh workflow run candidate8-formal-qualification.yml --repo "$GH_REPO" --ref main
