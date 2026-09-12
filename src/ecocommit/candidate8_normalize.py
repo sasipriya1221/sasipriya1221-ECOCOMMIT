@@ -17,7 +17,11 @@ from .candidate7_flat import (
     grounded_span,
     validate_relations,
 )
+from .candidate7_structure import _ACTION_PATTERNS, _action_kind
 from .candidate8_logic import C8FactDisposition
+
+
+_CANDIDATE8_ACTION_KINDS = frozenset(kind for kind, _ in _ACTION_PATTERNS)
 
 
 class Candidate8DispositionError(ValueError):
@@ -28,6 +32,25 @@ class Candidate8DispositionError(ValueError):
         self.code = code
         self.fact = fact
         self.partial_dispositions = dict(partial_dispositions)
+
+
+def _candidate8_action_match(text: str) -> tuple[str, re.Match[str]]:
+    """Resolve the earliest explicit action lexeme in a grounded span."""
+    matches: list[tuple[int, int, int, str, re.Match[str]]] = []
+    for kind_index, (kind, terms) in enumerate(_ACTION_PATTERNS):
+        for term_index, term in enumerate(terms):
+            match = re.search(rf"\b{re.escape(term)}\b", text, re.I)
+            if match is not None:
+                matches.append((match.start(), kind_index, term_index, kind, match))
+    if not matches:
+        raise ValueError("C7_ACTION_KIND_UNSUPPORTED")
+    _, _, _, kind, match = min(matches, key=lambda item: item[:3])
+    return kind, match
+
+
+def candidate8_action_kind(text: str) -> str:
+    """Prefer source order when an object noun resembles another action."""
+    return _candidate8_action_match(text)[0]
 
 
 _CONDITION_MARKER = re.compile(r"\b(only\s+if|unless|if|after)\b", re.I)
@@ -172,6 +195,38 @@ def normalize_candidate8_facts(instruction: str, facts: tuple[LabeledFact, ...])
         quote = fact.text_span.quote
         kind = fact.kind
         polarity = fact.polarity
+
+        # An action span can include an object noun that also appears in the
+        # action vocabulary (for example, ``Release payment``). Candidate 7's
+        # vocabulary-order scan would select PAY before reaching RELEASE. When
+        # that conflict occurs, retain the exact leading source verb so the
+        # downstream frozen compiler observes the same deterministic type.
+        if kind is FactKind.ACTION and fact.action_type in _CANDIDATE8_ACTION_KINDS:
+            source_kind, source_match = _candidate8_action_match(quote)
+            if fact.action_type != source_kind:
+                raise ValueError("C7_ACTION_TYPE_SPAN_MISMATCH")
+            if _action_kind(quote) != source_kind:
+                # Preserve the grounded direct-object suffix before reducing
+                # the action span for Candidate 7's frozen compiler.  Pass 1
+                # is allowed to emit a combined ACTION span (for example,
+                # ``Release payment``) without a duplicate ENTITY.  Dropping
+                # that suffix would preserve the verb but lose the economic
+                # object.  Materializing it as an exact-source ENTITY keeps
+                # both roles explicit; normal deduplication below collapses it
+                # when the provider already emitted the same entity.
+                suffix = quote[source_match.end():].strip()
+                if suffix:
+                    suffix_offset = quote.find(suffix, source_match.end())
+                    suffix_start = start + suffix_offset
+                    staged.append((suffix_start, _make_fact(
+                        suffix,
+                        FactKind.ENTITY,
+                        occurrence=_occurrence_at(instruction, suffix, suffix_start),
+                    )))
+                    events.append({"outcome": "action_object_suffix_materialized", "fact_id": fact.id})
+                quote = source_match.group(0)
+                start += source_match.start()
+                events.append({"outcome": "action_lexeme_canonicalized", "fact_id": fact.id})
 
         # A model may absorb an explicit condition tail into the preceding
         # entity (for example, ``the customer after finance approves``). Keep

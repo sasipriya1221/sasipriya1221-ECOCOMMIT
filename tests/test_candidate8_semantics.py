@@ -3,10 +3,13 @@ from __future__ import annotations
 import pytest
 
 from ecocommit.candidate8 import run_candidate8
+from ecocommit.candidate7_compile import compile_graph_v2
 from ecocommit.candidate7_flat import LabeledFact, Relation, RelationBatch
 from ecocommit.candidate7_relation_checklist import Pass2DecisionBatch
+from ecocommit.candidate7_structure import build_graph
 from ecocommit.candidate8_logic import C8FactDisposition, C8RelationType, build_typed_ast, verify_ast_conservation
 from ecocommit.candidate8_normalize import (
+    candidate8_action_kind,
     candidate8_dispositions,
     infer_candidate8_relations,
     normalize_candidate8_facts,
@@ -552,3 +555,41 @@ def test_leading_role_marker_entity_is_canonicalized_and_conserved(
     assert set(dispositions) == {row.id for row in normalized.facts}
     assert set(dispositions.values()) == {C8FactDisposition.USED}
     build_typed_ast(normalized.facts, relations, dispositions)
+
+
+@pytest.mark.parametrize(
+    ("span", "expected"),
+    [
+        ("Release payment", "RELEASE"),
+        ("Cancel the order", "CANCEL"),
+        ("Book the renewal", "BOOK"),
+    ],
+)
+def test_candidate8_action_kind_uses_source_order_not_vocabulary_order(span, expected):
+    assert candidate8_action_kind(span) == expected
+
+
+def test_action_object_noun_collision_materializes_missing_object_before_compilation():
+    instruction = "Release payment if the client signs off or an arbitration decision is received."
+    raw = (
+        fact("F0001", "Release payment", "ACTION", action_type="RELEASE"),
+        fact("F0002", "the client", "ENTITY"),
+        fact("F0003", "an arbitration decision", "ENTITY"),
+        fact("F0004", "the client signs off", "PREDICATE"),
+        fact("F0005", "an arbitration decision is received", "PREDICATE"),
+    )
+    normalized = normalize_candidate8_facts(instruction, raw)
+    action = next(row for row in normalized.facts if row.kind.value == "ACTION")
+    assert action.action_type == "RELEASE"
+    assert action.text_span.quote == "Release"
+    assert any(row.kind.value == "ENTITY" and row.text_span.quote == "payment" for row in normalized.facts)
+    assert any(event["outcome"] == "action_lexeme_canonicalized" for event in normalized.events)
+    assert any(event["outcome"] == "action_object_suffix_materialized" for event in normalized.events)
+    relations = infer_candidate8_relations(instruction, normalized.facts)
+    assert sum(row.kind.value == "ACTION_OBJECT" for row in relations.relations) == 1
+    assert sum(row.kind.value == "GUARDS_ACTION" for row in relations.relations) == 2
+    dispositions = candidate8_dispositions(instruction, normalized.facts, relations)
+    assert set(dispositions) == {row.id for row in normalized.facts}
+    build_typed_ast(normalized.facts, relations, dispositions)
+    graph = build_graph(instruction, normalized.facts, relations)
+    compile_graph_v2(graph)
