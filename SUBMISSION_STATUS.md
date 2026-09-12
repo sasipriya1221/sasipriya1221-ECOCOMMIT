@@ -1,29 +1,16 @@
 # ECOCOMMIT Submission Status
 
-Authoritative status after Candidate-8 visible-development run
-[`34052199164`](https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/34052199164), attempt 2.
+Authoritative status as of Candidate-8 official Checkpoint A run [`34676224911`](https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/34676224911), attempt 1.
 
 | Stage | Status | Evidence / blocker |
 |---|---|---|
-| Runnable local product | **LOCALLY VALIDATED** | The deterministic safety console runs `HAPPY_PATH`, `CHECKPOINT_A_BLOCKED` and `CAPTURE_FAILURE` in explicitly labelled simulation mode with no provider call or money movement. |
-| Candidate 7 qualification | **FAILED** | After the preregistered 900-token provider amendment removed HTTP 429, run `33957313516`, artifact `9966909942`, produced D003 0/5 and D009 5/5 with zero provider/schema failures. Candidate 7 remains frozen. |
-| Candidate 8 visible development | **PASS** | Source `ed3ffd31c213d4f3198c47dc3fe641552102c767`; run `34052199164`, attempt 2; artifact `10005594543`; digest `sha256:e4ae9b436874f33d88008512b4918ff7c5909e6861c490457774a17adf2bdd4a`. 24/24 cases, 100% selective reliability, 83.33% autonomous coverage, 100% clarification accuracy and all zero-tolerance safety counters at zero. |
-| Candidate 8 visible regression | **NOT RUN** | Next gate, bound to the exact visible-development PASS source and evidence. |
-| Candidate 8 sealed preflight / qualification | **NOT RUN** | Locked until post-repair visible regression passes. |
-| Checkpoint A | **EXECUTION-READY / BLOCKED / NOT PASSED** | The official runner and receipt machinery are implemented. Execution requires a legitimate Candidate qualification PASS. |
-| Checkpoint B | **FINAL-EXECUTION READY / NOT PASSED** | A loading, provenance-before-order, transaction binding, idempotency, TOCTOU, Test-only enforcement, webhook verification, capture/refund reconciliation and typed receipt paths are implemented. A fresh Razorpay Test lifecycle remains gated by A PASS. |
-| Checkpoint C | **FINAL-EXPERIMENT READY / NOT RUN** | Comparator/TEL, frozen manifests, exact-source and A/B receipt gates are implemented. The final experiment remains gated by A+B PASS. |
-| Checkpoint D | **LOCAL PRODUCT RUNNABLE / FINAL PROOF BLOCKED** | API/UI, persistence, audit, safety boundary, recovery and blocked-state behavior are implemented. Authoritative proof requires valid A/B/C receipts and hosted evidence. |
-| Checkpoint E | **SUBMISSION PACKAGE READY / FINAL EVIDENCE BLOCKED** | Public repository, Apache-2.0, dependency lock, CI, architecture, threat model, evidence index, chronology and demo instructions exist. Final gated receipts and hosted proof remain absent. |
+| Runnable local product | **LOCALLY VALIDATED** | Deterministic console scenarios; no provider call or money movement |
+| Candidate-8 visible development | **PASS** | Source `850a7b5f1f21d7951cd4a9a840c0bebbb635d594`; run `34322382314`; artifact `10093914827`; 24/24 |
+| Candidate-8 visible regression | **PASS** | Run `34436075032`; artifact `10136732309`; digest `sha256:b89c17f068257f0cd3b323064e778153efb49ecb285489ca691c96db6079a2c8`; 12/12 |
+| Candidate-8 sealed preflight | **PASS** | Run `34440794156`; aggregate artifact `10138944664`; digest `sha256:35677602df358909a0769349a19243e1be79423adffe54934b230d4ae1186a31`; 24/24; restricted artifact unopened |
+| Candidate-8 formal qualification | **PASS** | Run `34458656631`; aggregate artifact `10146318320`; digest `sha256:d829225be0ee23792cc7674cee15ed89dfdde43765128bcd3ed4ee08549c8817`; typed receipt PASS; 24/24; restricted artifact unopened |
+| Checkpoint A | **FAILED** | Run `34676224911`; artifact `10292342612`; digest `sha256:eb1b0c48b7c956c56868f176dd76b9eee3e7fd956a2dcf1f94551b9b7bb7feaa`; early stop after 3/80; no A PASS receipt |
+| Checkpoints B–E | **BLOCKED** | Sequentially locked because A did not pass |
+| Candidate-9 | **NOT RUN** | Newly authorized; preregistration must precede provider development |
 
-## Submission claim
-
-ECOCOMMIT is a runnable, locally validated safety-control product for agentic
-economic actions. Candidate-8 visible development has passed, but it must **not**
-be represented as formally qualified or as having passed Checkpoints A–E.
-Green workflows preserve evidence; the retained semantic artifact decides each
-gate's status.
-
-See [Buildathon Submission](docs/BUILDATHON_SUBMISSION.md),
-[Failure Recovery](docs/FAILURE_RECOVERY.md) and
-[Submission Evidence](docs/SUBMISSION_EVIDENCE.md).
+Candidate-8 is frozen. Its official failure is terminal and is not development evidence for Candidate-9. Machine-readable artifacts and typed receipts override narrative summaries.
