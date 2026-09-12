@@ -61,14 +61,18 @@ REQUIRED_FILES = (
     "src/ecocommit/webhook.py",
 )
 README_HEADINGS = (
-    "## Why ECOCOMMIT",
+    "## Problem and objective",
+    "## Core design principle",
     "## Architecture",
-    "## Checkpoint truth",
+    "## End-to-end operation",
+    "## Technical stack",
+    "## Safety guarantees",
+    "## Product demonstration",
     "## Quick start",
-    "## Local safety-console demo",
-    "## Evidence and reports",
-    "## Submission evidence status",
-    "## Safety and limitations",
+    "## Repository structure",
+    "## Evaluation and evidence",
+    "## Failure recovery",
+    "## Limitations",
     "## License",
 )
 EVIDENCE_SLOTS = (
@@ -79,8 +83,9 @@ EVIDENCE_SLOTS = (
     "FINAL_SCREENSHOTS",
     "FINAL_VIDEO",
 )
-EVIDENCE_MARKERS = tuple(
-    f"EVIDENCE:{slot} status=BLOCKED" for slot in EVIDENCE_SLOTS
+EVIDENCE_MARKERS = (
+    "EVIDENCE:CHECKPOINT_A_FINAL_METRICS status=FAILED",
+    *(f"EVIDENCE:{slot} status=BLOCKED" for slot in EVIDENCE_SLOTS[1:]),
 )
 EVIDENCE_MARKER = re.compile(
     r"<!--\s*EVIDENCE:([A-Z0-9_]+)\s+status=(BLOCKED|FAILED|PASSED)\s*-->"
@@ -431,7 +436,7 @@ def build_report(
     checks.append(Check("current_tree_secret_markers", not sensitive, f"files={sensitive}"))
 
     progress = _read_text(root, "PROGRESS.md") or ""
-    truth_terms = ("BUILT", "LOCALLY VALIDATED", "BLOCKED", "PASSED", "NOT PASSED")
+    truth_terms = ("PASS", "FAILED", "BLOCKED", "LOCALLY VALIDATED", "NOT RUN")
     absent_truth_terms = [term for term in truth_terms if term not in progress]
     checks.append(
         Check(
