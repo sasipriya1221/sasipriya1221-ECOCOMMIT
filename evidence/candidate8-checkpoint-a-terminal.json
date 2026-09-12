@@ -1,0 +1,20 @@
+{
+  "aggregate_file_sha256": "a7b3d1c0e4072a253952e9209edcda1f3e62877641cb5e8e8ce5c9d462ec0b4c",
+  "aggregate_sha256": "22b8c30676b7b3a7b295920d9e62d47801cc0190a0505ca0f61d1507447eb726",
+  "artifact_archive_sha256": "eb1b0c48b7c956c56868f176dd76b9eee3e7fd956a2dcf1f94551b9b7bb7feaa",
+  "artifact_id": "10292342612",
+  "artifact_name": "checkpoint-a-candidate8-official-34676224911-attempt-1",
+  "candidate": "A-CANDIDATE-8",
+  "decision_file_sha256": "a2af9ade91cd56c722397b1cc586b2f9358daef9b1939fd3c8e86e67be1816dc",
+  "decision_sha256": "9572f5ccb50e2a41d8c9db3e832ff6c94d77f365e897eadabb649407e88c3e86",
+  "mathematically_eliminated_after_processed_case": 3,
+  "official_case_material_permitted_for_development": false,
+  "provider_attempt_rows": 3,
+  "run_attempt": 1,
+  "run_id": "34676224911",
+  "schema": "ecocommit.candidate8.checkpoint-a-terminal.v1",
+  "score_recovery_retries": 0,
+  "source_sha": "850a7b5f1f21d7951cd4a9a840c0bebbb635d594",
+  "status": "FAILED",
+  "typed_a_pass_receipt_present": false
+}
