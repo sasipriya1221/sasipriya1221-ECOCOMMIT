@@ -17,16 +17,20 @@ jobs:
           import json,os,subprocess
           from pathlib import Path
           q=json.loads(Path('evidence/candidate8-official-prereg-request.json').read_text())
-          required={'candidate':'A-CANDIDATE-8','source_sha':'850a7b5f1f21d7951cd4a9a840c0bebbb635d594','qualification_run_id':'34458656631','qualification_run_attempt':1,'qualification_artifact_id':'10146318320','qualification_artifact_digest':'sha256:d829225be0ee23792cc7674cee15ed89dfdde43765128bcd3ed4ee08549c8817','qualification_summary_sha256':'2e0208ed0445c90dc241ba9aff71d60c52b2c138a82904dfe6fbe9e35b342f03','request':'PREREGISTER_AND_RUN_ONCE'}
+          required={'candidate':'A-CANDIDATE-8','source_sha':'850a7b5f1f21d7951cd4a9a840c0bebbb635d594','qualification_run_id':'34458656631','qualification_run_attempt':1,'qualification_artifact_id':'10146318320','qualification_artifact_digest':'sha256:d829225be0ee23792cc7674cee15ed89dfdde43765128bcd3ed4ee08549c8817','qualification_summary_sha256':'2e0208ed0445c90dc241ba9aff71d60c52b2c138a82904dfe6fbe9e35b342f03','request':'AUTHORIZED_REPLACEMENT_AFTER_INFRA_FAILURE','invalid_run_id':'34465756009'}
           for k,v in required.items():
               if q.get(k)!=v: raise SystemExit(f'invalid Checkpoint-A request: {k}')
           run=json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/runs/{q['qualification_run_id']}"],text=True)); artifact=json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/artifacts/{q['qualification_artifact_id']}"],text=True))
           if run.get('conclusion')!='success' or run.get('run_attempt')!=1 or artifact.get('digest')!=q['qualification_artifact_digest'] or artifact.get('expired') is not False: raise SystemExit('formal qualification artifact binding mismatch')
           existing=json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/workflows/checkpoint-a-candidate8.yml/runs?event=workflow_dispatch&per_page=100"],text=True))
-          if existing.get('total_count',0): raise SystemExit('Candidate-8 official Checkpoint A already has history; duplicate refused')
+          runs=existing.get('workflow_runs',[])
+          if [str(x.get('id')) for x in runs] != [required['invalid_run_id']]: raise SystemExit('replacement refused: unexpected Candidate-8 official history')
+          ci=json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/runs?head_sha={q.get('supervisor_revision','')}&per_page=20"],text=True))
+          if not any(x.get('name')=='Offline Regression' and x.get('conclusion')=='success' for x in ci.get('workflow_runs',[])): raise SystemExit('exact-source CI PASS required')
       - name: Dispatch immutable preregistration
         env: {GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}"}
         run: >-
           gh workflow run candidate8-official-prereg.yml --repo "$GH_REPO" --ref main
           -f qualification_run_id=34458656631 -f qualification_run_attempt=1 -f qualification_artifact_id=10146318320
           -f qualification_archive_sha256=d829225be0ee23792cc7674cee15ed89dfdde43765128bcd3ed4ee08549c8817
+          -f supervisor_revision="$(python -c 'import json; print(json.load(open("evidence/candidate8-official-prereg-request.json"))["supervisor_revision"])')"
