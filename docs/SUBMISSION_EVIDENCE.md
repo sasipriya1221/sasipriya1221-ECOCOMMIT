@@ -1,152 +1,62 @@
-# ECOCOMMIT Submission Evidence
+# Submission Evidence
 
-This is the judge-facing evidence index. A green workflow, local demo,
-screenshot or narrative cannot promote a checkpoint. Typed receipts and
-source-bound retained artifacts are authoritative.
+This index records the authoritative current boundary. GitHub Actions artifact bytes, aggregate summaries, and typed receipts override this narrative.
 
-## Current verdict
-
-**Runnable product LOCALLY VALIDATED. Candidate 8 and Checkpoints A–E NOT
-PASSED.**
-
-The local console is a safe deterministic simulation. Candidate 8 is still in
-visible development. No final Razorpay lifecycle, held-out comparator experiment
-or hosted integrated proof is claimed.
-
-No final ECOCOMMIT-versus-baseline numbers are available. No final screenshot is
-retained. No final video is recorded. For the fresh final lifecycle, no payment
-authorization, capture, refund, webhook delivery, reconciliation, or settlement
-was executed.
-
-## Current evidence matrix
-
-| Evidence boundary | State | Authoritative reference |
-|---|---|---|
-| Local product | **LOCALLY VALIDATED** | `HAPPY_PATH`, `CHECKPOINT_A_BLOCKED` and `CAPTURE_FAILURE` in `scripts/checkpoint_d_demo.py` and the local console |
-| Candidate 7 | **FAILED** | Run `33957313516`; artifact `9966909942`; D003 0/5, D009 5/5; zero provider/schema failures |
-| Candidate 8 iteration 1 | **DEVELOPMENT FAIL** | Run `33959690847`; source `1600a9d7d8f469d2b948f8b4ec0b548e4cae1c48`; 6/24 (25%) |
-| Candidate 8 iteration 2 | **DEVELOPMENT FAIL** | Run `33965955682`; artifact `9970125633`; source `eabf660b...`; 18/24 (75%) |
-| Candidate 8 iteration 3 | **DEVELOPMENT NOT READY** | Run [`33970539713`](https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33970539713); source `b540de4998769cc0dd6e3a220fa00abeb8a3ce72`; artifact `9971456984`; digest `sha256:11a9b21340b549d4b9bc7b6f4328c80c86784123c1d930b8e7483a6215b403f1` |
-| Candidate 8 regression/preflight/qualification | **NOT RUN** | Locked behind a complete visible-development PASS |
-| Checkpoint A | **BLOCKED / NOT PASSED** | No qualified candidate and no typed A PASS receipt |
-| Checkpoint B | **FINAL EXECUTION BLOCKED** | Deterministic implementation exists; no eligible A receipt or fresh final Razorpay Test lifecycle |
-| Checkpoint C | **FINAL EXPERIMENT BLOCKED** | Comparator/TEL infrastructure exists; no passing A+B receipt chain |
-| Checkpoint D | **LOCAL DEMO ONLY / FINAL PROOF BLOCKED** | Runnable simulation exists; no authoritative A/B/C integration or hosted proof |
-| Checkpoint E | **PACKAGE READY / FINAL EVIDENCE BLOCKED** | Repository, license, lock, architecture, threat model and runbook exist; gated receipts remain absent |
-
-## Candidate-8 iteration-3 metrics
-
-The retained `summary.json` reports:
-
-| Metric | Observed | Development requirement | Result |
-|---|---:|---:|---|
-| Case pass | 23/24 = 95.83% | >= 95% | Met |
-| Selective semantic reliability | 100% | >= 97% | Met |
-| Autonomous coverage | 79.17% | >= 60% | Met |
-| Ambiguous clarification accuracy | 100% | >= 90% | Met |
-| Provider deferrals | 0 | 0 | Met |
-| Schema/validation failures | 0 | 0 | Met |
-| Conservation failures | 0 | 0 | Met |
-| Fail-open outcomes | 0 | 0 | Met |
-| Dropped guards | 1 | 0 | **Failed** |
-
-C8D020 was rejected with `C8_UNRESOLVED_ENTITY_DISPOSITION`. It authorized no
-economic action, but its material guard was unresolved. The artifact correctly
-records `passed: false`.
-
-## Runnable demo evidence
-
-The local console must visibly retain:
-
-- `SIMULATION MODE — NO PROVIDER CALLS · NO MONEY MOVEMENT`;
-- all A–E cards blocked without authoritative receipts; and
-- the three fixed scenario outcomes.
-
-| Scenario | Required visible result |
-|---|---|
-| `HAPPY_PATH` | `SIMULATED_CAPTURED`; INR 40 requested/captured under INR 50 cap; legal state sequence |
-| `CHECKPOINT_A_BLOCKED` | `SIMULATED_BLOCKED`; zero authorized/captured; no payment |
-| `CAPTURE_FAILURE` | `SIMULATED_FAILED_CLOSED`; zero captured; failed state; simulated hold voided |
-
-This demonstrates component composition, decision transparency and failure
-recovery. It is not provider or payment-network evidence.
-
-## Build and reproducibility evidence
-
-- Apache License 2.0: `LICENSE`.
-- Python 3.11+ package: `pyproject.toml`.
-- Hash-locked dependencies: `requirements-dev.lock`.
-- Deterministic reproduction: `docs/REPRODUCIBILITY.md`.
-- Independent clean-machine reproduction is retained historically, but final
-  exact-source release evidence must be regenerated after submission changes.
-- The stale workflow-security assertion was corrected to the preregistered
-  900-token Candidate-7 amendment source. Local regression at this submission
-  boundary is **524/524 passing**; exact-source GitHub CI remains required after
-  publication.
-
-## What must remain blocked
-
-### Checkpoint A
-
-<!-- EVIDENCE:CHECKPOINT_A_FINAL_METRICS status=BLOCKED -->
-
-Requires a frozen candidate qualification PASS followed by one official
-80-case run satisfying all four thresholds together:
-
-- case pass >= 90%;
-- selective semantic reliability >= 95%;
-- autonomous coverage >= 55%; and
-- ambiguous clarification accuracy >= 80%.
-
-No typed A PASS receipt exists.
-
-### Checkpoint B
-
+<!-- EVIDENCE:CHECKPOINT_A_FINAL_METRICS status=FAILED -->
 <!-- EVIDENCE:CHECKPOINT_B_RAZORPAY_TEST status=BLOCKED -->
-
-Requires A PASS followed by provenance-before-order, Razorpay **Test Mode**
-authorization, verification, capture, `payment.captured` verification, refund,
-`refund.processed` verification, reconciliation and a typed B receipt. No Live
-Mode or real financial data is permitted. Historical pre-provenance transaction
-evidence is non-promotable.
-
-### Checkpoint C
-
 <!-- EVIDENCE:CHECKPOINT_C_FINAL_COMPARISON status=BLOCKED -->
-
-Requires passing A+B receipts and the frozen one-shot comparator/TEL experiment.
-No final comparison outcome is claimed.
-
-### Checkpoint D
-
 <!-- EVIDENCE:CHECKPOINT_D_FINAL_INTEGRATION status=BLOCKED -->
-
-Requires legitimate A/B/C receipts, an integrated trace and hosted
-security/operations evidence. Localhost simulation is not hosted proof.
-
-### Checkpoint E
-
-Requires the final exact-source CI/reproduction and legitimate A–D evidence.
-Repository readiness does not substitute for those gates.
-
-## Video and screenshot boundary
-
 <!-- EVIDENCE:FINAL_SCREENSHOTS status=BLOCKED -->
 <!-- EVIDENCE:FINAL_VIDEO status=BLOCKED -->
 
-The five-minute recording may show the runnable local simulation, architecture,
-tests and retained failure history. It must say aloud that:
+## Candidate-8 evidence chain
 
-1. the console is simulation-only;
-2. Candidate 8 is 23/24 in visible development, not qualified; and
-3. A–E have not passed.
+| Gate | Status | Authoritative evidence |
+|---|---|---|
+| Visible development | **PASS** | Source `850a7b5f1f21d7951cd4a9a840c0bebbb635d594`; run `34322382314`, attempt 1; artifact `10093914827`; archive SHA-256 `b2ce264c2df986adbe9e41e97b3484200b71d4fa519dafac479b50815e2249b4`; summary SHA-256 `24fc8854a05fff78bef9f24719c919f464c1501bf4965857608d8d1486c6a028`; 24/24 |
+| Visible regression | **PASS** | Run `34436075032`, attempt 1; artifact `10136732309`; archive SHA-256 `b89c17f068257f0cd3b323064e778153efb49ecb285489ca691c96db6079a2c8`; summary SHA-256 `d8253f25979442365553ee81453de65e1f9a52c61c5e72734ac815f5f995cd0f`; 12/12 |
+| Sealed preflight | **PASS** | Run `34440794156`, attempt 1; aggregate artifact `10138944664`; archive SHA-256 `35677602df358909a0769349a19243e1be79423adffe54934b230d4ae1186a31`; summary SHA-256 `c4be609bbcfe14d829c7282519648c60829589c98d017ec89f5faed380925ea0`; 24/24 |
+| Formal qualification | **PASS** | Run `34458656631`, attempt 1; aggregate artifact `10146318320`; archive SHA-256 `d829225be0ee23792cc7674cee15ed89dfdde43765128bcd3ed4ee08549c8817`; summary SHA-256 `2e0208ed0445c90dc241ba9aff71d60c52b2c138a82904dfe6fbe9e35b342f03`; typed receipt SHA-256 field `8afa0a96900ced5b1c50429811b05c9d88dfc8603f358aa708eba14d6aca1d74`; 24/24 |
+| Official Checkpoint A | **FAILED** | Run `34676224911`, attempt 1; artifact `10292342612`; archive SHA-256 `eb1b0c48b7c956c56868f176dd76b9eee3e7fd956a2dcf1f94551b9b7bb7feaa`; decision file SHA-256 `a2af9ade91cd56c722397b1cc586b2f9358daef9b1939fd3c8e86e67be1816dc`; aggregate file SHA-256 `a7b3d1c0e4072a253952e9209edcda1f3e62877641cb5e8e8ce5c9d462ec0b4c`; early stop after 3/80; no PASS receipt |
 
-Do not expose API keys, provider dashboards, signatures, webhook URLs or real
-financial information.
+Visible regression metrics were 100% case pass, 100% selective reliability, 91.67% autonomous coverage, 100% clarification accuracy, and zero safety failures/provider deferrals. Sealed preflight and formal qualification each scored 24/24, 100% selective reliability, 83.33% autonomous coverage, 100% ambiguity accuracy, and zero safety/provider failures.
 
-## Promotion rule
+The official aggregate records status `FAILED`, processed `3`, provider-attempt rows `3`, zero score-recovery retries, and mathematical elimination after the third processed case. The official case-level artifact is not development evidence and must not be used for Candidate-9.
 
-A status changes only when its complete protocol finishes and its artifact,
-source revision and digest are retained. Missing evidence stays `BLOCKED` or
-`NOT RUN`; it is never inferred from implementation, file presence or a green
-workflow.
+Restricted artifacts `10138944316` (sealed preflight) and `10146317641` (formal qualification) were not opened.
+
+## Infrastructure chronology
+
+- Official run `34465756009` stopped during aggregation after one provider-scored row because `OfficialCounts` was absent from the runner runtime.
+- Official run `34675788962` stopped before provider construction because a checked-out supervisor SHA was incorrectly compared with the dispatch commit SHA.
+- Both failures are preserved as infrastructure evidence; neither is the terminal semantic decision.
+- Exact-source CI run `34676095634` passed the corrected runner before the terminal evaluation.
+
+## Checkpoint matrix
+
+| Checkpoint | Status | Reason |
+|---|---|---|
+| A | **FAILED** | Candidate-8 did not meet the frozen official gate and emitted no A PASS receipt |
+| B | **BLOCKED** | Requires A PASS |
+| C | **BLOCKED** | Requires A and B PASS receipts |
+| D | **BLOCKED** | Requires legitimate A/B/C evidence |
+| E | **BLOCKED** | Requires the complete upstream evidence chain |
+
+## Candidate-9
+
+Candidate-9 is authorized but **NOT RUN**. It must preregister before provider-backed development and must not consume official-A case material, sealed gold, or formal-qualification gold.
+
+## Product and repository evidence
+
+- Local deterministic safety console: **LOCALLY VALIDATED**
+- Hash-locked dependencies and pytest suite: retained in `requirements-dev.lock`, `tests/`, and Offline Regression runs
+- Architecture and threat model: `docs/ARCHITECTURE.md`, `docs/THREAT_MODEL.md`
+- Reproduction: `docs/REPRODUCIBILITY.md`
+- Payment boundary: Razorpay **TEST MODE only**; no Live Mode or real-money claim
+- License: Apache-2.0 (`LICENSE`, `docs/LICENSE_DECISION.md`)
+
+No final ECOCOMMIT-versus-baseline numbers are available because C is blocked.
+No final screenshot is retained. No final video is recorded as Checkpoint-E
+evidence; the linked YouTube demonstration is a local product demo. For the
+authoritative B gate, no payment authorization, capture, refund, webhook delivery,
+reconciliation, or settlement was executed.
