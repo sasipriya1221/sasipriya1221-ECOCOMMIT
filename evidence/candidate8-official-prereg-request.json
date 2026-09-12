@@ -7,7 +7,7 @@
   "qualification_run_id": "34458656631",
   "qualification_summary_sha256": "2e0208ed0445c90dc241ba9aff71d60c52b2c138a82904dfe6fbe9e35b342f03",
   "request": "AUTHORIZED_REPLACEMENT_AFTER_INFRA_FAILURE",
-  "request_revision": 4,
+  "request_revision": 5,
   "source_sha": "850a7b5f1f21d7951cd4a9a840c0bebbb635d594",
-  "supervisor_revision": "147bc0e403e4d4b8cc062272957ef7f36f23b891"
+  "supervisor_revision": "2c5e21640f9840b26351cbf47f57def12e78d396"
 }
