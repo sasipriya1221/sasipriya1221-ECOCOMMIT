@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def runtime(candidate):
     sys.path.insert(0,str((candidate/"src").resolve()))
-    from candidate6_official_reachability import OfficialThresholds,final_pass,reachable
+    from candidate6_official_reachability import OfficialCounts,OfficialThresholds,final_pass,reachable
     from checkpoint_a_live import _ambiguous_cases,_clear_cases,semantic_case_pass
     from ecocommit.candidate8 import run_candidate8
     from ecocommit.candidate8_provider import GroqCandidate8Provider
