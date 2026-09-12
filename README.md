@@ -1,188 +1,171 @@
 # ECOCOMMIT
 
-**Evidence-calibrated safety controls for AI agents that can create irreversible economic commitments.**
+**Evidence-calibrated safety infrastructure for AI agents that can create irreversible economic commitments.**
 
-**Razorpay AI Buildathon — Track 1: AI Growth & Agentic Commerce.**
+Razorpay AI Buildathon — Track 1: AI Growth & Agentic Commerce.
+
+AI agents can misunderstand conditions, exceptions, payment objects, counterparties, amounts, sequencing, and whether the user actually granted authority. A fluent interpretation is therefore not enough to buy, pay, book, hire, transfer, renew, reserve, release, cancel, or commit.
+
+ECOCOMMIT converts natural-language instructions into typed, inspectable economic contracts and places deterministic controls between probabilistic interpretation and execution. Missing, ambiguous, stale, unsupported, or unverifiable authority fails closed. This makes agentic commerce safer to inspect, test, recover, and audit.
 
 ## Project links
 
-- **Demo video:** [Watch ECOCOMMIT on YouTube](https://youtu.be/WjkrzrcffXk)
-- **Application:** [Local safety console](http://127.0.0.1:8765/) — available after following Quick Start below
-- **Technical submission:** [Architecture, engineering evidence and Buildathon fit](docs/BUILDATHON_SUBMISSION.md)
+- [YouTube demonstration](https://youtu.be/WjkrzrcffXk)
+- [Local application](#quick-start)
+- [Technical architecture](docs/ARCHITECTURE.md)
+- [Evidence index](docs/SUBMISSION_EVIDENCE.md)
+- [Reproducibility guide](docs/REPRODUCIBILITY.md)
 
-## Why ECOCOMMIT
+No public deployment is claimed. The application is available locally after completing Quick Start.
 
-ECOCOMMIT sits between an AI agent and an economic action such as buying, paying, booking, hiring, transferring, renewing, reserving, releasing, cancelling, or committing. The language model may interpret semantics, but it does **not** own economic authority. Deterministic code owns validation, Boolean authorization logic, normalization, dependency handling, ambiguity blocking, semantic conservation, transaction eligibility, evidence, and execution permission.
+## Problem and objective
 
-The core principle is simple: **LLM for semantic interpretation; deterministic controls for economic authority.** Unknown or materially ambiguous authorization state fails closed. A missing or invalid receipt never unlocks a downstream checkpoint.
+Economic instructions combine actions with guards, exceptions, limits, dependencies, and implicit grammatical roles. If an AI silently drops one of those facts—or treats uncertainty as permission—the result may be an irreversible commitment.
 
-## What a reviewer can verify in five minutes
+ECOCOMMIT extracts source-grounded facts, classifies their relationships, compiles a typed contract, and independently verifies that economically material meaning survives. It refuses execution when authority is missing, ambiguous, inconsistent, stale, or unsupported by the required evidence chain.
 
-1. Clone the repository and install the hash-locked dependencies.
-2. Run the deterministic test suite.
-3. Start the local safety console.
-4. Exercise a successful simulation, an upstream-gate denial, and an injected capture failure.
-5. Inspect the correlation ID, state transitions, cleanup result, and blocked A–E evidence cards.
+## Core design principle
 
-The demo is deliberately safe: it performs **no provider call and no money movement**. It proves that the product runs and that missing authority fails closed; it is not presented as an authoritative A/B/C/D/E PASS.
+> **LLM for semantic interpretation; deterministic code for economic authority.**
+
+The model may extract grounded facts and classify semantic relations. It cannot grant economic authority, choose policy limits, bypass evidence, fabricate missing conditions, advance transaction state, convert `UNKNOWN` into permission, or authorize payment without valid upstream receipts.
+
+Deterministic code owns schemas, grounding, Boolean and dependency structure, conservation, ambiguity handling, policy limits, evidence validation, transaction eligibility, state transitions, idempotency, reconciliation, and audit.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    A["User economic instruction"] --> B["AI semantic interpretation"]
-    B --> C["Grounded facts and relations"]
-    C --> D["Deterministic AST and contract compiler"]
-    D --> E{"Safety, evidence and exposure gates"}
-    E -->|Denied or unclear| F["Clarify or fail closed"]
-    E -->|Authorized| G["Transaction-bound certificate"]
-    G --> H["Razorpay Test or simulated execution"]
-    H --> I["Reconciliation and audit trail"]
+    U["User instruction"] --> P1["Pass 1: grounded facts"]
+    P1 --> P2["Pass 2: semantic relations"]
+    P2 --> AST["Typed Boolean and dependency AST"]
+    AST --> S["Deterministic safety and conservation"]
+    S --> E["Evidence and provenance"]
+    E --> A["Economic authority decision"]
+    A --> T["Razorpay Test transaction boundary"]
+    T --> R["Persistence, reconciliation and audit"]
 ```
 
-The model may identify meaning. It cannot grant economic authority, choose a policy ceiling, bypass evidence, advance transaction state, or turn an unknown condition into permission. See [Technical Overview](docs/TECHNICAL_OVERVIEW.md) for the component and data-flow description.
+The implementation has nine layers: natural-language interpretation; typed Semantic IR; Boolean/dependency compilation; conservation and fail-closed validation; evidence and checkpoint receipts; transaction authorization; Razorpay Test lifecycle; SQLite persistence/recovery/audit; and the API/UI safety console.
 
-The repository is organized around that boundary:
+See [Architecture](docs/ARCHITECTURE.md), [Technical Overview](docs/TECHNICAL_OVERVIEW.md), and [Threat Model](docs/THREAT_MODEL.md).
 
-- `src/ecocommit/` — protocol implementation, Semantic IR, validation, compilation, conservation, execution and evidence logic.
-- `tests/` — deterministic regression, property/metamorphic, security, workflow and qualification tests.
-- `data/` — frozen evaluation inputs and versioned candidate-development partitions.
-- `scripts/` — qualification, checkpoint, reproducibility and evidence tooling.
-- `ui/` — integrated safety-console demonstration.
-- `docs/ARCHITECTURE.md` and `docs/THREAT_MODEL.md` — architecture and trust/safety boundaries.
+## End-to-end operation
+
+```text
+User instruction → grounded facts → relation classification → typed AST
+→ deterministic contract → ambiguity and safety validation → provenance
+→ transaction eligibility → Razorpay Test order/capture/refund
+→ reconciliation → audit evidence
+```
+
+| State | Meaning |
+|---|---|
+| `COMPILED` | A grounded contract survived deterministic checks; downstream receipts are still required before execution. |
+| `CLARIFICATION_REQUIRED` | Material meaning or authority is ambiguous, so the system asks rather than guesses. |
+| `REJECTED` | Schema, grounding, conservation, contradiction, or safety validation failed. |
+| `PROVIDER_DEFERRED` | The provider could not produce a usable result under the bounded attempt policy; this is not semantic authorization. |
 
 ## Technical stack
 
-| Layer | Technology | Role |
+| Layer | Technology | Purpose |
 |---|---|---|
-| Frontend | HTML5, CSS3, vanilla JavaScript | Responsive safety console, scenario controls, gate state, exposure and audit display |
-| Backend/API | Python 3.11+, WSGI | Commit simulation, status, metrics, guarded Test execution and webhook endpoints |
-| Validation | Pydantic 2 | Strict typed facts, relations, contracts, receipts and provider payloads |
-| AI interpretation | Groq OpenAI-compatible API, `qwen/qwen3.6-27b` | Two-pass grounded fact extraction and relation classification |
-| Deterministic safety | Python policy engine, Boolean/dependency AST, conservation checker | Authority decisions, caps, ambiguity handling and fail-closed enforcement |
-| Persistence | SQLite with WAL/FULL-sync controls | Commitments, payments, idempotency, webhook evidence and restart recovery |
-| Payments | Razorpay REST API, Checkout and HMAC-SHA256 webhooks | Test Mode order, authorization, capture, refund and reconciliation boundary |
-| Testing | pytest | Deterministic, security, workflow, property/metamorphic and integration tests |
-| CI/evidence | GitHub Actions, SHA-256 manifests and typed receipts | Exact-source validation and retained artifact provenance |
-| Deployment | WSGI and hardened nginx templates | Prepared TLS/reverse-proxy single-host deployment boundary |
+| Frontend | HTML5, CSS3, vanilla JavaScript | Responsive safety console, scenarios, evidence, and audit display |
+| Backend/API | Python 3.11+, WSGI | Simulation, status, guarded transaction, and webhook endpoints |
+| Validation | Pydantic 2 | Typed facts, relations, contracts, receipts, and provider payloads |
+| AI | Groq OpenAI-compatible API with `qwen/qwen3.6-27b` | Two-pass grounded semantic interpretation |
+| Deterministic safety | Python policy engine and typed Boolean/dependency AST | Economic authority and fail-closed enforcement |
+| Persistence | SQLite with WAL and FULL-sync controls | Commitments, payments, idempotency, webhooks, and restart recovery |
+| Payments | Razorpay REST API and HMAC-SHA256 webhooks | Test Mode order, capture, refund, and reconciliation |
+| Testing | pytest | Unit, integration, security, property, workflow, and qualification validation |
+| Evidence | GitHub Actions, SHA-256 manifests, and typed receipts | Exact-source provenance and checkpoint enforcement |
+| Deployment | WSGI and hardened nginx templates | Controlled single-host deployment boundary |
 
-## Checkpoint truth
+## Safety guarantees
 
-The product is runnable now in its deterministic local demonstration. The
-remaining evidence chain is intentionally sequential so that no implementation,
-workflow colour or screenshot can substitute for an authoritative receipt.
+- Fail-closed authorization; missing or invalid authority never becomes permission.
+- Strict schema validation and source grounding for every material fact.
+- Boolean guard, exception, dependency, and semantic-conservation preservation.
+- Closed policy classes and trusted exposure ceilings.
+- Provenance-before-order and exact upstream receipt validation.
+- Transaction-bound certificates resistant to TOCTOU changes and replay.
+- Durable idempotency and legal state-transition enforcement.
+- Razorpay Test-only enforcement; Live Mode is prohibited.
+- Raw-body webhook HMAC verification, event identity, and reconciliation.
+- SQLite restart recovery, compensation, and chained audit history.
 
-```mermaid
-flowchart TD
-    C8["Candidate 8 development"] --> R["Visible regression"]
-    R --> P["Sealed preflight"]
-    P --> Q["Formal qualification"]
-    Q --> A["Checkpoint A: official 80 cases"]
-    A --> B["Checkpoint B: Razorpay Test lifecycle"]
-    B --> C["Checkpoint C: final TEL experiment"]
-    C --> D["Checkpoint D: integrated proof"]
-    D --> E["Checkpoint E: release package"]
-```
+## Product demonstration
 
-### Remaining execution process
+The local safety console proves application startup, successful deterministic simulation, upstream-gate denial, injected capture failure, cleanup/recovery, correlation IDs, state transitions, evidence cards, and blocked checkpoints without valid receipts.
 
-1. Correct the remaining general C8D020 entity/guard boundary and repeat visible development.
-2. Run the separate visible regression partition.
-3. Freeze the exact Candidate-8 source and consume the sealed preflight once.
-4. Run formal Candidate-8 qualification.
-5. If qualified, run the official frozen 80-case Checkpoint A evaluation.
-6. With an A receipt, execute the provenance-first Razorpay Test Mode lifecycle and produce B evidence.
-7. With A+B receipts, run the frozen Total Economic Loss comparison for C.
-8. Load legitimate A/B/C receipts through the API/UI and retain the integrated D proof.
-9. Produce the exact-source reproduction, evidence index and final E release package.
-
-Current development position: Candidate 8 has reached **23/24 visible cases
-(95.83%)**, with 100% selective reliability, 79.17% autonomous coverage and
-100% clarification accuracy. One unresolved guard case remains fail-closed and
-must be corrected before the next stage.
-
-### Expected post-submission validation timeline
-
-| Work | Expected duration if no new blocker appears |
-|---|---:|
-| C8D020 correction and deterministic validation | 20–40 minutes |
-| Visible-development rerun | 45–60 minutes |
-| Regression, sealed preflight and qualification | 1–2 hours |
-| Official Checkpoint A with free-tier provider pacing | 2–4 hours |
-| Final B/C/D/E execution and evidence | 1–3+ hours |
-
-Before any sealed or official execution, the exact source, prompts, schemas,
-provider policy, dataset, evaluator and thresholds are cryptographically bound.
-
-The one-shot internal holdout requires all gates simultaneously:
-
-| Gate | Requirement |
-| --- | ---: |
-| Case pass rate | ≥ 95% |
-| Selective semantic reliability | ≥ 97% |
-| Autonomous coverage | ≥ 60% |
-| Ambiguous clarification accuracy | ≥ 90% |
-| Fail-open errors | 0 |
-| Dropped guards | 0 |
-| Dropped exceptions | 0 |
-| Semantic-conservation failures | 0 |
-| UNKNOWN → authorized | 0 |
-
-Only an internal qualification PASS can unlock the official frozen Checkpoint-A run. Official A remains one-shot with case pass ≥ 90%, selective reliability ≥ 95%, autonomous coverage ≥ 55%, and ambiguous clarification accuracy ≥ 80%.
+The demo makes no provider call and moves no real money. It does not substitute for authoritative checkpoint evidence.
 
 ## Quick start
 
-Requires Python 3.11+.
+Prerequisites: Git and Python 3.11 or newer. Node.js is optional and only needed for the JavaScript syntax check.
 
-```bash
-python -m pip install --require-hashes -r requirements-dev.lock
-python -m pip install --no-deps --no-build-isolation -e .
-python -m pip check
-python -m pytest -p no:cacheprovider
-python -m compileall -q src scripts tests
-node --check ui/app.js
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT.git
+Set-Location sasipriya1221-ECOCOMMIT
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install --require-hashes -r requirements-dev.lock
+.venv\Scripts\python.exe -m pip install --no-deps --no-build-isolation -e .
+.venv\Scripts\python.exe -m pip check
+.venv\Scripts\python.exe -m pytest -p no:cacheprovider --basetemp .test-tmp-reproduction
+.venv\Scripts\python.exe scripts\checkpoint_d_server.py --port 8765
 ```
 
-Follow `docs/REPRODUCIBILITY.md` for the clean-machine procedure, source/evidence binding and artifact expectations.
+### Unix/macOS
 
-## Local safety-console demo
+```bash
+git clone https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT.git
+cd sasipriya1221-ECOCOMMIT
+python3 -m venv .venv
+.venv/bin/python -m pip install --require-hashes -r requirements-dev.lock
+.venv/bin/python -m pip install --no-deps --no-build-isolation -e .
+.venv/bin/python -m pip check
+.venv/bin/python -m pytest -p no:cacheprovider --basetemp .test-tmp-reproduction
+.venv/bin/python scripts/checkpoint_d_server.py --port 8765
+```
 
-The `ui/` application demonstrates the economic-control boundary without weakening qualification gates. Use the exact [five-minute demo runbook](docs/DEMO_RUNBOOK.md). Demo output is not treated as benchmark evidence unless a checkpoint protocol explicitly binds it.
+Open <http://127.0.0.1:8765/> and run `HAPPY_PATH`, `CHECKPOINT_A_BLOCKED`, and `CAPTURE_FAILURE`. See the [five-minute demo runbook](docs/DEMO_RUNBOOK.md).
+
+## Repository structure
+
+- `src/ecocommit/` — contracts, semantic candidates, safety policy, transactions, evidence, persistence, and audit
+- `tests/` — deterministic, integration, security, property, workflow, and receipt validation
+- `data/` — versioned evaluation and visible-development corpora
+- `scripts/` — qualification, checkpoint, reproduction, and evidence tooling
+- `ui/` — local safety console
+- `docs/` — architecture, threat model, evidence, deployment, and runbooks
+- `evidence/` — retained machine-readable evidence and request bindings
+- `.github/workflows/` — exact-source CI and gated provider/Test Mode execution
+
+## Evaluation and evidence
+
+Candidate-8 is frozen at source `850a7b5f1f21d7951cd4a9a840c0bebbb635d594`. It passed visible development, visible regression, sealed preflight, and formal qualification, then legitimately **FAILED** official Checkpoint A. Its terminal evidence is preserved; it was not retried until lucky.
+
+Checkpoints B–E remain **BLOCKED** because there is no valid A PASS receipt. Candidate-9 is newly authorized under a separate visible-evidence-only development protocol. No receipt is valid unless its exact-source, dataset, evaluator, configuration, upstream evidence, run, attempt, and artifact bindings validate.
+
+See [Submission Evidence](docs/SUBMISSION_EVIDENCE.md), [Progress](PROGRESS.md), and [Submission Status](SUBMISSION_STATUS.md).
 
 ## Failure recovery
 
-The failure trail is part of the work, not hidden history. Candidate 7 first hit a Groq output-token-per-minute rejection because the request ceiling exceeded the free-tier OTPM limit. Reducing the bound ceiling to 900 removed the infrastructure failure and exposed the real semantic defect: D003 failed 5/5 while D009 passed 5/5. Candidate 7 was frozen as failed rather than retried until lucky. Candidate 8 then moved into a separate, visible-data-only development protocol. Its three visible iterations improved from 25%, to 75%, to 95.83%. Iteration 3 still failed the safety gate because C8D020 dropped one guard; the rejection remained fail-closed. See [Failure Recovery](docs/FAILURE_RECOVERY.md) for the evidence-linked chronology and engineering lessons.
+Groq’s initial HTTP 429 was diagnosed as an output-tokens-per-minute conflict: the bound request ceiling exceeded the 1,000-token limit. A preregistered 900-token ceiling removed that infrastructure failure. Candidate-7 then exposed a genuine semantic defect and was frozen.
 
-## Evidence and reports
+Candidate-8 introduced typed semantic roles, stronger AST/conservation handling, and source-order action resolution. Visible defects were corrected only from permitted visible evidence. Candidate-8 passed its internal gates but failed official A; that failure was preserved rather than mined for patches or retried. Candidate-9 is isolated as a new candidate with official and hidden evidence explicitly forbidden during development. See [Failure Recovery](docs/FAILURE_RECOVERY.md).
 
-Key evidence documents are:
+## Limitations
 
-- `docs/BUILDATHON_SUBMISSION.md` — Track-1 fit and direct judge rubric mapping.
-- `docs/SUBMISSION_EVIDENCE.md` — authoritative evidence index and checkpoint status.
-- `docs/REPRODUCIBILITY.md` — exact-source reproduction instructions.
-- `docs/ARCHITECTURE.md` — system architecture.
-- `docs/TECHNICAL_OVERVIEW.md` — concise implementation and trust-boundary description.
-- `docs/FAILURE_RECOVERY.md` — provider, semantic and development-failure chronology.
-- `docs/THREAT_MODEL.md` — threat and safety model.
-- `docs/DEPLOYMENT_READINESS.md` — deployment/readiness constraints.
-- `docs/ENGINEERING_LOG.md` — engineering chronology.
-
-Machine-verifiable receipts and GitHub Actions artifacts remain authoritative over narrative summaries.
-
-## Submission evidence status
-
-The public repository contains the complete implementation, runnable local
-product, architecture, security model, test suite, evidence framework and
-post-submission execution path. Formal candidate qualification and final A–E
-receipts remain sequential validation work. See `SUBMISSION_STATUS.md` for the
-current machine-evidence boundary.
-
-## Safety and limitations
-
-ECOCOMMIT is designed to refuse unsupported economic authority rather than guess. Qualification thresholds are not lowered to improve presentation results, and frozen benchmark/evaluator data are not altered after results are observed.
-
-Payment lifecycle demonstrations use **Razorpay TEST MODE only**. Provenance must exist before test transaction creation. Qualification must never use Razorpay Live Mode, real money, or real bank/card/UPI information. Human-only login, OTP, secret-entry or sandbox interactions remain human boundaries rather than automation targets.
+- Razorpay Live Mode and real money are prohibited.
+- The authoritative chain stops at Candidate-8’s failed Checkpoint A result.
+- B–E have implemented/local validation paths but no authoritative PASS receipts.
+- Semantic evaluation depends on an external model provider.
+- Qualification results do not guarantee unrestricted production safety.
+- Bundled deployment configuration is not evidence of a public or highly available service.
 
 ## License
 
-Apache-2.0. See `LICENSE` and `docs/LICENSE_DECISION.md`.
+Licensed under [Apache-2.0](LICENSE). See the [license decision](docs/LICENSE_DECISION.md).
