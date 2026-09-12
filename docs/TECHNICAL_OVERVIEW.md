@@ -24,10 +24,9 @@ The model proposes meaning; deterministic code decides authority.
 | Payment adapter | Simulate locally or use Razorpay Test Mode | Live Mode and real financial data are prohibited |
 | Reconciliation and audit | Preserve outcomes, webhook identity, compensation and correlation | Records history; never changes authority |
 
-## Candidate-8 semantic path
+## Candidate semantic path
 
-Candidate 8 is developed on a separate branch and remains gated until its
-qualification passes:
+The Candidate-8 implementation demonstrates the current semantic path:
 
 1. Pass 1 extracts a flat, source-grounded fact inventory.
 2. Fact IDs are assigned deterministically.
@@ -40,6 +39,10 @@ qualification passes:
 Model output is schema checked and grounded. Invalid relation proposals may fall
 back only to the deterministic source grammar; material uncertainty does not fall
 back to authorization.
+
+Candidate 8 passed development, regression, sealed preflight and formal
+qualification, but failed official Checkpoint A and is frozen. Candidate 9 is a
+new development candidate and cannot use official or hidden evidence.
 
 ## Runtime paths
 
