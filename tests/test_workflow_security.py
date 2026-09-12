@@ -90,9 +90,10 @@ def test_secret_bearing_workflows_require_explicit_manual_dispatch():
             "candidate8-formal-qualification.yml",
             "candidate8-provider-readiness.yml",
             "candidate8-sealed-preflight.yml",
-        "candidate8-visible-development.yml",
-        "candidate8-visible-regression.yml",
-        "checkpoint-a-candidate6.yml",
+            "candidate8-visible-development.yml",
+            "candidate8-visible-regression.yml",
+            "candidate9-visible-development.yml",
+            "checkpoint-a-candidate6.yml",
             "checkpoint-a-candidate7.yml",
             "checkpoint-a-candidate8.yml",
         "checkpoint-a-live.yml",
@@ -157,6 +158,19 @@ def test_candidate8_regression_bridge_is_secretless_exact_source_and_duplicate_s
     assert "10093914827" in workflow
     assert "duplicate Candidate-8 regression dispatch for this exact request refused" in workflow
     assert "gh workflow run candidate8-visible-regression.yml" in workflow
+    assert "persist-credentials: false" in workflow
+
+
+def test_candidate9_development_bridge_keeps_request_off_source_branch():
+    workflow = (WORKFLOWS / "candidate9-development-request.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert "branches: [main]" in trigger_block
+    assert "evidence/candidate9-development-request.json" in trigger_block
+    assert "secrets." not in workflow
+    assert "actions: write" in workflow
+    assert "branches/candidate9-development" in workflow
+    assert "duplicate Candidate-9 development dispatch for exact source refused" in workflow
+    assert "--ref candidate9-development" in workflow
     assert "persist-credentials: false" in workflow
 
 

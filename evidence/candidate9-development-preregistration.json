@@ -1,0 +1,103 @@
+{
+  "schema": "ecocommit.candidate9.development-preregistration.v1",
+  "candidate": "A-CANDIDATE-9",
+  "status": "PREREGISTERED",
+  "created_utc": "2026-09-12T00:00:00Z",
+  "development_branch": "candidate9-development",
+  "base_repository_sha": "b32de589352b78fdce206e6ac555567eb3a873be",
+  "frozen_semantic_parent": {
+    "candidate": "A-CANDIDATE-8",
+    "source_sha": "850a7b5f1f21d7951cd4a9a840c0bebbb635d594",
+    "terminal_checkpoint_a_status": "FAILED",
+    "must_not_be_modified_or_rerun": true
+  },
+  "evidence_boundary": {
+    "permitted": [
+      "public implementation and public source history",
+      "Candidate-8 visible development and visible regression corpora and gold",
+      "general English grammar and source-grounding invariants",
+      "deterministic, property, and metamorphic tests",
+      "public provider documentation and non-secret infrastructure"
+    ],
+    "forbidden": [
+      "Candidate-8 official Checkpoint-A cases, outputs, gold, or failure clusters",
+      "sealed-preflight gold or restricted artifacts",
+      "formal-qualification gold or restricted artifacts",
+      "any hidden or official evaluator feedback used as development signal"
+    ]
+  },
+  "architecture_hypothesis": {
+    "name": "clause_local_bidirectional_modifier_binding",
+    "statement": "A source-grounded modifier can precede or follow its economic action. Candidate-9 will resolve constraints and other authority-bearing modifiers within an explicit source clause, rather than treating preceding-action order as semantic scope. Resolution must be unique and exact-source grounded; ambiguity or cross-clause competition fails closed.",
+    "allowed_change_surface": [
+      "new Candidate-9 modules",
+      "new Candidate-9 deterministic tests",
+      "new Candidate-9 visible-development runner and workflow infrastructure"
+    ],
+    "frozen_parent_files": [
+      "src/ecocommit/candidate8.py",
+      "src/ecocommit/candidate8_logic.py",
+      "src/ecocommit/candidate8_normalize.py",
+      "src/ecocommit/candidate8_provider.py"
+    ]
+  },
+  "provider_configuration": {
+    "provider": "Groq",
+    "model": "qwen/qwen3.6-27b",
+    "temperature": 0,
+    "reasoning_effort": "none",
+    "maximum_completion_tokens": 900,
+    "maximum_attempts_per_pass": 2,
+    "semantic_failure_retry": false
+  },
+  "prompts": {
+    "pass1_sha256": "1cb84e6390e46bc3526caa6bf32376d17b115ad927d5ea1946f6459b6681b26e",
+    "pass2_sha256": "1c583d515793557d23a5c061850b641d43650fda384912d9588ce148b520dc23",
+    "policy": "frozen for the preregistered visible iteration"
+  },
+  "schemas": {
+    "fact_batch_canonical_json_schema_sha256": "26baf498a43cf96c8cf6b3a197a25de2d35d19b87f3890e68028b5ed7e926cb7",
+    "pass2_decision_batch_canonical_json_schema_sha256": "5a06becda1d635ce9b0dd51e403178c4c8ce7566b35541eb3d54df2178584032",
+    "relation_batch_canonical_json_schema_sha256": "b79c30aea63845a360d40a7fa05ee76db1989ef04ce4c0b050c06de0ec0ee210"
+  },
+  "visible_corpora": {
+    "development_dataset_sha256": "e73f1b770c10c5e751657cc3227ec7e16396dacc28ea739fcdb74690ec01a6de",
+    "development_gold_sha256": "1b8ad27b1957bc6cc4d80b830ae9d70f20be97efbde71b0ece2ec16ed86d7799",
+    "regression_dataset_sha256": "d086f3e9a8b62efcb498eb243496d6aa59bad93c6cfd499835db8af0a914ce00",
+    "regression_gold_sha256": "ec53f37d2475a42eab1f243412ca6a3450c33a4d4a56030fe929a0cadc8241d3"
+  },
+  "source_components": {
+    "candidate8_runner_sha256": "dd2bbf29fa66a0f208159547e8a4fc1c776f0b60281cfa8ead4370489feb974c",
+    "candidate8_logic_sha256": "313996df5cefc001bec515a47e096844619bc10d3e686253a36de5df3064c49f",
+    "candidate8_normalizer_sha256": "bac53c11d3a16b7ebd0ea5c68f780714b7f8d3c3654abbb14c5e97015a1beb93",
+    "candidate8_provider_sha256": "2c5905182b2874bb827bafe60a33abb280a35cb57383f36d6f9c06178b6378de",
+    "evaluator_sha256": "cac4226b7a8ebb0db8adcd3d93a61dd4c3c4815aff28bb51a102fa3a9fce5316",
+    "qualification_policy_sha256": "14a963d012ef2ac23faf054ad785423779f602d97b177929586d998964d37587"
+  },
+  "thresholds": {
+    "case_pass_rate_minimum": 0.95,
+    "selective_semantic_reliability_minimum": 0.97,
+    "autonomous_coverage_minimum": 0.60,
+    "ambiguous_clarification_accuracy_minimum": 0.90,
+    "fail_open_errors_maximum": 0,
+    "dropped_guards_maximum": 0,
+    "dropped_exceptions_maximum": 0,
+    "conservation_failures_maximum": 0,
+    "unknown_to_authorized_errors_maximum": 0
+  },
+  "iteration_policy": {
+    "maximum_visible_development_iterations": 3,
+    "visible_regression_runs_per_passing_source": 1,
+    "early_stop": "Use the frozen mathematical reachability policy; stop provider calls when passing becomes impossible.",
+    "provider_limited": "Preserve sanitized evidence and do not classify as a semantic failure or hammer the provider.",
+    "semantic_failure": "Diagnose only from permitted visible evidence; make the smallest general correction and never retry unchanged semantics until lucky."
+  },
+  "artifact_namespaces": {
+    "visible_development": "candidate9-visible-development-{run_id}-attempt-{attempt}",
+    "visible_regression": "candidate9-visible-regression-{run_id}-attempt-{attempt}",
+    "sealed_preflight": "candidate9-sealed-preflight-{run_id}-attempt-{attempt}",
+    "formal_qualification": "candidate9-formal-qualification-{run_id}-attempt-{attempt}",
+    "official_checkpoint_a": "candidate9-checkpoint-a-{run_id}-attempt-{attempt}"
+  },
+  "stopping_rule": "No provider development call may occur until this preregistration is committed on candidate9-development and deterministic validation passes. Later gates remain locked until each preceding retained semantic artifact genuinely passes."
+}

@@ -1,0 +1,75 @@
+name: Candidate 9 - Visible Development Iteration
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: candidate9-visible-development
+  cancel-in-progress: false
+
+jobs:
+  visible_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Bind exact development source and scope
+        shell: python
+        run: |
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          actual = subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
+          payload = {
+              'candidate':'A-CANDIDATE-9', 'mode':'VISIBLE_DEVELOPMENT', 'partition':'development',
+              'source_sha':actual, 'provider':'Groq', 'model':'qwen/qwen3.6-27b',
+              'max_completion_tokens':900, 'temperature':0, 'reasoning_effort':'none',
+              'formal_qualification':False, 'sealed_preflight':False,
+              'official_checkpoint_a_cases_used':False,
+              'run_id':os.environ['GITHUB_RUN_ID'], 'run_attempt':int(os.environ['GITHUB_RUN_ATTEMPT']),
+          }
+          raw=json.dumps(payload,sort_keys=True,separators=(',',':')).encode()
+          payload['binding_sha256']=hashlib.sha256(raw).hexdigest()
+          Path('/tmp/c9-binding').mkdir(parents=True,exist_ok=True)
+          Path('/tmp/c9-binding/binding.json').write_text(json.dumps(payload,indent=2,sort_keys=True),encoding='utf-8')
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install exact project dependencies
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation -e .
+          python -m pip check
+
+      - name: Focused deterministic gate before provider calls
+        run: |
+          python -m pytest tests/test_candidate9_preregistration.py tests/test_candidate9_semantics.py tests/test_candidate8_semantics.py -p no:cacheprovider --basetemp .test-tmp-c9-provider-gate
+          python -m compileall -q src/ecocommit/candidate9.py src/ecocommit/candidate9_normalize.py src/ecocommit/candidate9_provider.py scripts/candidate9_develop.py
+          git diff --check
+
+      - name: Prepare development evidence directory
+        run: |
+          mkdir -p artifacts/candidate9-visible-development
+          cp /tmp/c9-binding/binding.json artifacts/candidate9-visible-development/binding.json
+
+      - name: Run visible Candidate-9 development partition
+        env:
+          ECOCOMMIT_LLM_API_KEY: ${{ secrets.ECOCOMMIT_GROQ_API_KEY }}
+        run: python scripts/candidate9_develop.py --partition development --output-dir artifacts/candidate9-visible-development/iteration
+
+      - name: Preserve complete development evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: candidate9-visible-development-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: artifacts/candidate9-visible-development/
+          if-no-files-found: warn
+          retention-days: 30
