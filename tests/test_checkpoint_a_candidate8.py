@@ -40,3 +40,8 @@ def test_candidate8_runtime_exposes_reachability_counts(tmp_path):
     sys.path.insert(0, str(root / "scripts"))
     runtime = runner.runtime(root)
     assert runtime["OfficialCounts"].__name__ == "OfficialCounts"
+
+def test_candidate8_runner_binds_checked_out_supervisor_not_dispatch_sha():
+    source = (Path(__file__).parents[1] / "scripts/checkpoint_a_candidate8.py").read_text()
+    assert 'os.getenv("GITHUB_SHA")' not in source
+    assert 'supervisor_head()!=prereg.get("supervisor_source_revision")' in source
