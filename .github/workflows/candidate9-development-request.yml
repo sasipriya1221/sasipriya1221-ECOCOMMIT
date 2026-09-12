@@ -2,7 +2,7 @@ name: Candidate 9 - Visible Development Request Bridge
 
 on:
   push:
-    branches: [candidate9-development]
+    branches: [main]
     paths:
       - evidence/candidate9-development-request.json
 
