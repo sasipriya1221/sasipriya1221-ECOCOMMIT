@@ -6,13 +6,14 @@ on:
       qualification_run_attempt: {required: true, type: string}
       qualification_artifact_id: {required: true, type: string}
       qualification_archive_sha256: {required: true, type: string}
+      supervisor_revision: {required: true, type: string}
 jobs:
   preregister:
     runs-on: ubuntu-latest
     permissions: {contents: read, actions: write}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with: {ref: "${{ github.sha }}", path: supervisor, persist-credentials: false}
+        with: {ref: "${{ inputs.supervisor_revision }}", path: supervisor, persist-credentials: false}
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {ref: 850a7b5f1f21d7951cd4a9a840c0bebbb635d594, path: candidate, persist-credentials: false}
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -41,4 +42,4 @@ jobs:
         with: {name: "checkpoint-a-candidate8-preregistration-${{ github.run_id }}", path: bundle/, if-no-files-found: error, retention-days: 30}
       - name: Continue to provider readiness
         env: {GH_TOKEN: "${{ github.token }}", GH_REPO: "${{ github.repository }}"}
-        run: gh workflow run candidate8-provider-readiness.yml --repo "$GH_REPO" --ref main -f preregistration_run_id="$GITHUB_RUN_ID" -f supervisor_revision="$GITHUB_SHA"
+        run: gh workflow run candidate8-provider-readiness.yml --repo "$GH_REPO" --ref main -f preregistration_run_id="$GITHUB_RUN_ID" -f supervisor_revision="${{ inputs.supervisor_revision }}"
