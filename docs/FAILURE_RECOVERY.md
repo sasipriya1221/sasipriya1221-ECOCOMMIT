@@ -1,87 +1,48 @@
 # Failure Recovery: What Broke and What Changed
 
-ECOCOMMIT keeps failed attempts because recovery quality is part of the system’s
-trustworthiness. Workflow success is never substituted for semantic evidence.
+ECOCOMMIT preserves failed attempts because recovery quality is part of the trust boundary. Workflow success is never substituted for semantic evidence.
 
-## 1. Provider failure: HTTP 429 before semantic output
+## Provider-limit diagnosis
 
-Three exact-source Candidate-7 attempts stopped on the first D003 call with zero
-accepted outputs. The retained Groq log later identified the actual limit:
+Candidate-7 initially encountered Groq HTTP 429 responses before semantic output. The retained error dimension identified an output-tokens-per-minute conflict: a 1,424-token request ceiling exceeded the 1,000-token limit. An explicit, preregistered 900-token ceiling removed that infrastructure failure without changing model, evaluator, thresholds, or gold.
 
-- model: `qwen/qwen3.6-27b`;
-- category: output tokens per minute (OTPM);
-- free-tier limit: 1,000 output tokens/minute;
-- request ceiling: 1,424 tokens;
-- recorded input/output: 0/0 because rejection occurred before generation.
+## Semantic failure after infrastructure recovery
 
-This ruled out semantic failure, daily-token exhaustion and retry timing as the
-cause. The recovery was an explicit 900-token protocol amendment—below the
-enforced ceiling—not key cycling, model switching or repeated retries.
+With provider transport restored, Candidate-7 completed its frozen qualification and exposed a genuine semantic defect. It was frozen as **FAILED** instead of being repeatedly sampled until a favorable result appeared.
 
-## 2. Infrastructure recovery exposed a semantic failure
+## Candidate-8 isolation and development
 
-The amended Candidate-7 qualification completed without provider, schema or
-validation failures. Its artifact—not the green workflow—showed:
+Candidate-8 was developed separately using permitted visible evidence. It introduced typed semantic roles, Boolean/dependency AST and conservation improvements, deterministic source grammar, and source-order action resolution. A visible action-object defect was corrected while preserving the grounded object suffix.
 
-| Case | Correct | Result |
-|---|---:|---:|
-| D003 | 0/5 | 0% |
-| D009 | 5/5 | 100% |
+The repaired source `850a7b5f1f21d7951cd4a9a840c0bebbb635d594` passed:
 
-Run `33957313516`, artifact `9966909942`, therefore established a genuine and
-repeatable D003 role-classification defect. Candidate 7 was frozen as **FAILED**.
-It was not patched and rerun until lucky.
+- visible development: 24/24;
+- visible regression: 12/12;
+- sealed preflight: 24/24; and
+- fresh formal qualification: 24/24.
 
-## 3. Candidate 8: separate visible development
+Every listed stage retained zero fail-open, dropped-guard, dropped-exception, conservation, and UNKNOWN-to-authorized failures.
 
-Candidate 8 introduced a general typed-role/AST/conservation correction on a
-separate development branch. It did not reuse official-A answers.
+## Official Checkpoint-A result
 
-| Iteration | Source | Visible result | Interpretation |
-|---|---|---:|---|
-| 1 | `1600a9d7...` | 6/24 (25%) | Broad schema, guard, clarification and normalization defects remained |
-| 2 | `eabf660b...` | 18/24 (75%) | 100% selective reliability and clarification accuracy, but six cases and autonomous coverage still missed readiness |
-| 3 | `b540de4998769cc0dd6e3a220fa00abeb8a3ce72` | 23/24 (95.83%), but safety gate failed | All percentage margins passed; C8D020 was rejected with one dropped guard |
+Two infrastructure defects were separated from semantic evidence. Run `34465756009` stopped after one row because the runner omitted a reachability-count import. Run `34675788962` stopped before provider construction because it compared the pinned checkout with the dispatch commit SHA. Both were fixed with focused tests and exact-source CI.
 
-Iteration 2 retained zero provider deferrals, zero schema/validation failures,
-zero conservation failures and zero fail-open outcomes. It still did not pass:
-the case gate was 95% and autonomous-coverage gate was 60%, while observed values
-were 75% and 58.33%.
+The authorized terminal evaluation then ran as `34676224911`. Its retained aggregate artifact `10292342612` has archive SHA-256 `eb1b0c48b7c956c56868f176dd76b9eee3e7fd956a2dcf1f94551b9b7bb7feaa`. The frozen mathematical policy stopped after passing became impossible. Aggregate status is **FAILED**; no A PASS receipt exists, and B–E remain locked.
 
-Iteration 3 completed as run
-[`33970539713`](https://github.com/sasipriya1221/sasipriya1221-ECOCOMMIT/actions/runs/33970539713).
-Artifact `9971456984`
-(`candidate8-visible-development-33970539713-attempt-1`) has GitHub digest
-`sha256:11a9b21340b549d4b9bc7b6f4328c80c86784123c1d930b8e7483a6215b403f1`.
-Its retained summary reported:
+Candidate-8 was not patched from official material or retried until lucky.
 
-- case pass: **23/24 = 95.83%**;
-- selective semantic reliability: **100%**;
-- autonomous coverage: **79.17%**;
-- ambiguous clarification accuracy: **100%**;
-- provider deferrals, schema/validation failures, conservation failures and
-  fail-open outcomes: **0**; and
-- dropped guards: **1**.
+## Candidate-9 boundary
 
-The artifact therefore correctly recorded `passed: false`. C8D020 failed closed
-with `C8_UNRESOLVED_ENTITY_DISPOSITION`; no provider call was made for that case,
-no money action was authorized, and its material guard was not silently removed.
-The result is a near-pass, not a PASS.
+Candidate-9 is a new candidate, not a Candidate-8 retry. Its development may use public implementation, candidate history, visible corpora, general language/grammar principles, deterministic/property/metamorphic tests, provider documentation, and non-secret infrastructure evidence.
 
-## 4. Engineering lessons
+Official-A case instructions, case-level outputs, gold labels, failure clusters, sealed gold, and formal-qualification gold are prohibited. Candidate-9 must preregister before provider-backed development and must begin again at visible development.
 
-1. Diagnose rate limits from provider error dimensions, not generic HTTP status.
-2. A green orchestration job can preserve a failing semantic result correctly.
-3. Separate provider deferral, schema failure and semantic failure.
-4. Never use an LLM’s fluent relation label as economic authority.
-5. Make irrelevant context explicit, conserve every material fact and fail closed
-   on unresolved predicates/entities.
-6. Keep development, sealed preflight, qualification and official evaluation as
-   distinct evidence boundaries.
+## Engineering lessons
 
-## Current truth
-
-Candidate 8 remains development evidence until the C8D020 class is corrected and
-the visible gate, visible regression, sealed preflight and formal qualification
-legitimately pass. Official Checkpoint A and downstream authoritative checkpoints
-remain locked without that receipt chain.
+1. Diagnose provider limits from their precise dimensions, not generic HTTP status.
+2. Treat orchestration, provider, schema, and semantic failures as different classes.
+3. Let models propose semantics; keep economic authority deterministic.
+4. Preserve guards, exceptions, dependencies, and every material fact.
+5. Bind every gate to exact source, configuration, evaluator, dataset, run, attempt, and artifact.
+6. Stop when passing is mathematically impossible.
+7. Preserve terminal failures and start a new isolated candidate when further development is justified.
