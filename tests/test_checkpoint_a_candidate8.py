@@ -1,6 +1,8 @@
 from __future__ import annotations
 from copy import deepcopy
 import hashlib,json
+from pathlib import Path
+import sys
 import pytest
 from pydantic import ValidationError
 from ecocommit.checkpoint_a_evidence import CheckpointAEvidenceReceipt,CANDIDATE8_CRITERIA_SHA256,CANDIDATE8_EVALUATOR_SHA256
@@ -31,3 +33,10 @@ def test_candidate8_official_runner_forbids_score_retries():
     from pathlib import Path
     text=(Path(__file__).parents[1]/"scripts/checkpoint_a_candidate8_prereg.py").read_text()
     assert '"semantic_score_retry_permitted":False' in text
+
+def test_candidate8_runtime_exposes_reachability_counts(tmp_path):
+    from scripts import checkpoint_a_candidate8 as runner
+    root = Path(__file__).parents[1]
+    sys.path.insert(0, str(root / "scripts"))
+    runtime = runner.runtime(root)
+    assert runtime["OfficialCounts"].__name__ == "OfficialCounts"
