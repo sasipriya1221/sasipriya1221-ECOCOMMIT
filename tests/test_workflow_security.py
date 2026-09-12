@@ -161,6 +161,19 @@ def test_candidate8_regression_bridge_is_secretless_exact_source_and_duplicate_s
     assert "persist-credentials: false" in workflow
 
 
+def test_candidate9_development_bridge_keeps_request_off_source_branch():
+    workflow = (WORKFLOWS / "candidate9-development-request.yml").read_text(encoding="utf-8")
+    trigger_block = workflow.split("\nconcurrency:", 1)[0]
+    assert "branches: [main]" in trigger_block
+    assert "evidence/candidate9-development-request.json" in trigger_block
+    assert "secrets." not in workflow
+    assert "actions: write" in workflow
+    assert "branches/candidate9-development" in workflow
+    assert "duplicate Candidate-9 development dispatch for exact source refused" in workflow
+    assert "--ref candidate9-development" in workflow
+    assert "persist-credentials: false" in workflow
+
+
 def test_candidate8_sealed_preflight_is_manual_and_request_bridge_is_secretless():
     workflow = (WORKFLOWS / "candidate8-sealed-preflight.yml").read_text(encoding="utf-8")
     trigger_block = workflow.split("\nconcurrency:", 1)[0]
