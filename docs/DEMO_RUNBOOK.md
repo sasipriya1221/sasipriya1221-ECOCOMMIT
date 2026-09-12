@@ -43,7 +43,7 @@ authoritative gate evidence. The real-money card must remain disabled.
 | 2:05–2:55 | `CHECKPOINT_A_BLOCKED` | Show that a plausible contract cannot execute without an authoritative upstream receipt; authorized and captured amounts remain zero. |
 | 2:55–3:45 | `CAPTURE_FAILURE` | Show the failed state, zero capture and simulated hold cleanup. |
 | 3:45–4:25 | Architecture and trust boundary | Explain that the model proposes semantics while validation, evidence, state transitions, idempotency and payment authority are deterministic. |
-| 4:25–5:00 | Failure-recovery document and current status | Summarize OTPM diagnosis, Candidate-7 semantic failure, Candidate-8 development, and the decision not to fabricate checkpoint PASS states. |
+| 4:25–5:00 | Failure-recovery document and current status | Summarize OTPM diagnosis, Candidate-7 failure, Candidate-8 pre-A passes and official-A failure, and the isolated Candidate-9 boundary. |
 
 Keep the browser zoom high enough that the simulation banner, outcome, amounts,
 state sequence and correlation ID remain readable. Do not show secrets, local
