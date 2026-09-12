@@ -91,11 +91,13 @@ attempt metadata and distinguishes provider deferral, schema rejection and
 semantic failure. Datasets, prompts, schemas, evaluator, thresholds and exact
 source are digest-bound before sealed or official execution.
 
-Candidate 7 is frozen as failed after its provider-limit amendment exposed D003
-at 0/5. Candidate 8 remains in visible development: iteration 3 reached 23/24
-and met every percentage threshold but recorded one dropped guard in C8D020, so
-its summary correctly says `passed: false`. Visible regression, sealed preflight,
-formal qualification and the official 80-case Checkpoint A have not run.
+Candidate 7 is frozen as failed after its provider-limit amendment exposed a
+genuine semantic defect. Candidate 8 is frozen at
+`850a7b5f1f21d7951cd4a9a840c0bebbb635d594`: it passed visible development,
+visible regression, sealed preflight and formal qualification, then failed the
+official 80-case Checkpoint A under mathematical early stopping. No A PASS
+receipt exists, so B–E remain locked. Candidate 9 is isolated behind a new
+visible-evidence-only preregistration boundary.
 
 ### Deterministic B path
 
