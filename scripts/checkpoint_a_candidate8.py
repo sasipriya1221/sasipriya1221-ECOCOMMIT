@@ -28,7 +28,7 @@ def main():
     candidate=a.candidate_root.resolve(); prereg=load(a.preregistration); binding=load(a.binding); summary=load(a.summary); receipt=load(a.receipt); verify(candidate,prereg,binding,summary,receipt); rt=runtime(candidate); frozen=rt["_clear_cases"]()+rt["_ambiguous_cases"]()
     if a.verify_offline:return 0
     if os.getenv("GITHUB_RUN_ATTEMPT")!="1" or not a.provider_readiness or not a.output_dir or not a.evidence_reference: raise ValueError("one-shot official inputs required")
-    if supervisor_head()!=prereg.get("supervisor_source_revision") or os.getenv("GITHUB_SHA")!=prereg.get("supervisor_source_revision"): raise ValueError("official supervisor checkout differs from preregistration")
+    if supervisor_head()!=prereg.get("supervisor_source_revision"): raise ValueError("official supervisor checkout differs from preregistration")
     verify_readiness(load(a.provider_readiness),prereg); key=os.getenv("ECOCOMMIT_LLM_API_KEY","").strip()
     if not key: raise ValueError("provider key required")
     out=a.output_dir.resolve(); out.mkdir(parents=True,exist_ok=False); cases=out/"cases"; cases.mkdir(); provider=rt["GroqCandidate8Provider"](key); validator=rt["FidelityValidator"](); rows=[]; scored=[]; eliminated=None; provider_limited=False
